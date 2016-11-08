@@ -42,6 +42,7 @@ sonarqube {
         property "sonar.host.url", property("sourcerer_sonar_host_url")
         property "sonar.login", property("sourcerer_sonar_login")
         property "sonar.github.oauth", property("sourcerer_sonar_github_oauth")
+        property "sonar.github.repository", "elder-oss/sourcerer"
     }
 }
 
