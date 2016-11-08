@@ -21,11 +21,11 @@ deployment:
       - . infra/runsonar-preview.sh
   release:
     tag: /v[0-9]+(\.[0-9]+)*/
-    owner: Elder-HQ
+    owner: elder-oss
     commands:
       - . infra/publish-artifacts.sh
   prerelease:
     tag: /.*/
-    owner: Elder-HQ
+    owner: elder-oss
     commands:
       - . infra/publish-artifacts.sh
