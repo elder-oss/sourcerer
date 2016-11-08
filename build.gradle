@@ -30,6 +30,10 @@ nexusStaging {
     password = property("ossrhPassword")
 }
 
+project.ext.set("signing.keyId", property("sourcerer_signing_keyId"))
+project.ext.set("signing.password", property("sourcerer_signing_password"))
+project.ext.set("signing.secretKeyRingFile", property("sourcerer_signing_secretKeyRingFile"))
+
 sonarqube {
     properties {
         property "sonar.projectVersion", getVersionName()
