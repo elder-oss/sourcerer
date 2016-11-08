@@ -5,12 +5,15 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.0.4"
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.1"
     }
 }
 
 plugins {
     id "org.sonarqube" version "2.2"
 }
+
+apply plugin: 'io.codearte.nexus-staging'
 
 def getVersionName = { ->
     def stdout = new ByteArrayOutputStream()
@@ -19,6 +22,12 @@ def getVersionName = { ->
         standardOutput = stdout
     }
     return stdout.toString().trim()
+}
+
+nexusStaging {
+    packageGroup = "org.elder.sourcerer"
+    username = property("ossrhUsername")
+    password = property("ossrhPassword")
 }
 
 sonarqube {
@@ -40,7 +49,8 @@ subprojects {
     apply plugin: 'maven'
     apply plugin: 'maven-publish'
     apply plugin: 'checkstyle'
-    apply plugin: "jacoco"
+    apply plugin: 'jacoco'
+    apply plugin: 'signing'
 
     checkstyle {
         configFile = new File(rootDir, "infra/codehealth/checkstyle.xml")
@@ -127,6 +137,48 @@ subprojects {
             }
         }
     }
-}
 
-task pushAll(dependsOn: [subprojects.publish])
+    signing {
+        sign configurations.archives
+    }
+
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: property("ossrhUsername"), password: property("ossrhPassword"))
+                }
+
+                pom.project {
+                    name 'Elder Sourcerer'
+                    packaging 'jar'
+                    description 'An opinionated framework for implementing an CQRS architecture using event sourcing'
+                    url 'https://github.com/elder-oss/sourcerer'
+
+                    scm {
+                        connection 'scm:git:https://github.com/elder-oss/sourcerer.git'
+                        developerConnection 'scm:svn:https://github.com/elder-oss/sourcerer.git'
+                        url 'https://github.com/elder-oss/sourcerer'
+                    }
+
+                    licenses {
+                        license {
+                            name 'The MIT License (MIT)'
+                            url 'https://opensource.org/licenses/MIT'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id 'elder-developers'
+                            name 'Developers At Elder'
+                            email 'tech@elder.org'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
