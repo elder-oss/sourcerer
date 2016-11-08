@@ -23,9 +23,9 @@ deployment:
     tag: /v[0-9]+(\.[0-9]+)*/
     owner: elder-oss
     commands:
-      - . infra/publish-artifacts.sh
+      - . infra/publish-artifacts-central.sh
   prerelease:
     tag: /.*/
     owner: elder-oss
     commands:
-      - . infra/publish-artifacts.sh
+      - . infra/publish-artifacts-internal.sh
