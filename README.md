@@ -97,7 +97,7 @@ on the circumstances (live vs replay of old events, slow vs fast subscription ha
 
 ## Sample Projects
 
-For sample projects using Sourcerer to implement CQRS with event sourcing, see [sourcerer-samples].
+For sample projects using Sourcerer to implement CQRS with event sourcing, see [sourcerer-samples](https://github.com/elder-oss/sourcerer-samples).
 
 ## Implementation specifics
 
