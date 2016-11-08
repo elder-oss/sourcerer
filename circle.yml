@@ -11,7 +11,7 @@ test:
     - . infra/run-tests.sh
 
 deployment:
-  dev:
+  master:
     branch: master
     commands:
       - . infra/runsonar-full.sh
