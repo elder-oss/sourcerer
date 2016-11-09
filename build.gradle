@@ -26,22 +26,25 @@ def getVersionName = { ->
 
 nexusStaging {
     packageGroup = "org.elder.sourcerer"
-    username = property("ossrhUsername")
-    password = property("ossrhPassword")
+    username = ossrhUsername
+    password = ossrhPassword
 }
 
-project.ext.set("signing.keyId", property("sourcerer_signing_keyId"))
-project.ext.set("signing.password", property("sourcerer_signing_password"))
-project.ext.set("signing.secretKeyRingFile", property("sourcerer_signing_secretKeyRingFile"))
+if ("$enable_signing" == 'true') {
+    project.ext.set("use_signing", true)
+    project.ext.set("signing.keyId", sourcerer_signing_keyId)
+    project.ext.set("signing.password", sourcerer_signing_password)
+    project.ext.set("signing.secretKeyRingFile", sourcerer_signing_secretKeyRingFile)
+}
 
 sonarqube {
     properties {
         property "sonar.projectVersion", getVersionName()
         property "sonar.jacoco.reportPath", "build/coverage/jacoco.exec"
         property "sonar.analysis.mode", "preview"
-        property "sonar.host.url", property("sourcerer_sonar_host_url")
-        property "sonar.login", property("sourcerer_sonar_login")
-        property "sonar.github.oauth", property("sourcerer_sonar_github_oauth")
+        property "sonar.host.url", sourcerer_sonar_host_url
+        property "sonar.login", sourcerer_sonar_login
+        property "sonar.github.oauth", sourcerer_sonar_github_oauth
         property "sonar.github.repository", "elder-oss/sourcerer"
     }
 }
@@ -72,13 +75,6 @@ subprojects {
 
     repositories {
         mavenCentral()
-        maven {
-            credentials {
-                username property("sourcerer_nexus_username")
-                password property("sourcerer_nexus_password")
-            }
-            url property("sourcerer_nexus_releaseUrl")
-        }
     }
 
     dependencies {
@@ -144,6 +140,7 @@ subprojects {
     }
 
     signing {
+        required { "$enable_signing" == 'true' }
         sign configurations.archives
     }
 
@@ -153,7 +150,7 @@ subprojects {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
                 repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: property("ossrhUsername"), password: property("ossrhPassword"))
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
                 }
 
                 pom.project {
