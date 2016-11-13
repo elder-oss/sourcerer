@@ -1,6 +1,7 @@
 package org.elder.sourcerer;
 
-import  com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
@@ -12,29 +13,70 @@ import java.util.Map;
  */
 public interface AggregateRepository<TState, TEvent> {
     /**
-     * Gets the projection used by the aggregate repository to reconstruct aggregate state from
-     * events.
-     * @return The aggregate projection used in the repository.
-     */
-    AggregateProjection<TState, TEvent> getProjection();
-
-    /**
      * Reads an an aggregate given an aggregate id. The construction of an aggregate is
      * implementation specific, but would be semantically equivalent to applying a projection to
      * each recorded event for the aggregate.
      *
-     * @param aggregateId The id of the aggregate to read.
+     * @param aggregateId The id of the aggregate to load.
      * @return A snapshot in time of the aggregate along with information such as its current
-     * version. This method should never return null, but rather an AggregateRecord with a null
-     * aggregate if the aggregate is nonexistent or deleted.
+     * version. This method should never return null, but rather an ImmutableAggregate with a null
+     * state if the aggregate is nonexistent or deleted.
      */
-    AggregateRecord<TState> read(String aggregateId);
+    ImmutableAggregate<TState, TEvent> load(String aggregateId);
+
+    /**
+     * Updates a given existing or new aggregate with a list of events taken from an aggregate
+     * state. The id of the aggregate and expected version (if used) will be taken from the details
+     * of the aggregate state, and all pending events on the state will be persisted.
+     *
+     * @param aggregateState The state of the aggregate to apply updates for.
+     * @param atomic         If true, the original version of the aggregate will be used as the
+     *                       expected version, failing the operation if other changes have taken
+     *                       place in between.
+     * @param metadata       Metadata in the form of string key/value pairs used to annotate each
+     *                       event as persisted. Metadata will not be used to reconstruct the
+     *                       aggregate from events, but can be used to append diagnostic information
+     *                       to the operation, such as who performed the action that triggered it,
+     *                       or which system that submitted the events.
+     */
+    ImmutableAggregate<TState, TEvent> save(
+            @NotNull AggregateState<TState, TEvent> aggregateState,
+            boolean atomic,
+            Map<String, String> metadata);
+
+    /**
+     * Updates a given existing or new aggregate with a list of events taken from an aggregate
+     * state. The id of the aggregate and expected version (if used) will be taken from the details
+     * of the aggregate state, and all pending events on the state will be persisted.
+     *
+     * @param aggregateState The state of the aggregate to apply updates for.
+     * @param atomic         If true, the original version of the aggregate will be used as the
+     *                       expected version, failing the operation if other changes have taken
+     *                       place in between.
+     */
+    default ImmutableAggregate<TState, TEvent> save(
+            @NotNull AggregateState<TState, TEvent> aggregateState,
+            boolean atomic) {
+        return save(aggregateState, atomic, null);
+    }
+
+    /**
+     * Updates a given existing or new aggregate with a list of events taken from an aggregate
+     * state. The id of the aggregate and expected version (if used) will be taken from the details
+     * of the aggregate state, and all pending events on the state will be persisted.
+     *
+     * @param aggregateState The state of the aggregate to apply updates for.
+     */
+    default ImmutableAggregate<TState, TEvent> save(
+            @NotNull AggregateState<TState, TEvent> aggregateState) {
+        return save(aggregateState, true, null);
+    }
 
     /**
      * Updates a given existing or new aggregate with a list of events.
      *
-     * @param aggregateId     The id of the aggregate to update.
-     * @param events          The list of events to update the aggregate with.
+     * @param aggregateId     The id of the aggregate to append.
+     * @param events          The list of events to append the aggregate with.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
@@ -45,7 +87,7 @@ public interface AggregateRepository<TState, TEvent> {
      *                        information to the operation, such as who performed the action that
      *                        triggered it, or which system that submitted the events.
      */
-    int update(
+    int append(
             String aggregateId,
             Iterable<? extends TEvent> events,
             ExpectedVersion expectedVersion,
@@ -54,25 +96,25 @@ public interface AggregateRepository<TState, TEvent> {
     /**
      * Updates a given existing or new aggregate with a list of events.
      *
-     * @param aggregateId     The id of the aggregate to update.
-     * @param events          The list of events to update the aggregate with.
+     * @param aggregateId     The id of the aggregate to append.
+     * @param events          The list of events to append the aggregate with.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
      *                        UnexpectedVersionException will be thrown.
      */
-    default int update(
+    default int append(
             final String aggregateId,
             final Iterable<? extends TEvent> events,
             final ExpectedVersion expectedVersion) {
-        return update(aggregateId, events, expectedVersion, null);
+        return append(aggregateId, events, expectedVersion, null);
     }
 
     /**
      * Updates a given existing or new aggregate with single event.
      *
-     * @param aggregateId     The id of the aggregate to update.
-     * @param event           The list of event to update the aggregate with.
+     * @param aggregateId     The id of the aggregate to append.
+     * @param event           The list of event to append the aggregate with.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
@@ -83,24 +125,24 @@ public interface AggregateRepository<TState, TEvent> {
      *                        information to the operation, such as who performed the action that
      *                        triggered it, or which system that submitted the events.
      */
-    default int update(
+    default int append(
             final String aggregateId,
             final TEvent event,
             final ExpectedVersion expectedVersion,
             final Map<String, String> metadata) {
-        return update(aggregateId, ImmutableList.of(event), expectedVersion, metadata);
+        return append(aggregateId, ImmutableList.of(event), expectedVersion, metadata);
     }
 
     /**
-     * @param aggregateId     The id of the aggregate to update.
-     * @param event           The list of event to update the aggregate with.
+     * @param aggregateId     The id of the aggregate to append.
+     * @param event           The list of event to append the aggregate with.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
      *                        UnexpectedVersionException will be thrown.
      */
-    default int update(
+    default int append(
             final String aggregateId, final TEvent event, final ExpectedVersion expectedVersion) {
-        return update(aggregateId, ImmutableList.of(event), expectedVersion, null);
+        return append(aggregateId, ImmutableList.of(event), expectedVersion, null);
     }
 }

@@ -10,8 +10,8 @@ import java.util.function.Supplier;
 
 /**
  * Utility methods for constructing a synchronous facade from independent but related methods. Used
- * to (re)create a traditional synchronous create/update operation on top of the command/query
- * pattern by first executing the command, then waiting until the entity appears on the read side.
+ * to (re)create a traditional synchronous create/append operation on top of the command/query
+ * pattern by first executing the command, then waiting until the entity appears on the load side.
  */
 public final class CommandUtils {
     private static final Logger logger = LoggerFactory.getLogger(CommandUtils.class);
@@ -20,10 +20,10 @@ public final class CommandUtils {
     }
 
     /**
-     * Waits for the presence of an entity in a read model, polling until the model asserts the
+     * Waits for the presence of an entity in a load model, polling until the model asserts the
      * presence of the entity at the given version.
      *
-     * @param assertFunction A that should complete without exceptions if the relevant read model
+     * @param assertFunction A that should complete without exceptions if the relevant load model
      *                       now has the entity with the given id and version. On any exception (but
      *                       not other throwables), this method will be retried up to the maximum
      *                       number of attempts specified, or until successful.
@@ -40,10 +40,10 @@ public final class CommandUtils {
     }
 
     /**
-     * Waits for the presence of an entity in a read model, polling until the model asserts the
+     * Waits for the presence of an entity in a load model, polling until the model asserts the
      * presence of the entity at the given version.
      *
-     * @param assertFunction   A that should complete without exceptions if the relevant read model
+     * @param assertFunction   A that should complete without exceptions if the relevant load model
      *                         now has the entity with the given id and version. On any exception
      *                         (but not other throwables), this method will be retried up to the
      *                         maximum number of attempts specified, or until successful.
@@ -94,7 +94,7 @@ public final class CommandUtils {
     }
 
     /**
-     * Executes a command, and waits for the affected entity to be updated in the relevant read
+     * Executes a command, and waits for the affected entity to be updated in the relevant load
      * model. This method will execute the command once, propagating any exceptions immediately. If
      * the command is successful, it will use the provided assert function to check that it has been
      * created, retrying periodically as required until completed.
@@ -102,7 +102,7 @@ public final class CommandUtils {
      * @param commandFunction A function that, when called, executes the command and returns the id
      *                        of the affected entity along with its new version.
      * @param assertFunction  A function accepting an aggregate id and version that should complete
-     *                        without exceptions if the relevant read model now has the entity with
+     *                        without exceptions if the relevant load model now has the entity with
      *                        the given id and version. On any exception (but not other throwables),
      *                        this method will be retried up to the maximum number of attempts
      *                        specified, or until successful.
@@ -123,7 +123,7 @@ public final class CommandUtils {
     }
 
     /**
-     * Executes a command, and waits for the affected entity to be updated in the relevant read
+     * Executes a command, and waits for the affected entity to be updated in the relevant load
      * model. This method will execute the command once, propagating any exceptions immediately. If
      * the command is successful, it will use the provided assert function to check that it has been
      * created, retrying periodically as required until completed.
@@ -131,7 +131,7 @@ public final class CommandUtils {
      * @param commandFunction  A function that, when called, executes the command and returns the id
      *                         of the affected entity along with its new version.
      * @param assertFunction   A function accepting an aggregate id and version that should complete
-     *                         without exceptions if the relevant read model now has the entity with
+     *                         without exceptions if the relevant load model now has the entity with
      *                         the given id and version. On any exception (but not other
      *                         throwables), this method will be retried up to the maximum number of
      *                         attempts specified, or until successful.

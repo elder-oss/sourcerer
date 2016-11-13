@@ -175,7 +175,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                 true);
         return Flux.from(esPublisher)
                 .map(this::fromEsEvent)
-                // This implementation does not support caught up status, each update is an event
+                // This implementation does not support caught up status, each append is an event
                 .map(EventSubscriptionUpdate::ofEvent);
     }
 
@@ -191,7 +191,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                 true);
         return Flux.from(esPublisher)
                 .map(this::fromEsEvent)
-                // This implementation does not support caught up status, each update is an event
+                // This implementation does not support caught up status, each append is an event
                 .map(EventSubscriptionUpdate::ofEvent);
     }
 

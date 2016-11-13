@@ -20,7 +20,6 @@ import java.util.Map;
 public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, TParams, TEvent> {
     private static final Logger logger = LoggerFactory.getLogger(DefaultCommand.class);
     private final AggregateRepository<TState, TEvent> repository;
-    private final AggregateStateFactory<TState, TEvent> stateFactory;
     private final Map<String, String> metadata;
     private final Operation<TState, TParams, TEvent> operation;
     private boolean atomic = true;
@@ -33,20 +32,9 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     public DefaultCommand(
             @NotNull final AggregateRepository<TState, TEvent> repository,
             @NotNull final Operation<TState, TParams, TEvent> operation) {
-        this(repository,
-                new DefaultAggregateStateFactory<>(repository.getProjection()),
-                operation);
-    }
-
-    public DefaultCommand(
-            @NotNull final AggregateRepository<TState, TEvent> repository,
-            @NotNull final AggregateStateFactory<TState, TEvent> stateFactory,
-            @NotNull final Operation<TState, TParams, TEvent> operation) {
         Preconditions.checkNotNull(repository);
-        Preconditions.checkNotNull(stateFactory);
         Preconditions.checkNotNull(operation);
         this.repository = repository;
-        this.stateFactory = stateFactory;
         this.operation = operation;
         this.atomic = operation.atomic();
         this.metadata = new HashMap<>();
@@ -123,54 +111,50 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         logger.debug("Expected version set as {}", effectiveExpectedVersion);
 
         // Read the aggregate if needed
-        AggregateRecord<TState> aggregateRecord;
+        ImmutableAggregate<TState, TEvent> aggregate;
         if (operation.requiresState() || atomic) {
             logger.debug("Reading aggregate record from stream");
-            aggregateRecord = readAndValidateAggregate(effectiveExpectedVersion);
+            aggregate = readAndValidateAggregate(effectiveExpectedVersion);
+            logger.debug("Current state of aggregate is {}",
+                    aggregate.state() == null
+                            ? "<not created>"
+                            : "version " + aggregate.originalVersion());
         } else {
-            aggregateRecord = null;
+            logger.debug("Aggregate state not load");
+            aggregate = null;
         }
 
-        TState aggregate = aggregateRecord == null ? null : aggregateRecord.getAggregate();
-        logger.debug("Current state of aggregate is {}",
-                aggregateRecord == null
-                        ? "<not created>"
-                        : "version " + aggregateRecord.getVersion());
 
         // Bail out early if idempotent create, and already present
-        if (idempotentCreate && aggregateRecord != null && aggregateRecord.getAggregate() != null) {
+        if (idempotentCreate && aggregate != null && aggregate.state() != null) {
             logger.debug("Bailing out early as already created (and idempotent create set)");
             return new CommandResult<>(aggregateId,
-                    aggregateRecord.getVersion(),
-                    aggregateRecord.getVersion(),
+                    aggregate.originalVersion(),
+                    aggregate.originalVersion(),
                     ImmutableList.of());
         }
 
         // Execute the command handler
-
-        AggregateState<TState, TEvent> aggregateState =
-                aggregateRecord != null ? stateFactory.fromState(
-                        aggregateId,
-                        aggregateRecord.getAggregate()) : null;
-        List<? extends TEvent> operationEvents = operation.execute(aggregateState, arguments);
+        List<? extends TEvent> operationEvents = operation.execute(aggregate, arguments);
         ImmutableList<? extends TEvent> events =
                 ImmutableList.copyOf(operationEvents.stream().iterator());
 
         if (events.isEmpty()) {
             logger.debug("Operation is no-op, bailing early");
-            return new CommandResult<>(aggregateId,
-                    aggregateRecord != null ? aggregateRecord.getVersion() : null,
-                    aggregateRecord != null ? aggregateRecord.getVersion() : null,
+            return new CommandResult<>(
+                    aggregateId,
+                    aggregate != null ? aggregate.originalVersion() : null,
+                    aggregate != null ? aggregate.originalVersion() : null,
                     events);
         }
 
-        // Create/update the event stream as needed
+        // Create/append the event stream as needed
         ExpectedVersion updateExpectedVersion;
 
         if (atomic) {
             // Actually null safe since atomic above ...
-            if (aggregateRecord.getAggregate() != null) {
-                updateExpectedVersion = ExpectedVersion.exactly(aggregateRecord.getVersion());
+            if (aggregate.originalState() != null) {
+                updateExpectedVersion = ExpectedVersion.exactly(aggregate.originalVersion());
             } else {
                 updateExpectedVersion = ExpectedVersion.notCreated();
             }
@@ -198,7 +182,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
 
         try {
             int newVersion =
-                    repository.update(aggregateId, events, updateExpectedVersion, metadata);
+                    repository.append(aggregateId, events, updateExpectedVersion, metadata);
             // It may be nice to sanity check here by using the expected version explicitly, but
             // this works regardless of whether we have a specific expected version ...
             // Will return -1 if we just created the stream, which is fine
@@ -232,28 +216,28 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     }
 
     @NotNull
-    private AggregateRecord<TState> readAndValidateAggregate(
+    private ImmutableAggregate<TState, TEvent> readAndValidateAggregate(
             final ExpectedVersion effectiveExpectedVersion) {
-        AggregateRecord<TState> aggregateRecord = repository.read(aggregateId);
+        ImmutableAggregate<TState, TEvent> aggregate = repository.load(aggregateId);
 
         // Validate expected version early if we have state
         switch (effectiveExpectedVersion.getType()) {
             case ANY:
                 break;
             case ANY_EXISTING:
-                if (aggregateRecord.getAggregate() == null) {
+                if (aggregate.state() == null) {
                     throw new UnexpectedVersionException(-1, effectiveExpectedVersion);
                 }
                 break;
             case EXACTLY:
-                if (aggregateRecord.getVersion() != effectiveExpectedVersion.getExpectedVersion()) {
-                    throw new UnexpectedVersionException(aggregateRecord.getVersion(),
+                if (aggregate.originalVersion() != effectiveExpectedVersion.getExpectedVersion()) {
+                    throw new UnexpectedVersionException(aggregate.originalVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             case NOT_CREATED:
-                if (aggregateRecord.getAggregate() != null && !idempotentCreate) {
-                    throw new UnexpectedVersionException(aggregateRecord.getVersion(),
+                if (aggregate.state() != null && !idempotentCreate) {
+                    throw new UnexpectedVersionException(aggregate.originalVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
@@ -261,6 +245,6 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 throw new IllegalArgumentException("Unrecognized expected version type "
                                                    + effectiveExpectedVersion.getType());
         }
-        return aggregateRecord;
+        return aggregate;
     }
 }

@@ -24,7 +24,7 @@ public interface EventSubscriptionFactory<T> {
      * not yet active and must be started by calling start() to receive events.
      *
      * @param handler   The handler called to process batches of events.
-     * @param batchSize The maximum number of items to process in each update.
+     * @param batchSize The maximum number of items to process in each append.
      */
     EventSubscription fromSubscriptionHandler(
             EventSubscriptionHandler<T> handler,

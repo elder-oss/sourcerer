@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Event event with metadata and related information, as read from an event repository.
+ * Event event with metadata and related information, as load from an event repository.
  *
  * @param <T> The (base) type of events wrapped.
  */
@@ -53,7 +53,7 @@ public final class EventRecord<T> {
 
     /**
      * Gets the version (event sequence number) for the given event stream. This number relates to
-     * the position of the events in the stream subscribed to or read from, which in the case of
+     * the position of the events in the stream subscribed to or load from, which in the case of
      * projections / aggregate streams, may be different from the version relative to the stream
      */
     public int getStreamVersion() {
@@ -63,7 +63,7 @@ public final class EventRecord<T> {
     /**
      * Gets the version (event sequence number) for the aggregate that the event relates to, i.e.
      * the original stream that the event was written to, as apposed to the event number on the
-     * stream it was read from. In the case of aggregate streams / projections, this may differ
+     * stream it was load from. In the case of aggregate streams / projections, this may differ
      * from the stream version.
      */
     public int getAggregateVersion() {

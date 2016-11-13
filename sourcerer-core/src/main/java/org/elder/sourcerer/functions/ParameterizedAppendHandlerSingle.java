@@ -1,7 +1,7 @@
 package org.elder.sourcerer.functions;
 
 import com.google.common.collect.ImmutableList;
-import org.elder.sourcerer.AggregateState;
+import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.OperationHandler;
 
 import java.util.List;
@@ -17,7 +17,7 @@ public interface ParameterizedAppendHandlerSingle<TParams, TEvent>
     TEvent executeSingle(TParams params);
 
     default List<? extends TEvent> execute(
-            final AggregateState<Object, TEvent> aggregateState,
+            final ImmutableAggregate<Object, TEvent> aggregate,
             final TParams params) {
         return ImmutableList.of(executeSingle(params));
     }

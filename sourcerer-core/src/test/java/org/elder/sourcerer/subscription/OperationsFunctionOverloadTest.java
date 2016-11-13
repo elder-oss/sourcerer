@@ -1,6 +1,6 @@
 package org.elder.sourcerer.subscription;
 
-import org.elder.sourcerer.AggregateState;
+import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.Operation;
 import org.elder.sourcerer.OperationHandler;
 import org.elder.sourcerer.OperationHandlerOperation;
@@ -17,10 +17,12 @@ import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
 import org.elder.sourcerer.functions.UpdateHandlerSingle;
+import org.elder.sourcerer.functions.UpdateHandlerState;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -108,6 +110,13 @@ public class OperationsFunctionOverloadTest {
     }
 
     @Test
+    public void testUpdateStateResolved() {
+        Operation<State, Object, Event> operation =
+                Operations.updateOf(this::updateState);
+        this.assertHandlerType(operation, UpdateHandlerState.class);
+    }
+
+    @Test
     public void testParameterizedUpdateResolved() {
         Operation<State, Params, Event> operation =
                 Operations.updateOf(this::parameterizedUpdate);
@@ -119,6 +128,13 @@ public class OperationsFunctionOverloadTest {
         Operation<State, Params, Event> operation =
                 Operations.updateOf(this::parameterizedUpdateSingle);
         this.assertHandlerType(operation, ParameterizedUpdateHandlerSingle.class);
+    }
+
+    @Test
+    public void testParameterizedUpdateStateResolved() {
+        Operation<State, Params, Event> operation =
+                Operations.updateOf(this::parameterizedUpdateState);
+        this.assertHandlerType(operation, ParameterizedUpdateHandlerState.class);
     }
 
     @Test
@@ -189,21 +205,31 @@ public class OperationsFunctionOverloadTest {
         return null;
     }
 
-    private List<Event> update(final AggregateState<State, Event> state) {
+    private List<Event> update(final ImmutableAggregate<State, Event> state) {
         return null;
     }
 
-    private Event updateSingle(final AggregateState<State, Event> state) {
+    private Event updateSingle(final ImmutableAggregate<State, Event> state) {
+        return null;
+    }
+
+    private ImmutableAggregate<State, Event> updateState(
+            final ImmutableAggregate<State, Event> state) {
         return null;
     }
 
     private List<Event> parameterizedUpdate(
-            final AggregateState<State, Event> state, final Params params) {
+            final ImmutableAggregate<State, Event> state, final Params params) {
         return null;
     }
 
     private Event parameterizedUpdateSingle(
-            final AggregateState<State, Event> state, final Params params) {
+            final ImmutableAggregate<State, Event> state, final Params params) {
+        return null;
+    }
+
+    private ImmutableAggregate<State, Event> parameterizedUpdateState(
+            final ImmutableAggregate<State, Event> state, final Params params) {
         return null;
     }
 

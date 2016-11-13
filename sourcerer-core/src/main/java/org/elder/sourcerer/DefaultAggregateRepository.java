@@ -1,5 +1,7 @@
 package org.elder.sourcerer;
 
+import com.google.common.base.Preconditions;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,12 +39,7 @@ public class DefaultAggregateRepository<TState, TEvent>
     }
 
     @Override
-    public AggregateProjection<TState, TEvent> getProjection() {
-        return projection;
-    }
-
-    @Override
-    public AggregateRecord<TState> read(final String aggregateId) {
+    public ImmutableAggregate<TState, TEvent> load(final String aggregateId) {
         TState aggregate = null;
         int currentStreamPosition = 0;
         while (true) { // Exit through return
@@ -53,7 +50,11 @@ public class DefaultAggregateRepository<TState, TEvent>
 
             if (readResult == null || readResult.getEvents().isEmpty()) {
                 // Not found, return empty wrapper as per contract
-                return new AggregateRecord<>(aggregateId, null, -1);
+                return new DefaultImmutableAggregate<>(
+                        projection,
+                        aggregateId,
+                        -1,
+                        null);
             }
 
             Iterable<TEvent> events = readResult
@@ -64,7 +65,11 @@ public class DefaultAggregateRepository<TState, TEvent>
             aggregate = projection.apply(aggregateId, aggregate, events);
 
             if (readResult.isEndOfStream()) {
-                return new AggregateRecord<>(aggregateId, aggregate, readResult.getLastVersion());
+                return new DefaultImmutableAggregate<>(
+                        projection,
+                        aggregateId,
+                        readResult.getLastVersion(),
+                        aggregate);
             }
 
             currentStreamPosition = readResult.getNextVersion();
@@ -76,7 +81,7 @@ public class DefaultAggregateRepository<TState, TEvent>
     }
 
     @Override
-    public int update(
+    public int append(
             final String aggregateId,
             final Iterable<? extends TEvent> events,
             final ExpectedVersion expectedVersion,
@@ -90,6 +95,34 @@ public class DefaultAggregateRepository<TState, TEvent>
                         e))
                 .collect(Collectors.toList());
         return eventRepository.append(aggregateId, eventDatas, expectedVersion);
+    }
+
+    @Override
+    public ImmutableAggregate<TState, TEvent> save(
+            @NotNull final AggregateState<TState, TEvent> aggregateState,
+            final boolean atomic,
+            final Map<String, String> metadata) {
+        Preconditions.checkNotNull(aggregateState);
+        ExpectedVersion expectedVersion;
+        if (atomic) {
+            if (aggregateState.originalVersion() == -1) {
+                expectedVersion = ExpectedVersion.notCreated();
+            } else {
+                expectedVersion = ExpectedVersion.exactly(aggregateState.originalVersion());
+            }
+        } else {
+            expectedVersion = ExpectedVersion.any();
+        }
+        int newVersion = append(
+                aggregateState.id(),
+                aggregateState.events(),
+                expectedVersion,
+                metadata);
+        return new DefaultImmutableAggregate<>(
+                projection,
+                aggregateState.id(),
+                newVersion,
+                aggregateState.state());
     }
 
     private String getEventType(final TEvent event) {

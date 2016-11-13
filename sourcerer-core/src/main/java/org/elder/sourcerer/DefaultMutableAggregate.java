@@ -5,70 +5,67 @@ import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Default sourcerer implementation of AggregateState.
- */
-public class DefaultAggregateState<TState, TEvent> implements AggregateState<TState, TEvent> {
+public class DefaultMutableAggregate<TState, TEvent>
+        implements MutableAggregate<TState, TEvent> {
     private final AggregateProjection<TState, TEvent> projection;
     private final String id;
     private final TState originalState;
-    private final TState state;
-    private final ImmutableList<TEvent> appliedEvents;
+    private final int originalVersion;
+    private TState state;
+    private final List<TEvent> appliedEvents;
 
-    public DefaultAggregateState(
+    public DefaultMutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
+            final int originalVersion,
             @Nullable final TState originalState) {
-        this(projection, id, originalState, null, ImmutableList.of());
+        this(projection, id, originalVersion, originalState, originalState, ImmutableList.of());
     }
 
-    public DefaultAggregateState(
+    public DefaultMutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
+            final int originalVersion,
             @Nullable final TState originalState,
             @Nullable final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
         Preconditions.checkNotNull(id);
+        Preconditions.checkNotNull(state);
         Preconditions.checkNotNull(events);
         this.projection = projection;
         this.id = id;
+        this.originalVersion = originalVersion;
         this.originalState = originalState;
         this.state = state;
-        this.appliedEvents = ImmutableList.copyOf(events);
+        this.appliedEvents = new ArrayList<>(events);
     }
 
-    @NotNull
     @Override
-    public AggregateState<TState, TEvent> apply(@NotNull final TEvent event) {
+    public void apply(@NotNull final TEvent event) {
         Preconditions.checkNotNull(event);
-        @NotNull TState newState = projection.apply(id, state, event);
-        return new DefaultAggregateState<>(
-                projection,
-                id,
-                originalState,
-                newState,
-                ImmutableList.<TEvent>builder().addAll(appliedEvents).add(event).build());
+        state = projection.apply(id, state, event);
+        appliedEvents.add(event);
     }
 
-    @NotNull
     @Override
-    public AggregateState<TState, TEvent> apply(@NotNull final Iterable<? extends TEvent> events) {
+    public void apply(@NotNull final Iterable<? extends TEvent> events) {
         Preconditions.checkNotNull(events);
-        @NotNull TState newState = projection.apply(id, state, events);
-        return new DefaultAggregateState<>(
-                projection,
-                id,
-                originalState,
-                newState,
-                ImmutableList.<TEvent>builder().addAll(appliedEvents).addAll(events).build());
+        state = projection.apply(id, state, events);
+        events.forEach(appliedEvents::add);
     }
 
     @Override
     public String id() {
         return id;
+    }
+
+    @Override
+    public int originalVersion() {
+        return originalVersion;
     }
 
     @Nullable
@@ -77,7 +74,7 @@ public class DefaultAggregateState<TState, TEvent> implements AggregateState<TSt
         return originalState;
     }
 
-    @NotNull
+    @Nullable
     @Override
     public TState state() {
         return state;
@@ -86,14 +83,26 @@ public class DefaultAggregateState<TState, TEvent> implements AggregateState<TSt
     @NotNull
     @Override
     public List<TEvent> events() {
-        return appliedEvents;
+        return ImmutableList.copyOf(appliedEvents);
     }
 
     @Override
-    public MutableAggregateState<TState, TEvent> toMutable() {
-        return new DefaultMutableAggregateState<>(
+    public ImmutableAggregate<TState, TEvent> toImmutableAggregate() {
+        return new DefaultImmutableAggregate<>(
                 projection,
                 id,
+                originalVersion,
+                originalState,
+                state,
+                appliedEvents);
+    }
+
+    @Override
+    public MutableAggregate<TState, TEvent> toMutableAggregate() {
+        return new DefaultMutableAggregate<>(
+                projection,
+                id,
+                originalVersion,
                 originalState,
                 state,
                 appliedEvents);

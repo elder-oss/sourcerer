@@ -1,6 +1,6 @@
 package org.elder.sourcerer.functions;
 
-import org.elder.sourcerer.AggregateState;
+import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.OperationHandler;
 
 import java.util.List;
@@ -11,7 +11,7 @@ public interface ParameterizedConstructorHandler<TParams, TEvent>
     List<? extends TEvent> execute(TParams params);
 
     default List<? extends TEvent> execute(
-            final AggregateState<Object, TEvent> aggregateState,
+            final ImmutableAggregate<Object, TEvent> aggregate,
             final TParams params) {
         return execute(params);
     }

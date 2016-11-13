@@ -40,7 +40,7 @@ final class SessionSubscriber<T> {
                     break;
                 default:
                     throw new IllegalArgumentException(
-                            "Unrecognized event update type: " + update.getUpdateType());
+                            "Unrecognized event append type: " + update.getUpdateType());
             }
         } catch (InterruptedException ex) {
             logger.warn("Session subscriber thread interrupted", ex);

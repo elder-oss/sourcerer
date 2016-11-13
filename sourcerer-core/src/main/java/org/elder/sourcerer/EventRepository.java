@@ -8,13 +8,13 @@ public interface EventRepository<T> {
     /**
      * Reads all events for a given stream id from a given version and onwards.
      *
-     * @param streamId  The id of the stream to read events for.
-     * @param version   The version to read events from. Versions are monotonically increasing
+     * @param streamId  The id of the stream to load events for.
+     * @param version   The version to load events from. Versions are monotonically increasing
      *                  starting with 0, specifying a version of 0 is equivalent to reading the
      *                  events from the beginning of the stream.
-     * @param maxEvents The maximum number of events to read in one go. Note that this may be
+     * @param maxEvents The maximum number of events to load in one go. Note that this may be
      *                  truncated to a lower number by the implementation, it is not safe to assume
-     *                  that a successful read will have this many events, even if they are present
+     *                  that a successful load will have this many events, even if they are present
      *                  in the underlying event store.
      * @return An immutable list of all events for a given stream, each event annotated with
      * additional information such as its version, unique id, and metadata - or null if no stream
@@ -26,8 +26,8 @@ public interface EventRepository<T> {
      * Reads all events for a given stream id from a given version and onwards, with no specified
      * upper bound on the number of events returned.
      *
-     * @param streamId The id of the stream to read events for.
-     * @param version  The version to read events from. Versions are monotonically increasing
+     * @param streamId The id of the stream to load events for.
+     * @param version  The version to load events from. Versions are monotonically increasing
      *                 starting with 0, specifying a version of 0 is equivalent to reading the
      *                 events from the beginning of the stream.
      * @return An immutable list of all events for a given stream, each event annotated with
@@ -41,7 +41,7 @@ public interface EventRepository<T> {
     /**
      * Reads all events for a given stream id from the beginning.
      *
-     * @param streamId The id of the stream to read events for.
+     * @param streamId The id of the stream to load events for.
      * @return An immutable list of all events for a given stream, each event annotated with
      * additional information such as its version, unique id, and metadata - or null if no stream
      * with the given id is found.

@@ -26,13 +26,13 @@ public interface OperationHandler<TState, TParams, TEvent> {
      * related to the aggregate it operates on other than in the form of returning events, and does
      * need to be written to support retries.
      *
-     * @param aggregateState The aggregate that the operation is executed on.
+     * @param immutableAggregate The aggregate that the operation is executed on.
      * @param params         The arguments applied to the operation.
-     * @return A list of events to be applied to the aggregate to update its state, may be empty if
+     * @return A list of events to be applied to the aggregate to append its state, may be empty if
      * the operation is a no-op, must not be null,
      */
     @NotNull
     List<? extends TEvent> execute(
-            @Nullable AggregateState<TState, TEvent> aggregateState,
+            @Nullable ImmutableAggregate<TState, TEvent> immutableAggregate,
             @Nullable TParams params);
 }

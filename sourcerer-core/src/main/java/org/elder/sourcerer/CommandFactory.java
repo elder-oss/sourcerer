@@ -15,7 +15,7 @@ public interface CommandFactory<TAggregate, TEvent> {
      *                  create a command from.
      * @param <TParams> The type of parameters required by the operation. If no parameters are
      *                  required, use Void.
-     * @return A Command instance that can be further configured and ultimated run to update a
+     * @return A Command instance that can be further configured and ultimated run to append a
      * single aggregate from this repository.
      */
     <TParams> Command<TAggregate, TParams, TEvent> fromOperation(

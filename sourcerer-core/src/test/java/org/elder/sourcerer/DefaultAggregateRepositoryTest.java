@@ -41,24 +41,27 @@ public class DefaultAggregateRepositoryTest {
 
     @Test
     public void readReturnsRecordWithNullOnNullStream() throws Exception {
-        returnsRecordWithNullOn(null);
+        returnsAggregateWithNullStateOn(null);
     }
 
     @Test
     public void readReturnsNullOnEmptyStream() throws Exception {
-        returnsRecordWithNullOn(ImmutableList.of());
+        returnsAggregateWithNullStateOn(
+                new EventReadResult(
+                        ImmutableList.of(),
+                        0, 10, 11, false));
     }
 
-    private void returnsRecordWithNullOn(final List<EventRecord<TestEvent>> readEventsResult) {
-        when(eventRepository.read(any())).thenReturn(null);
-
-        AggregateRecord<TestState> aggregate = repository.read(AGGREGATE_ID_1);
+    private void returnsAggregateWithNullStateOn(
+            final EventReadResult readEventsResult) {
+        when(eventRepository.read(any())).thenReturn(readEventsResult);
+        ImmutableAggregate<TestState, TestEvent> aggregate = repository.load(AGGREGATE_ID_1);
 
         verify(eventRepository).read(AGGREGATE_ID_1, 0);
         verifyNoMoreInteractions(eventRepository);
         Assert.assertNotNull(aggregate);
-        Assert.assertNull(aggregate.getAggregate());
-        Assert.assertEquals(-1, aggregate.getVersion());
+        Assert.assertNull(aggregate.state());
+        Assert.assertEquals(-1, aggregate.originalVersion());
     }
 
     @Test
@@ -79,7 +82,7 @@ public class DefaultAggregateRepositoryTest {
         when(eventRepository.read(any(), anyInt())).thenReturn(repositoryResult);
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
 
-        AggregateRecord<TestState> result = repository.read(AGGREGATE_ID_1);
+        ImmutableAggregate<TestState, TestEvent> result = repository.load(AGGREGATE_ID_1);
 
         verify(eventRepository).read(AGGREGATE_ID_1, 0);
         ArgumentCaptor<Iterable<TestEvent>> passedEvents
@@ -90,7 +93,7 @@ public class DefaultAggregateRepositoryTest {
                 org.hamcrest.Matchers.contains(expectedEvents.toArray()));
 
         verifyNoMoreInteractions(eventRepository, aggregateProjection);
-        Assert.assertEquals(expectedState, result.getAggregate());
+        Assert.assertEquals(expectedState, result.state());
     }
 
     @Test
@@ -100,7 +103,7 @@ public class DefaultAggregateRepositoryTest {
         when(eventRepository.append(any(), anyList(), any())).thenReturn(newVersion);
 
         int actualNewVersion
-                = repository.update(AGGREGATE_ID_1, new TestEvent("test"), expectedVersion);
+                = repository.append(AGGREGATE_ID_1, new TestEvent("test"), expectedVersion);
 
         verify(eventRepository).append(eq(AGGREGATE_ID_1), anyList(), eq(expectedVersion));
         Assert.assertEquals(newVersion, actualNewVersion);
@@ -112,7 +115,7 @@ public class DefaultAggregateRepositoryTest {
 
         when(eventRepository.append(any(), anyList(), any())).thenReturn(42);
 
-        repository.update(AGGREGATE_ID_1, events, ExpectedVersion.any());
+        repository.append(AGGREGATE_ID_1, events, ExpectedVersion.any());
 
         ArgumentCaptor<List<EventData<TestEvent>>> passedEvents
                 = ArgumentCaptor.forClass((Class) List.class);
@@ -154,7 +157,7 @@ public class DefaultAggregateRepositoryTest {
                 repositoryResult2);
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
 
-        repository.read(AGGREGATE_ID_1);
+        repository.load(AGGREGATE_ID_1);
         verify(aggregateProjection, times(2)).apply(any(), any(), (Iterable) any());
         verify(eventRepository).read(AGGREGATE_ID_1, 0);
         verify(eventRepository).read(AGGREGATE_ID_1, 2);

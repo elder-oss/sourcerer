@@ -174,7 +174,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
                     logger.debug("Subscription error, signalling", update.getError());
                     throw new DownstreamSubscriptionException(update.getError());
                 default:
-                    throw new IllegalArgumentException("Unknown update type");
+                    throw new IllegalArgumentException("Unknown append type");
             }
         }
 
@@ -192,19 +192,19 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
             final BlockingQueue<Update<T>> updatesQueue) throws InterruptedException {
         Update<T> update = updatesQueue.poll(1000, TimeUnit.MILLISECONDS);
         if (update != null) {
-            // We have at least one pending update, check if there's more!
+            // We have at least one pending append, check if there's more!
             List<Update<T>> updatesBatch = new ArrayList<>();
             updatesBatch.add(update);
             if (updatesQueue.peek() != null) {
-                logger.debug("Subscription received update, queue not empty, draining ...");
+                logger.debug("Subscription received append, queue not empty, draining ...");
                 updatesQueue.drainTo(updatesBatch);
             } else {
-                logger.debug("Subscription received single update");
+                logger.debug("Subscription received single append");
             }
             return updatesBatch;
         } else {
             // Nothing pending, nothing to see here
-            logger.trace("No update (yet)");
+            logger.trace("No append (yet)");
             return null;
         }
     }
