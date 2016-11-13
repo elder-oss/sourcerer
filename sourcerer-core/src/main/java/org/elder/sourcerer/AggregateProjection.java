@@ -70,7 +70,7 @@ public interface AggregateProjection<TState, TEvent> {
     default @NotNull TState apply(
             @NotNull final String id,
             @Nullable TState state,
-            @NotNull final Iterable<TEvent> events) {
+            @NotNull final Iterable<? extends TEvent> events) {
         for (TEvent e : events) {
             state = apply(id, state, e);
         }
