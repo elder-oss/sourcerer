@@ -34,7 +34,7 @@ public interface AggregateState<TState, TEvent> {
      * event applied, together with the list of applied events.
      */
     @NotNull
-    AggregateState<TState, TEvent> apply(TEvent event);
+    AggregateState<TState, TEvent> apply(@NotNull TEvent event);
 
     /**
      * Applies a list of events to the aggregate state, updating both the encapsulated state,
@@ -44,7 +44,7 @@ public interface AggregateState<TState, TEvent> {
      * event applied, together with the list of applied events.
      */
     @NotNull
-    AggregateState<TState, TEvent> apply(Iterable<? extends TEvent> events);
+    AggregateState<TState, TEvent> apply(@NotNull Iterable<? extends TEvent> events);
 
     /**
      * Gets the id of the aggregate being operated on. The id will never be updated by events

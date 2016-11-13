@@ -30,6 +30,7 @@ public class DefaultCommandTest {
     @Before
     public void setUp() {
         this.repository = mock(AggregateRepository.class);
+        when(repository.getProjection()).thenReturn(mock(AggregateProjection.class));
     }
 
     @Test(expected = InvalidCommandException.class)

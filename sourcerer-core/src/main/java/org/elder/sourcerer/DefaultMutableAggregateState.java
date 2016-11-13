@@ -17,18 +17,18 @@ public class DefaultMutableAggregateState<TState, TEvent>
     private final List<TEvent> appliedEvents;
 
     public DefaultMutableAggregateState(
-            @NotNull AggregateProjection<TState, TEvent> projection,
-            @NotNull String id,
-            @Nullable TState originalState) {
+            @NotNull final AggregateProjection<TState, TEvent> projection,
+            @NotNull final String id,
+            @Nullable final TState originalState) {
         this(projection, id, originalState, null, ImmutableList.of());
     }
 
     public DefaultMutableAggregateState(
-            @NotNull AggregateProjection<TState, TEvent> projection,
-            @NotNull String id,
-            @Nullable TState originalState,
-            @Nullable TState state,
-            @NotNull List<TEvent> events) {
+            @NotNull final AggregateProjection<TState, TEvent> projection,
+            @NotNull final String id,
+            @Nullable final TState originalState,
+            @Nullable final TState state,
+            @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
         Preconditions.checkNotNull(id);
         Preconditions.checkNotNull(state);
@@ -41,13 +41,15 @@ public class DefaultMutableAggregateState<TState, TEvent>
     }
 
     @Override
-    public void apply(TEvent event) {
+    public void apply(@NotNull final TEvent event) {
+        Preconditions.checkNotNull(event);
         state = projection.apply(id, state, event);
         appliedEvents.add(event);
     }
 
     @Override
-    public void apply(Iterable<? extends TEvent> events) {
+    public void apply(@NotNull final Iterable<? extends TEvent> events) {
+        Preconditions.checkNotNull(events);
         state = projection.apply(id, state, events);
         events.forEach(appliedEvents::add);
     }

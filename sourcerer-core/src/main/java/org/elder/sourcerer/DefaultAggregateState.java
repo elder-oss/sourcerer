@@ -18,21 +18,20 @@ public class DefaultAggregateState<TState, TEvent> implements AggregateState<TSt
     private final ImmutableList<TEvent> appliedEvents;
 
     public DefaultAggregateState(
-            @NotNull AggregateProjection<TState, TEvent> projection,
-            @NotNull String id,
-            @Nullable TState originalState) {
+            @NotNull final AggregateProjection<TState, TEvent> projection,
+            @NotNull final String id,
+            @Nullable final TState originalState) {
         this(projection, id, originalState, null, ImmutableList.of());
     }
 
     public DefaultAggregateState(
-            @NotNull AggregateProjection<TState, TEvent> projection,
-            @NotNull String id,
-            @Nullable TState originalState,
-            @Nullable TState state,
-            @NotNull List<TEvent> events) {
+            @NotNull final AggregateProjection<TState, TEvent> projection,
+            @NotNull final String id,
+            @Nullable final TState originalState,
+            @Nullable final TState state,
+            @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
         Preconditions.checkNotNull(id);
-        Preconditions.checkNotNull(state);
         Preconditions.checkNotNull(events);
         this.projection = projection;
         this.id = id;
@@ -43,7 +42,8 @@ public class DefaultAggregateState<TState, TEvent> implements AggregateState<TSt
 
     @NotNull
     @Override
-    public AggregateState<TState, TEvent> apply(TEvent event) {
+    public AggregateState<TState, TEvent> apply(@NotNull final TEvent event) {
+        Preconditions.checkNotNull(event);
         @NotNull TState newState = projection.apply(id, state, event);
         return new DefaultAggregateState<>(
                 projection,
@@ -55,7 +55,8 @@ public class DefaultAggregateState<TState, TEvent> implements AggregateState<TSt
 
     @NotNull
     @Override
-    public AggregateState<TState, TEvent> apply(Iterable<? extends TEvent> events) {
+    public AggregateState<TState, TEvent> apply(@NotNull final Iterable<? extends TEvent> events) {
+        Preconditions.checkNotNull(events);
         @NotNull TState newState = projection.apply(id, state, events);
         return new DefaultAggregateState<>(
                 projection,
