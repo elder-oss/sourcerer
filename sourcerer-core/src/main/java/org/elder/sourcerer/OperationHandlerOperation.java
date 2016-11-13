@@ -67,4 +67,8 @@ public class OperationHandlerOperation<TState, TParams, TEvent>
     public boolean atomic() {
         return atomic;
     }
+
+    public OperationHandler<TState, TParams, TEvent> handler() {
+        return handler;
+    }
 }
