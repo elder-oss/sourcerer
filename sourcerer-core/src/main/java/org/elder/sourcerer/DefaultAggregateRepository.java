@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Default implementation of AggregateRepository, expressed in terms of EventRepository, and
@@ -36,6 +37,11 @@ public class DefaultAggregateRepository<TState, TEvent>
     }
 
     @Override
+    public AggregateProjection<TState, TEvent> getProjection() {
+        return projection;
+    }
+
+    @Override
     public AggregateRecord<TState> read(final String aggregateId) {
         TState aggregate = null;
         int currentStreamPosition = 0;
@@ -47,7 +53,7 @@ public class DefaultAggregateRepository<TState, TEvent>
 
             if (readResult == null || readResult.getEvents().isEmpty()) {
                 // Not found, return empty wrapper as per contract
-                return new AggregateRecord<>(null, -1);
+                return new AggregateRecord<>(aggregateId, null, -1);
             }
 
             Iterable<TEvent> events = readResult
@@ -58,7 +64,7 @@ public class DefaultAggregateRepository<TState, TEvent>
             aggregate = projection.apply(aggregateId, aggregate, events);
 
             if (readResult.isEndOfStream()) {
-                return new AggregateRecord<>(aggregate, readResult.getLastVersion());
+                return new AggregateRecord<>(aggregateId, aggregate, readResult.getLastVersion());
             }
 
             currentStreamPosition = readResult.getNextVersion();
@@ -72,11 +78,11 @@ public class DefaultAggregateRepository<TState, TEvent>
     @Override
     public int update(
             final String aggregateId,
-            final List<? extends TEvent> events,
+            final Iterable<? extends TEvent> events,
             final ExpectedVersion expectedVersion,
             final Map<String, String> metadata) {
-        List<EventData<TEvent>> eventDatas = events
-                .stream()
+        List<EventData<TEvent>> eventDatas = StreamSupport
+                .stream(events.spliterator(), false)
                 .map(e -> new EventData<TEvent>(
                         getEventType(e),
                         UUID.randomUUID(),

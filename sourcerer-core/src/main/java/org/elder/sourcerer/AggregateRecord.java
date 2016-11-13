@@ -1,5 +1,9 @@
 package org.elder.sourcerer;
 
+import com.google.common.base.Preconditions;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * An AggregateRecord is an immutable representation of a snapshot in time of an aggregate as
  * constructed from events, along with additional metadata about the aggregate such as the current
@@ -15,12 +19,25 @@ package org.elder.sourcerer;
  * @param <T> the type of aggregate that this class is describing
  */
 public class AggregateRecord<T> {
+    private final String id;
     private final T aggregate;
     private final int version;
 
-    public AggregateRecord(final T aggregate, final int version) {
+    public AggregateRecord(
+            @NotNull final String id,
+            @Nullable final T aggregate,
+            final int version) {
+        Preconditions.checkNotNull(id);
+        this.id = id;
         this.aggregate = aggregate;
         this.version = version;
+    }
+
+    /**
+     * Gets the id of the wrapped aggregate.
+     */
+    public String getId() {
+        return id;
     }
 
     /**
@@ -29,7 +46,6 @@ public class AggregateRecord<T> {
     public T getAggregate() {
         return aggregate;
     }
-
 
     /**
      * Gets the current version of the aggregate. The version can be set as the expected version

@@ -23,9 +23,17 @@ public class DefaultCommandFactory<TAggregate, TEvent>
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <TParams> Command<TAggregate, TParams, TEvent> fromOperation(
             final Operation<? super TAggregate, ? super TParams, ? extends TEvent> operation) {
-        Command<TAggregate, TParams, TEvent> command = new DefaultCommand<>(repository, operation);
+        // HACK: We know this case is safe based on how we use these interfaces, having the
+        // wildcard types bubble through everywhere makes the code very ugly however - this is the
+        // point where we convert from operation types that may use other concrete types for state
+        // and parameters, into the one we know is applicable to our aggregate repository.
+        Operation<TAggregate, TParams, TEvent> typeHackedOperation =
+                (Operation<TAggregate, TParams, TEvent>) operation;
+        Command<TAggregate, TParams, TEvent> command =
+                new DefaultCommand<TAggregate, TParams, TEvent>(repository, typeHackedOperation);
         for (CommandPostProcessor postProcessor : postProcessors) {
             postProcessor.postProcessCommand(command);
         }

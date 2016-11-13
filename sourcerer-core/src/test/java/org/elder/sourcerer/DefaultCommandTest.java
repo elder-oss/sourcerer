@@ -58,7 +58,8 @@ public class DefaultCommandTest {
                 false,
                 false,
                 ExpectedVersion.notCreated());
-        when(repository.read(any())).thenReturn(new AggregateRecord(new TestState("test"), 42));
+        when(repository.read(any()))
+                .thenReturn(new AggregateRecord(AGGREGATE_ID, new TestState("test"), 42));
         DefaultCommand command = new DefaultCommand(repository, operation);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
@@ -77,7 +78,7 @@ public class DefaultCommandTest {
                 true,
                 false,
                 ExpectedVersion.any());
-        when(repository.read(any())).thenReturn(new AggregateRecord(null, -1));
+        when(repository.read(any())).thenReturn(new AggregateRecord("id", null, -1));
         when(repository.update(any(), any(), any(), any())).thenReturn(newVersion);
         DefaultCommand command = new DefaultCommand(repository, operation);
         command.setAggregateId(AGGREGATE_ID);
@@ -105,7 +106,8 @@ public class DefaultCommandTest {
                 false,
                 false,
                 ExpectedVersion.notCreated());
-        when(repository.read(any())).thenReturn(new AggregateRecord(new TestState("test"), 42));
+        when(repository.read(any()))
+                .thenReturn(new AggregateRecord(AGGREGATE_ID, new TestState("test"), 42));
         DefaultCommand command = new DefaultCommand(repository, operation);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
@@ -127,7 +129,8 @@ public class DefaultCommandTest {
                 ExpectedVersion.any());
 
         DefaultCommand command = new DefaultCommand(repository, operation);
-        when(repository.read(any())).thenReturn(new AggregateRecord(new TestState("test"), 42));
+        when(repository.read(any()))
+                .thenReturn(new AggregateRecord(AGGREGATE_ID, new TestState("test"), 42));
         command.setAggregateId(AGGREGATE_ID);
         command.run();
 
@@ -146,7 +149,8 @@ public class DefaultCommandTest {
                 ExpectedVersion.any());
 
         DefaultCommand command = new DefaultCommand(repository, operation);
-        when(repository.read(any())).thenReturn(new AggregateRecord(new TestState("test"), 42));
+        when(repository.read(any()))
+                .thenReturn(new AggregateRecord(AGGREGATE_ID, new TestState("test"), 42));
         when(repository.update(any(), any(), any(), any())).thenReturn(newVersion);
 
         command.setAggregateId(AGGREGATE_ID);

@@ -1,7 +1,6 @@
 package org.elder.sourcerer.functions;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.elder.sourcerer.AggregateState;
 import org.elder.sourcerer.OperationHandler;
 
@@ -16,14 +15,14 @@ import java.util.List;
  * have the same version as when the aggregate was read.
  */
 @FunctionalInterface
-public interface UpdateHandlerSingle<TState, TEvent>
-        extends OperationHandler<TState, Object, TEvent> {
-    TEvent executeSingle(AggregateState<TState, TEvent> aggregateState);
+public interface ParameterizedPojoUpdateHandler<TState, TParams, TEvent>
+        extends OperationHandler<TState, TParams, TEvent> {
+    List<? extends TEvent> execute(TState state, TParams params);
 
     default List<? extends TEvent> execute(
             final AggregateState<TState, TEvent> aggregateState,
-            final Object params) {
+            final TParams params) {
         Preconditions.checkNotNull(aggregateState);
-        return ImmutableList.of(executeSingle(aggregateState));
+        return execute(aggregateState.state(), params);
     }
 }

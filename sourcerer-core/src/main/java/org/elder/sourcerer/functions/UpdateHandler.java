@@ -1,5 +1,7 @@
 package org.elder.sourcerer.functions;
 
+import com.google.common.base.Preconditions;
+import org.elder.sourcerer.AggregateState;
 import org.elder.sourcerer.OperationHandler;
 
 import java.util.List;
@@ -14,9 +16,12 @@ import java.util.List;
  */
 @FunctionalInterface
 public interface UpdateHandler<TState, TEvent> extends OperationHandler<TState, Object, TEvent> {
-    List<? extends TEvent> execute(TState state);
+    List<? extends TEvent> execute(AggregateState<TState, TEvent> aggregateState);
 
-    default List<? extends TEvent> execute(final TState state, final Object params) {
-        return execute(state);
+    default List<? extends TEvent> execute(
+            final AggregateState<TState, TEvent> aggregateState,
+            final Object params) {
+        Preconditions.checkNotNull(aggregateState);
+        return execute(aggregateState);
     }
 }

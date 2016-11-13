@@ -42,8 +42,10 @@ public class OperationHandlerOperation<TState, TParams, TEvent>
     }
 
     @Override
-    public List<? extends TEvent> execute(final TState state, final TParams params) {
-        return handler.execute(state, params);
+    public List<? extends TEvent> execute(
+            final AggregateState<TState, TEvent> aggregateState,
+            final TParams params) {
+        return handler.execute(aggregateState, params);
     }
 
     @Override

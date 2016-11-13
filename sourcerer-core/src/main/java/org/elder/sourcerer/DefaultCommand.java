@@ -1,5 +1,6 @@
 package org.elder.sourcerer;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
@@ -19,8 +20,9 @@ import java.util.Map;
 public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, TParams, TEvent> {
     private static final Logger logger = LoggerFactory.getLogger(DefaultCommand.class);
     private final AggregateRepository<TState, TEvent> repository;
+    private final AggregateStateFactory<TState, TEvent> stateFactory;
     private final Map<String, String> metadata;
-    private Operation<? super TState, ? super TParams, ? extends TEvent> operation;
+    private final Operation<TState, TParams, TEvent> operation;
     private boolean atomic = true;
     private boolean idempotentCreate = false;
     private String aggregateId = null;
@@ -29,9 +31,22 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     private List<MetadataDecorator> metadataDecorators;
 
     public DefaultCommand(
-            final AggregateRepository<TState, TEvent> repository,
-            final Operation<? super TState, ? super TParams, ? extends TEvent> operation) {
+            @NotNull final AggregateRepository<TState, TEvent> repository,
+            @NotNull final Operation<TState, TParams, TEvent> operation) {
+        this(repository,
+                new DefaultAggregateStateFactory<>(repository.getProjection()),
+                operation);
+    }
+
+    public DefaultCommand(
+            @NotNull final AggregateRepository<TState, TEvent> repository,
+            @NotNull final AggregateStateFactory<TState, TEvent> stateFactory,
+            @NotNull final Operation<TState, TParams, TEvent> operation) {
+        Preconditions.checkNotNull(repository);
+        Preconditions.checkNotNull(stateFactory);
+        Preconditions.checkNotNull(operation);
         this.repository = repository;
+        this.stateFactory = stateFactory;
         this.operation = operation;
         this.atomic = operation.atomic();
         this.metadata = new HashMap<>();
@@ -87,8 +102,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             throw new InvalidCommandException("No aggregate id specified");
         }
         if (operation.requiresArguments() && arguments == null) {
-            throw new InvalidCommandException(
-                    "No arguments specified to command that requires " + "arguments");
+            throw new InvalidCommandException("No arguments specified to command that requires "
+                                              + "arguments");
         }
 
         // Try to calculate effective expected version - will validate combinations
@@ -103,8 +118,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         logger.debug("Running command on {}", aggregateId);
         validate();
 
-        ExpectedVersion effectiveExpectedVersion
-                = getEffectiveExpectedVersion(expectedVersion, operation.expectedVersion());
+        ExpectedVersion effectiveExpectedVersion =
+                getEffectiveExpectedVersion(expectedVersion, operation.expectedVersion());
         logger.debug("Expected version set as {}", effectiveExpectedVersion);
 
         // Read the aggregate if needed
@@ -117,8 +132,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         }
 
         TState aggregate = aggregateRecord == null ? null : aggregateRecord.getAggregate();
-        logger.debug(
-                "Current state of aggregate is {}",
+        logger.debug("Current state of aggregate is {}",
                 aggregateRecord == null
                         ? "<not created>"
                         : "version " + aggregateRecord.getVersion());
@@ -126,22 +140,25 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         // Bail out early if idempotent create, and already present
         if (idempotentCreate && aggregateRecord != null && aggregateRecord.getAggregate() != null) {
             logger.debug("Bailing out early as already created (and idempotent create set)");
-            return new CommandResult<>(
-                    aggregateId,
+            return new CommandResult<>(aggregateId,
                     aggregateRecord.getVersion(),
                     aggregateRecord.getVersion(),
                     ImmutableList.of());
         }
 
         // Execute the command handler
-        List<? extends TEvent> operationEvents = operation.execute(aggregate, arguments);
-        ImmutableList<? extends TEvent> events
-                = ImmutableList.copyOf(operationEvents.stream().iterator());
+
+        AggregateState<TState, TEvent> aggregateState =
+                aggregateRecord != null ? stateFactory.fromState(
+                        aggregateId,
+                        aggregateRecord.getAggregate()) : null;
+        List<? extends TEvent> operationEvents = operation.execute(aggregateState, arguments);
+        ImmutableList<? extends TEvent> events =
+                ImmutableList.copyOf(operationEvents.stream().iterator());
 
         if (events.isEmpty()) {
             logger.debug("Operation is no-op, bailing early");
-            return new CommandResult<>(
-                    aggregateId,
+            return new CommandResult<>(aggregateId,
                     aggregateRecord != null ? aggregateRecord.getVersion() : null,
                     aggregateRecord != null ? aggregateRecord.getVersion() : null,
                     events);
@@ -180,11 +197,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         }
 
         try {
-            int newVersion = repository.update(
-                    aggregateId,
-                    events,
-                    updateExpectedVersion,
-                    metadata);
+            int newVersion =
+                    repository.update(aggregateId, events, updateExpectedVersion, metadata);
             // It may be nice to sanity check here by using the expected version explicitly, but
             // this works regardless of whether we have a specific expected version ...
             // Will return -1 if we just created the stream, which is fine
@@ -196,8 +210,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             // a stream and not fail if the same stream is attempted to be created on replays.
             if (idempotentCreate) {
                 logger.debug("Idempotent create enabled, ignoring existing stream");
-                return new CommandResult<>(
-                        aggregateId,
+                return new CommandResult<>(aggregateId,
                         ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
                         ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
                         ImmutableList.of());
@@ -213,8 +226,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         try {
             return ExpectedVersion.merge(commandExpectedVersion, operationExpectedVersion);
         } catch (ConflictingExpectedVersionsException ex) {
-            throw new InvalidCommandException(
-                    "Conflicting expected version constraints: " + ex.getMessage(), ex);
+            throw new InvalidCommandException("Conflicting expected version constraints: "
+                                              + ex.getMessage(), ex);
         }
     }
 
@@ -233,23 +246,20 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 }
                 break;
             case EXACTLY:
-                if (aggregateRecord.getVersion()
-                        != effectiveExpectedVersion.getExpectedVersion()) {
-                    throw new UnexpectedVersionException(
-                            aggregateRecord.getVersion(),
+                if (aggregateRecord.getVersion() != effectiveExpectedVersion.getExpectedVersion()) {
+                    throw new UnexpectedVersionException(aggregateRecord.getVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             case NOT_CREATED:
                 if (aggregateRecord.getAggregate() != null && !idempotentCreate) {
-                    throw new UnexpectedVersionException(
-                            aggregateRecord.getVersion(),
+                    throw new UnexpectedVersionException(aggregateRecord.getVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             default:
-                throw new IllegalArgumentException(
-                        "Unrecognized expected version type " + effectiveExpectedVersion.getType());
+                throw new IllegalArgumentException("Unrecognized expected version type "
+                                                   + effectiveExpectedVersion.getType());
         }
         return aggregateRecord;
     }

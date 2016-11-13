@@ -16,14 +16,14 @@ import java.util.List;
  * have the same version as when the aggregate was read.
  */
 @FunctionalInterface
-public interface UpdateHandlerSingle<TState, TEvent>
-        extends OperationHandler<TState, Object, TEvent> {
-    TEvent executeSingle(AggregateState<TState, TEvent> aggregateState);
+public interface ParameterizedPojoUpdateHandlerSingle<TState, TParams, TEvent>
+        extends OperationHandler<TState, TParams, TEvent> {
+    TEvent executeSingle(TState state, TParams params);
 
     default List<? extends TEvent> execute(
             final AggregateState<TState, TEvent> aggregateState,
-            final Object params) {
+            final TParams params) {
         Preconditions.checkNotNull(aggregateState);
-        return ImmutableList.of(executeSingle(aggregateState));
+        return ImmutableList.of(executeSingle(aggregateState.state(), params));
     }
 }

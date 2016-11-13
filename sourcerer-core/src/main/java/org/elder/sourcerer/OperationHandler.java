@@ -1,5 +1,8 @@
 package org.elder.sourcerer;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -23,10 +26,13 @@ public interface OperationHandler<TState, TParams, TEvent> {
      * related to the aggregate it operates on other than in the form of returning events, and does
      * need to be written to support retries.
      *
-     * @param state  The aggregate that the operation is executed on.
-     * @param params The arguments applied to the operation.
+     * @param aggregateState The aggregate that the operation is executed on.
+     * @param params         The arguments applied to the operation.
      * @return A list of events to be applied to the aggregate to update its state, may be empty if
      * the operation is a no-op, must not be null,
      */
-    List<? extends TEvent> execute(TState state, TParams params);
+    @NotNull
+    List<? extends TEvent> execute(
+            @Nullable AggregateState<TState, TEvent> aggregateState,
+            @Nullable TParams params);
 }

@@ -1,9 +1,7 @@
 package org.elder.sourcerer;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import  com.google.common.collect.ImmutableList;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -12,7 +10,14 @@ import java.util.Map;
  * the AggregateRepository is also aware of how aggregates are constructed from events, and allows
  * for functions operating on this level such as commands.
  */
-public interface AggregateRepository<TAggregate, TEvent> {
+public interface AggregateRepository<TState, TEvent> {
+    /**
+     * Gets the projection used by the aggregate repository to reconstruct aggregate state from
+     * events.
+     * @return The aggregate projection used in the repository.
+     */
+    AggregateProjection<TState, TEvent> getProjection();
+
     /**
      * Reads an an aggregate given an aggregate id. The construction of an aggregate is
      * implementation specific, but would be semantically equivalent to applying a projection to
@@ -23,7 +28,7 @@ public interface AggregateRepository<TAggregate, TEvent> {
      * version. This method should never return null, but rather an AggregateRecord with a null
      * aggregate if the aggregate is nonexistent or deleted.
      */
-    AggregateRecord<TAggregate> read(String aggregateId);
+    AggregateRecord<TState> read(String aggregateId);
 
     /**
      * Updates a given existing or new aggregate with a list of events.
@@ -42,7 +47,7 @@ public interface AggregateRepository<TAggregate, TEvent> {
      */
     int update(
             String aggregateId,
-            List<? extends TEvent> events,
+            Iterable<? extends TEvent> events,
             ExpectedVersion expectedVersion,
             Map<String, String> metadata);
 
@@ -58,7 +63,7 @@ public interface AggregateRepository<TAggregate, TEvent> {
      */
     default int update(
             final String aggregateId,
-            final List<? extends TEvent> events,
+            final Iterable<? extends TEvent> events,
             final ExpectedVersion expectedVersion) {
         return update(aggregateId, events, expectedVersion, null);
     }
