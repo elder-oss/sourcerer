@@ -90,8 +90,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             throw new InvalidCommandException("No aggregate id specified");
         }
         if (operation.requiresArguments() && arguments == null) {
-            throw new InvalidCommandException("No arguments specified to command that requires "
-                                              + "arguments");
+            throw new InvalidCommandException(
+                    "No arguments specified to command that requires arguments");
         }
 
         // Try to calculate effective expected version - will validate combinations
@@ -118,9 +118,9 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             logger.debug("Current state of aggregate is {}",
                     aggregate.state() == null
                             ? "<not created>"
-                            : "version " + aggregate.originalVersion());
+                            : "version " + aggregate.sourceVersion());
         } else {
-            logger.debug("Aggregate state not load");
+            logger.debug("Aggregate state not loaded");
             aggregate = null;
         }
 
@@ -129,8 +129,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         if (idempotentCreate && aggregate != null && aggregate.state() != null) {
             logger.debug("Bailing out early as already created (and idempotent create set)");
             return new CommandResult<>(aggregateId,
-                    aggregate.originalVersion(),
-                    aggregate.originalVersion(),
+                    aggregate.sourceVersion(),
+                    aggregate.sourceVersion(),
                     ImmutableList.of());
         }
 
@@ -143,8 +143,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             logger.debug("Operation is no-op, bailing early");
             return new CommandResult<>(
                     aggregateId,
-                    aggregate != null ? aggregate.originalVersion() : null,
-                    aggregate != null ? aggregate.originalVersion() : null,
+                    aggregate != null ? aggregate.sourceVersion() : null,
+                    aggregate != null ? aggregate.sourceVersion() : null,
                     events);
         }
 
@@ -153,8 +153,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
 
         if (atomic) {
             // Actually null safe since atomic above ...
-            if (aggregate.originalState() != null) {
-                updateExpectedVersion = ExpectedVersion.exactly(aggregate.originalVersion());
+            if (aggregate.sourceState() != null) {
+                updateExpectedVersion = ExpectedVersion.exactly(aggregate.sourceVersion());
             } else {
                 updateExpectedVersion = ExpectedVersion.notCreated();
             }
@@ -226,24 +226,26 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 break;
             case ANY_EXISTING:
                 if (aggregate.state() == null) {
-                    throw new UnexpectedVersionException(-1, effectiveExpectedVersion);
+                    throw new UnexpectedVersionException(
+                            AggregateState.VERSION_NOT_CREATED,
+                            effectiveExpectedVersion);
                 }
                 break;
             case EXACTLY:
-                if (aggregate.originalVersion() != effectiveExpectedVersion.getExpectedVersion()) {
-                    throw new UnexpectedVersionException(aggregate.originalVersion(),
+                if (aggregate.sourceVersion() != effectiveExpectedVersion.getExpectedVersion()) {
+                    throw new UnexpectedVersionException(aggregate.sourceVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             case NOT_CREATED:
                 if (aggregate.state() != null && !idempotentCreate) {
-                    throw new UnexpectedVersionException(aggregate.originalVersion(),
+                    throw new UnexpectedVersionException(aggregate.sourceVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unrecognized expected version type "
-                                                   + effectiveExpectedVersion.getType());
+                throw new IllegalArgumentException(
+                        "Unrecognized expected version type " + effectiveExpectedVersion.getType());
         }
         return aggregate;
     }

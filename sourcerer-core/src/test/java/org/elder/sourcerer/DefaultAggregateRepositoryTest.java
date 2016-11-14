@@ -61,7 +61,7 @@ public class DefaultAggregateRepositoryTest {
         verifyNoMoreInteractions(eventRepository);
         Assert.assertNotNull(aggregate);
         Assert.assertNull(aggregate.state());
-        Assert.assertEquals(-1, aggregate.originalVersion());
+        Assert.assertEquals(-1, aggregate.sourceVersion());
     }
 
     @Test

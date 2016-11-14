@@ -3,7 +3,7 @@ package org.elder.sourcerer;
 import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 
 /**
- * Describes the version that an aggregate is expected to be in when load, or appended to.
+ * Describes the version that an aggregate is expected to be in when read, or appended to.
  */
 public final class ExpectedVersion {
     private final ExpectedVersionType type;
@@ -38,7 +38,9 @@ public final class ExpectedVersion {
     }
 
     public static ExpectedVersion notCreated() {
-        return new ExpectedVersion(ExpectedVersionType.NOT_CREATED, -1);
+        return new ExpectedVersion(
+                ExpectedVersionType.NOT_CREATED,
+                AggregateState.VERSION_NOT_CREATED);
     }
 
     public static ExpectedVersion exactly(final int version) {

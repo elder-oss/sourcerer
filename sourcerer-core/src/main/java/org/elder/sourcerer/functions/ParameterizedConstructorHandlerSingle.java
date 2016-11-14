@@ -11,6 +11,7 @@ public interface ParameterizedConstructorHandlerSingle<TParams, TEvent>
         extends OperationHandler<Object, TParams, TEvent> {
     TEvent executeSingle(TParams params);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<Object, TEvent> aggregate,
             final TParams params) {

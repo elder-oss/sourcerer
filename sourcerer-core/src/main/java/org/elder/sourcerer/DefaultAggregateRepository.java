@@ -53,7 +53,7 @@ public class DefaultAggregateRepository<TState, TEvent>
                 return new DefaultImmutableAggregate<>(
                         projection,
                         aggregateId,
-                        -1,
+                        AggregateState.VERSION_NOT_CREATED,
                         null);
             }
 
@@ -105,10 +105,10 @@ public class DefaultAggregateRepository<TState, TEvent>
         Preconditions.checkNotNull(aggregateState);
         ExpectedVersion expectedVersion;
         if (atomic) {
-            if (aggregateState.originalVersion() == -1) {
+            if (aggregateState.sourceVersion() == AggregateState.VERSION_NOT_CREATED) {
                 expectedVersion = ExpectedVersion.notCreated();
             } else {
-                expectedVersion = ExpectedVersion.exactly(aggregateState.originalVersion());
+                expectedVersion = ExpectedVersion.exactly(aggregateState.sourceVersion());
             }
         } else {
             expectedVersion = ExpectedVersion.any();
