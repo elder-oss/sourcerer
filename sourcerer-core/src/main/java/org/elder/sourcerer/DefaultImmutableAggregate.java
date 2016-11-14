@@ -2,6 +2,7 @@ package org.elder.sourcerer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,6 +47,8 @@ public class DefaultImmutableAggregate<TState, TEvent>
     }
 
     @Override
+    @NotNull
+    @Contract(pure = true)
     public String id() {
         return id;
     }

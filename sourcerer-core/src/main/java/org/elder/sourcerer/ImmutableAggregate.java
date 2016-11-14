@@ -1,10 +1,6 @@
 package org.elder.sourcerer;
 
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 /**
  * An immutable specialization of AggregateState, implicitly bound to an aggregate projection, that
@@ -15,16 +11,6 @@ import java.util.List;
  * @param <TEvent> The type of events that can be applied to the aggregate (in the current domain).
  */
 public interface ImmutableAggregate<TState, TEvent> extends AggregateState<TState, TEvent> {
-    @Nullable
-    @Override
-    @Contract(pure = true)
-    TState state();
-
-    @NotNull
-    @Override
-    @Contract(pure = true)
-    List<TEvent> events();
-
     /**
      * Applies a single event to the aggregate state, updating both the encapsulated state, and the
      * local log of events applied to it.
