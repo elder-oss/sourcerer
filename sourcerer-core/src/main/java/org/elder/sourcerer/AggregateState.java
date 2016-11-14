@@ -1,5 +1,6 @@
 package org.elder.sourcerer;
 
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,6 +36,8 @@ public interface AggregateState<TState, TEvent> {
      *
      * @return The id of the aggregate this state represents.
      */
+    @NotNull
+    @Contract(pure = true)
     String id();
 
     /**
@@ -45,6 +48,7 @@ public interface AggregateState<TState, TEvent> {
      * @return The version of the aggregate as loaded from an external source, prior to events
      * applied to it locally. Will be -1 if not created.
      */
+    @Contract(pure = true)
     int sourceVersion();
 
     /**
@@ -54,6 +58,7 @@ public interface AggregateState<TState, TEvent> {
      * @return The original state of the aggregate before the events were applied.
      */
     @Nullable
+    @Contract(pure = true)
     TState sourceState();
 
     /**
