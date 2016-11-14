@@ -3,7 +3,7 @@ package org.elder.sourcerer.functions;
 import org.elder.sourcerer.OperationHandler;
 
 /**
- * An append handler requires access to the current state (and optionally parameters), and performs
+ * An update handler requires access to the current state (and optionally parameters), and performs
  * some append on the aggregate in the form of adding events.
  * <p>
  * Update handler, by default, will require an existing aggregate, and will be atomic, i.e. will
