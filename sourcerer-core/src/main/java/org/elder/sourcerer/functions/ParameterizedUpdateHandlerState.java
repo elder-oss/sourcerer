@@ -22,6 +22,7 @@ public interface ParameterizedUpdateHandlerState<TState, TParams, TEvent>
             ImmutableAggregate<TState, TEvent> aggregate,
             TParams params);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
             final TParams params) {

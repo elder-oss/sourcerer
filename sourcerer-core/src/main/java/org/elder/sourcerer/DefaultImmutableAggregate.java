@@ -14,24 +14,24 @@ public class DefaultImmutableAggregate<TState, TEvent>
         implements ImmutableAggregate<TState, TEvent> {
     private final AggregateProjection<TState, TEvent> projection;
     private final String id;
-    private final int originalVersion;
-    private final TState originalState;
+    private final int sourceVersion;
+    private final TState sourceState;
     private final TState state;
     private final ImmutableList<TEvent> appliedEvents;
 
     public DefaultImmutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
-            final int originalVersion,
-            @Nullable final TState originalState) {
-        this(projection, id, originalVersion, originalState, originalState, ImmutableList.of());
+            final int sourceVersion,
+            @Nullable final TState sourceState) {
+        this(projection, id, sourceVersion, sourceState, sourceState, ImmutableList.of());
     }
 
     public DefaultImmutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
-            final int originalVersion,
-            @Nullable final TState originalState,
+            final int sourceVersion,
+            @Nullable final TState sourceState,
             @Nullable final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
@@ -39,8 +39,8 @@ public class DefaultImmutableAggregate<TState, TEvent>
         Preconditions.checkNotNull(events);
         this.projection = projection;
         this.id = id;
-        this.originalVersion = originalVersion;
-        this.originalState = originalState;
+        this.sourceVersion = sourceVersion;
+        this.sourceState = sourceState;
         this.state = state;
         this.appliedEvents = ImmutableList.copyOf(events);
     }
@@ -51,14 +51,14 @@ public class DefaultImmutableAggregate<TState, TEvent>
     }
 
     @Override
-    public int originalVersion() {
-        return originalVersion;
+    public int sourceVersion() {
+        return sourceVersion;
     }
 
     @Nullable
     @Override
-    public TState originalState() {
-        return originalState;
+    public TState sourceState() {
+        return sourceState;
     }
 
     @Nullable
@@ -83,8 +83,8 @@ public class DefaultImmutableAggregate<TState, TEvent>
         return new DefaultMutableAggregate<>(
                 projection,
                 id,
-                originalVersion,
-                originalState,
+                sourceVersion,
+                sourceState,
                 state,
                 appliedEvents);
     }
@@ -97,8 +97,8 @@ public class DefaultImmutableAggregate<TState, TEvent>
         return new DefaultImmutableAggregate<>(
                 projection,
                 id,
-                originalVersion,
-                originalState,
+                sourceVersion,
+                sourceState,
                 newState,
                 ImmutableList.<TEvent>builder().addAll(appliedEvents).add(event).build());
     }
@@ -112,8 +112,8 @@ public class DefaultImmutableAggregate<TState, TEvent>
         return new DefaultImmutableAggregate<>(
                 projection,
                 id,
-                originalVersion,
-                originalState,
+                sourceVersion,
+                sourceState,
                 newState,
                 ImmutableList.<TEvent>builder().addAll(appliedEvents).addAll(events).build());
     }

@@ -20,6 +20,7 @@ public interface UpdateHandlerState<TState, TEvent>
         extends OperationHandler<TState, Object, TEvent> {
     AggregateState<TState, TEvent> executeWithState(ImmutableAggregate<TState, TEvent> aggregate);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
             final Object params) {

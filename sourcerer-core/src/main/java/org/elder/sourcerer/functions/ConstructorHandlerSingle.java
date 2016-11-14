@@ -11,6 +11,7 @@ public interface ConstructorHandlerSingle<TEvent>
         extends OperationHandler<Object, Object, TEvent> {
     TEvent executeSingle();
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<Object, TEvent> aggregate,
             final Object params) {

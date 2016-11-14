@@ -15,6 +15,7 @@ public interface ParameterizedAppendHandler<TParams, TEvent>
         extends OperationHandler<Object, TParams, TEvent> {
     List<? extends TEvent> execute(TParams params);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<Object, TEvent> aggregate,
             final TParams params) {

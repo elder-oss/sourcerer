@@ -20,6 +20,7 @@ public interface ParameterizedPojoUpdateHandlerSingle<TState, TParams, TEvent>
         extends OperationHandler<TState, TParams, TEvent> {
     TEvent executeSingle(TState state, TParams params);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
             final TParams params) {

@@ -20,6 +20,7 @@ public interface ParameterizedUpdateHandlerSingle<TState, TParams, TEvent>
         extends OperationHandler<TState, TParams, TEvent> {
     TEvent executeSingle(ImmutableAggregate<TState, TEvent> aggregate, TParams params);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
             final TParams params) {

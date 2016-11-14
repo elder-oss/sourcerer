@@ -64,13 +64,13 @@ public class DefaultMutableAggregate<TState, TEvent>
     }
 
     @Override
-    public int originalVersion() {
+    public int sourceVersion() {
         return originalVersion;
     }
 
     @Nullable
     @Override
-    public TState originalState() {
+    public TState sourceState() {
         return originalState;
     }
 

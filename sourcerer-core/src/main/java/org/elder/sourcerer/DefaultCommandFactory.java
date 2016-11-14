@@ -33,7 +33,7 @@ public class DefaultCommandFactory<TAggregate, TEvent>
         Operation<TAggregate, TParams, TEvent> typeHackedOperation =
                 (Operation<TAggregate, TParams, TEvent>) operation;
         Command<TAggregate, TParams, TEvent> command =
-                new DefaultCommand<TAggregate, TParams, TEvent>(repository, typeHackedOperation);
+                new DefaultCommand<>(repository, typeHackedOperation);
         for (CommandPostProcessor postProcessor : postProcessors) {
             postProcessor.postProcessCommand(command);
         }

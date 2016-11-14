@@ -19,6 +19,7 @@ public interface PojoUpdateHandler<TState, TEvent>
         extends OperationHandler<TState, Object, TEvent> {
     List<? extends TEvent> execute(TState state);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
             final Object params) {

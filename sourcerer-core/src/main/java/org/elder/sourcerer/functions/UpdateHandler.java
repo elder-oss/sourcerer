@@ -18,6 +18,7 @@ import java.util.List;
 public interface UpdateHandler<TState, TEvent> extends OperationHandler<TState, Object, TEvent> {
     List<? extends TEvent> execute(ImmutableAggregate<TState, TEvent> aggregate);
 
+    @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
             final Object params) {
