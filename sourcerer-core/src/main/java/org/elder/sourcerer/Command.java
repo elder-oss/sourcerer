@@ -3,7 +3,7 @@ package org.elder.sourcerer;
 import java.util.Map;
 
 /**
- * A Command represents an operation performed on a single aggregate to append its state. Commands,
+ * A Command represents an operation performed on a single aggregate to update its state. Commands,
  * unlike events, can be rejected if the command is not applicable to the aggregate in its current
  * state, or the arguments passed the the command do not apply.
  * <p>
@@ -11,7 +11,7 @@ import java.util.Map;
  * for later execution (to support handling intermittent errors and circuit breaker patterns).
  * <p>
  * A command is at a minimum bound to a specific aggregate and operation. The Operation represents
- * the business logic performed on the aggregate to append its state. In addition, a command may
+ * the business logic performed on the aggregate to update its state. In addition, a command may
  * have additional components such as validators used to check that the given arguments are valid,
  * and constraints on the current version on an aggregate for optimistic concurrency.
  *
@@ -20,7 +20,7 @@ import java.util.Map;
  *                  the repository.
  * @param <TParams> The type of parameters that the command accepts. If the commands does not accept
  *                  any parameters, use Void.
- * @param <TEvent>  The type of event that the command produces to append the aggregate if
+ * @param <TEvent>  The type of event that the command produces to update the aggregate if
  *                  successful. When used with an AggregateRepository, this should match, or be a
  *                  subclass of the TEvent type of the repository.
  */

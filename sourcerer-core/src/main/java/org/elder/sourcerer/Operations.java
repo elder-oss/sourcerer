@@ -67,7 +67,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -78,7 +78,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -89,7 +89,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -100,7 +100,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -111,7 +111,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -122,7 +122,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -133,7 +133,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -156,7 +156,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -179,7 +179,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -202,7 +202,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -225,7 +225,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -248,7 +248,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -271,7 +271,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -282,7 +282,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -293,7 +293,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -304,7 +304,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, requiring an existing aggregate.
+     * Creates an update operation, requiring an existing aggregate.
      *
      * @param handler The handler to invoke with the current state to apply updates.
      * @return An operation representing the supplied logic, with metadata.
@@ -315,7 +315,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -338,7 +338,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -361,7 +361,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no
@@ -384,7 +384,7 @@ public final class Operations {
     }
 
     /**
-     * Creates an append operation, optionally requiring an existing aggregate.
+     * Creates an update operation, optionally requiring an existing aggregate.
      *
      * @param handler    The handler to invoke with the current state to apply updates.
      * @param autoCreate If true, the handler will be invoked with a null state in the case where no

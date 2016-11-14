@@ -43,9 +43,9 @@ public class OperationHandlerOperation<TState, TParams, TEvent>
 
     @Override
     public List<? extends TEvent> execute(
-            final ImmutableAggregate<TState, TEvent> immutableAggregate,
+            final ImmutableAggregate<TState, TEvent> aggregate,
             final TParams params) {
-        return handler.execute(immutableAggregate, params);
+        return handler.execute(aggregate, params);
     }
 
     @Override

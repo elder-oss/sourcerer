@@ -90,8 +90,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             throw new InvalidCommandException("No aggregate id specified");
         }
         if (operation.requiresArguments() && arguments == null) {
-            throw new InvalidCommandException("No arguments specified to command that requires "
-                                              + "arguments");
+            throw new InvalidCommandException(
+                    "No arguments specified to command that requires arguments");
         }
 
         // Try to calculate effective expected version - will validate combinations
@@ -120,7 +120,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                             ? "<not created>"
                             : "version " + aggregate.sourceVersion());
         } else {
-            logger.debug("Aggregate state not load");
+            logger.debug("Aggregate state not loaded");
             aggregate = null;
         }
 
@@ -244,8 +244,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unrecognized expected version type "
-                                                   + effectiveExpectedVersion.getType());
+                throw new IllegalArgumentException(
+                        "Unrecognized expected version type " + effectiveExpectedVersion.getType());
         }
         return aggregate;
     }

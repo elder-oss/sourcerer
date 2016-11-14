@@ -32,17 +32,16 @@ public interface Operation<TState, TParams, TEvent> {
      * related to the aggregate it operates on other than in the form of returning events, and does
      * need to be written to support retries.
      *
-     * @param immutableAggregate The state of the aggregate that the operation is executed on. A
-     *                           null value indicates that no state has been retrieved and the
-     *                           current state is unknown, whereas an aggregate state holder with
-     *                           null current state indicates that the aggregate does not currently
-     *                           exist.
-     * @param params             The arguments applied to the operation.
-     * @return A list of events to be applied to the aggregate to append its state, may be empty if
+     * @param aggregate The state of the aggregate that the operation is executed on. A null value
+     *                  indicates that no state has been retrieved and the current state is unknown,
+     *                  whereas an aggregate state holder with null current state indicates that the
+     *                  aggregate does not currently exist.
+     * @param params    The arguments applied to the operation.
+     * @return A list of events to be applied to the aggregate to update its state, may be empty if
      * the operation is a no-op, must not be null,
      */
     @NotNull List<? extends TEvent> execute(
-            @Nullable ImmutableAggregate<TState, TEvent> immutableAggregate,
+            @Nullable ImmutableAggregate<TState, TEvent> aggregate,
             @Nullable TParams params);
 
     /**
