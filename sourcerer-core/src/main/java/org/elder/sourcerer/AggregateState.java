@@ -66,6 +66,8 @@ public interface AggregateState<TState, TEvent> {
      *
      * @return The state of the aggregate, with the events of this aggregate state holder applied.
      */
+    @NotNull
+    @Contract(pure = true)
     TState state();
 
     /**

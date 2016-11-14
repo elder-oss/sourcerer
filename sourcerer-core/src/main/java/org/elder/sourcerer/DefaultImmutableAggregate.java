@@ -25,7 +25,13 @@ public class DefaultImmutableAggregate<TState, TEvent>
             @NotNull final String id,
             final int sourceVersion,
             @Nullable final TState sourceState) {
-        this(projection, id, sourceVersion, sourceState, sourceState, ImmutableList.of());
+        this(
+                projection,
+                id,
+                sourceVersion,
+                sourceState,
+                sourceState != null ? sourceState : projection.empty(),
+                ImmutableList.of());
     }
 
     public DefaultImmutableAggregate(
@@ -33,7 +39,7 @@ public class DefaultImmutableAggregate<TState, TEvent>
             @NotNull final String id,
             final int sourceVersion,
             @Nullable final TState sourceState,
-            @Nullable final TState state,
+            @NotNull final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
         Preconditions.checkNotNull(id);
@@ -64,14 +70,16 @@ public class DefaultImmutableAggregate<TState, TEvent>
         return sourceState;
     }
 
-    @Nullable
     @Override
+    @NotNull
+    @Contract(pure = true)
     public TState state() {
         return state;
     }
 
-    @NotNull
     @Override
+    @NotNull
+    @Contract(pure = true)
     public List<TEvent> events() {
         return appliedEvents;
     }

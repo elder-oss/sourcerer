@@ -116,7 +116,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             logger.debug("Reading aggregate record from stream");
             aggregate = readAndValidateAggregate(effectiveExpectedVersion);
             logger.debug("Current state of aggregate is {}",
-                    aggregate.state() == null
+                    aggregate.sourceState() == null
                             ? "<not created>"
                             : "version " + aggregate.sourceVersion());
         } else {
@@ -124,9 +124,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             aggregate = null;
         }
 
-
         // Bail out early if idempotent create, and already present
-        if (idempotentCreate && aggregate != null && aggregate.state() != null) {
+        if (idempotentCreate && aggregate != null && aggregate.sourceState() != null) {
             logger.debug("Bailing out early as already created (and idempotent create set)");
             return new CommandResult<>(aggregateId,
                     aggregate.sourceVersion(),
@@ -225,7 +224,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             case ANY:
                 break;
             case ANY_EXISTING:
-                if (aggregate.state() == null) {
+                if (aggregate.sourceState() == null) {
                     throw new UnexpectedVersionException(
                             AggregateState.VERSION_NOT_CREATED,
                             effectiveExpectedVersion);
@@ -238,7 +237,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 }
                 break;
             case NOT_CREATED:
-                if (aggregate.state() != null && !idempotentCreate) {
+                if (aggregate.sourceState() != null && !idempotentCreate) {
                     throw new UnexpectedVersionException(aggregate.sourceVersion(),
                             effectiveExpectedVersion);
                 }

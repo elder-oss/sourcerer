@@ -1,7 +1,6 @@
 package org.elder.sourcerer;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * A projection is a function that given an aggregate and an event, returns a new aggregate
@@ -11,6 +10,15 @@ import org.jetbrains.annotations.Nullable;
  * @param <TEvent> The type of event that the projection is capable of applying to aggregates.
  */
 public interface AggregateProjection<TState, TEvent> {
+    /**
+     * Returns an empty aggregate state for the given type. The projection is never passed null as
+     * the current state, but rather this value in the case where the event(s) applied are the very
+     * first ones.
+     *
+     * @return An empty state for the aggregate.
+     */
+    @NotNull TState empty();
+
     /**
      * Applies an event to an aggregate, creating a new aggregate representing a snapshot-in-time
      * state of the aggregate with the event applied. This must be a pure function, returning a
@@ -36,7 +44,7 @@ public interface AggregateProjection<TState, TEvent> {
      * @return A new aggregate instance of the same type as the provided, representing a
      * snapshot-in-time state of the given aggregate with the provided event applied.
      */
-    @NotNull TState apply(@NotNull String id, @Nullable TState state, @NotNull TEvent event);
+    @NotNull TState apply(@NotNull String id, @NotNull TState state, @NotNull TEvent event);
 
     /**
      * Applies a sequence of events to an aggregate, creating a new aggregate representing a
@@ -69,7 +77,7 @@ public interface AggregateProjection<TState, TEvent> {
      */
     default @NotNull TState apply(
             @NotNull final String id,
-            @Nullable TState state,
+            @NotNull TState state,
             @NotNull final Iterable<? extends TEvent> events) {
         for (TEvent e : events) {
             state = apply(id, state, e);

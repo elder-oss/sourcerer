@@ -71,20 +71,20 @@ public class DefaultMutableAggregate<TState, TEvent>
         return originalVersion;
     }
 
-    @Nullable
     @Override
+    @Nullable
     public TState sourceState() {
         return originalState;
     }
 
-    @Nullable
     @Override
+    @NotNull
     public TState state() {
         return state;
     }
 
-    @NotNull
     @Override
+    @NotNull
     public List<TEvent> events() {
         return ImmutableList.copyOf(appliedEvents);
     }
