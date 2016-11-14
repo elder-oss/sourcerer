@@ -13,7 +13,7 @@ import java.util.Map;
  */
 public interface AggregateRepository<TState, TEvent> {
     /**
-     * Reads an an aggregate given an aggregate id. The construction of an aggregate is
+     * Loads an an aggregate given an aggregate id. The construction of an aggregate is
      * implementation specific, but would be semantically equivalent to applying a projection to
      * each recorded event for the aggregate.
      *
@@ -25,7 +25,7 @@ public interface AggregateRepository<TState, TEvent> {
     ImmutableAggregate<TState, TEvent> load(String aggregateId);
 
     /**
-     * Updates a given existing or new aggregate with a list of events taken from an aggregate
+     * Persists a given existing or new aggregate with a list of events taken from an aggregate
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.
      *
@@ -45,7 +45,7 @@ public interface AggregateRepository<TState, TEvent> {
             Map<String, String> metadata);
 
     /**
-     * Updates a given existing or new aggregate with a list of events taken from an aggregate
+     * Persists a given existing or new aggregate with a list of events taken from an aggregate
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.
      *
@@ -61,7 +61,7 @@ public interface AggregateRepository<TState, TEvent> {
     }
 
     /**
-     * Updates a given existing or new aggregate with a list of events taken from an aggregate
+     * Persists a given existing or new aggregate with a list of events taken from an aggregate
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.
      *
@@ -73,10 +73,11 @@ public interface AggregateRepository<TState, TEvent> {
     }
 
     /**
-     * Updates a given existing or new aggregate with a list of events.
+     * Appends events, provided explicitly, to a given existing or new aggregate, optionally
+     * requiring the current version to match the specified requirements.
      *
-     * @param aggregateId     The id of the aggregate to append.
-     * @param events          The list of events to append the aggregate with.
+     * @param aggregateId     The id of the aggregate to append events do.
+     * @param events          The list of events to append.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
@@ -94,10 +95,11 @@ public interface AggregateRepository<TState, TEvent> {
             Map<String, String> metadata);
 
     /**
-     * Updates a given existing or new aggregate with a list of events.
+     * Appends events, provided explicitly, to a given existing or new aggregate, optionally
+     * requiring the current version to match the specified requirements.
      *
-     * @param aggregateId     The id of the aggregate to append.
-     * @param events          The list of events to append the aggregate with.
+     * @param aggregateId     The id of the aggregate to append events do.
+     * @param events          The list of events to append.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
@@ -111,10 +113,11 @@ public interface AggregateRepository<TState, TEvent> {
     }
 
     /**
-     * Updates a given existing or new aggregate with single event.
+     * Appends an event, provided explicitly, to a given existing or new aggregate, optionally
+     * requiring the current version to match the specified requirements.
      *
-     * @param aggregateId     The id of the aggregate to append.
-     * @param event           The list of event to append the aggregate with.
+     * @param aggregateId     The id of the aggregate to append events do.
+     * @param event           The event to append.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
@@ -134,8 +137,11 @@ public interface AggregateRepository<TState, TEvent> {
     }
 
     /**
-     * @param aggregateId     The id of the aggregate to append.
-     * @param event           The list of event to append the aggregate with.
+     * Appends an event, provided explicitly, to a given existing or new aggregate, optionally
+     * requiring the current version to match the specified requirements.
+     *
+     * @param aggregateId     The id of the aggregate to append events do.
+     * @param event           The event to append.
      * @param expectedVersion The expected version of the aggregate at the time the new events are
      *                        appended to its underlying stream of events. If the version at the
      *                        time the append is attempted differs from the one provided, an
