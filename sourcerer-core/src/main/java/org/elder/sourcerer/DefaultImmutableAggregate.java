@@ -128,4 +128,16 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 newState,
                 ImmutableList.<TEvent>builder().addAll(appliedEvents).addAll(events).build());
     }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> rebase(final int version) {
+        return new DefaultImmutableAggregate<>(
+                projection,
+                id,
+                version,
+                state,
+                state,
+                ImmutableList.of());
+    }
 }

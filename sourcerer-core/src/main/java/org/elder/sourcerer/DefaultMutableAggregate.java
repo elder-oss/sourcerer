@@ -13,25 +13,31 @@ public class DefaultMutableAggregate<TState, TEvent>
         implements MutableAggregate<TState, TEvent> {
     private final AggregateProjection<TState, TEvent> projection;
     private final String id;
-    private final TState originalState;
-    private final int originalVersion;
+    private TState sourceState;
+    private int sourceVersion;
     private TState state;
     private final List<TEvent> appliedEvents;
 
     public DefaultMutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
-            final int originalVersion,
-            @Nullable final TState originalState) {
-        this(projection, id, originalVersion, originalState, originalState, ImmutableList.of());
+            final int sourceVersion,
+            @Nullable final TState sourceState) {
+        this(
+                projection,
+                id,
+                sourceVersion,
+                sourceState,
+                sourceState == null ? projection.empty() : sourceState,
+                ImmutableList.of());
     }
 
     public DefaultMutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
-            final int originalVersion,
-            @Nullable final TState originalState,
-            @Nullable final TState state,
+            final int sourceVersion,
+            @Nullable final TState sourceState,
+            @NotNull final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
         Preconditions.checkNotNull(id);
@@ -39,24 +45,10 @@ public class DefaultMutableAggregate<TState, TEvent>
         Preconditions.checkNotNull(events);
         this.projection = projection;
         this.id = id;
-        this.originalVersion = originalVersion;
-        this.originalState = originalState;
+        this.sourceVersion = sourceVersion;
+        this.sourceState = sourceState;
         this.state = state;
         this.appliedEvents = new ArrayList<>(events);
-    }
-
-    @Override
-    public void apply(@NotNull final TEvent event) {
-        Preconditions.checkNotNull(event);
-        state = projection.apply(id, state, event);
-        appliedEvents.add(event);
-    }
-
-    @Override
-    public void apply(@NotNull final Iterable<? extends TEvent> events) {
-        Preconditions.checkNotNull(events);
-        state = projection.apply(id, state, events);
-        events.forEach(appliedEvents::add);
     }
 
     @Override
@@ -68,13 +60,13 @@ public class DefaultMutableAggregate<TState, TEvent>
 
     @Override
     public int sourceVersion() {
-        return originalVersion;
+        return sourceVersion;
     }
 
     @Override
     @Nullable
     public TState sourceState() {
-        return originalState;
+        return sourceState;
     }
 
     @Override
@@ -94,8 +86,8 @@ public class DefaultMutableAggregate<TState, TEvent>
         return new DefaultImmutableAggregate<>(
                 projection,
                 id,
-                originalVersion,
-                originalState,
+                sourceVersion,
+                sourceState,
                 state,
                 appliedEvents);
     }
@@ -105,9 +97,31 @@ public class DefaultMutableAggregate<TState, TEvent>
         return new DefaultMutableAggregate<>(
                 projection,
                 id,
-                originalVersion,
-                originalState,
+                sourceVersion,
+                sourceState,
                 state,
                 appliedEvents);
+    }
+
+    @Override
+    public void apply(@NotNull final TEvent event) {
+        Preconditions.checkNotNull(event);
+        state = projection.apply(id, state, event);
+        appliedEvents.add(event);
+    }
+
+    @Override
+    public void apply(@NotNull final Iterable<? extends TEvent> events) {
+        Preconditions.checkNotNull(events);
+        state = projection.apply(id, state, events);
+        events.forEach(appliedEvents::add);
+    }
+
+    @Override
+    public void rebase(final int version) {
+        this.sourceVersion = version;
+        this.sourceState = state;
+        this.events().clear();
+        ;
     }
 }
