@@ -59,7 +59,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.notCreated());
         when(repository.load(any()))
-                .thenReturn(new DefaultImmutableAggregate(
+                .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
                         42,
@@ -84,11 +84,8 @@ public class DefaultCommandTest {
                 ExpectedVersion.any());
         AggregateProjection projection = mock(AggregateProjection.class);
         when(projection.empty()).thenReturn(new TestState(null));
-        DefaultImmutableAggregate sourceAggregate = new DefaultImmutableAggregate(
-                projection,
-                AGGREGATE_ID,
-                -1,
-                null);
+        DefaultImmutableAggregate sourceAggregate =
+                DefaultImmutableAggregate.createNew(projection, AGGREGATE_ID);
         when(repository.load(any())).thenReturn(sourceAggregate);
         when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
         DefaultCommand command = new DefaultCommand(repository, operation);
@@ -118,7 +115,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.notCreated());
         when(repository.load(any()))
-                .thenReturn(new DefaultImmutableAggregate(
+                .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
                         42,
@@ -145,7 +142,7 @@ public class DefaultCommandTest {
 
         DefaultCommand command = new DefaultCommand(repository, operation);
         when(repository.load(any()))
-                .thenReturn(new DefaultImmutableAggregate(
+                .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
                         42,
@@ -169,7 +166,7 @@ public class DefaultCommandTest {
 
         DefaultCommand command = new DefaultCommand(repository, operation);
         when(repository.load(any()))
-                .thenReturn(new DefaultImmutableAggregate(
+                .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
                         42,

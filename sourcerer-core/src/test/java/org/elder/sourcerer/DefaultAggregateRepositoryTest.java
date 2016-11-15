@@ -36,23 +36,24 @@ public class DefaultAggregateRepositoryTest {
     public void setUpRepository() {
         eventRepository = mock(EventRepository.class);
         aggregateProjection = mock(AggregateProjection.class);
+        when(aggregateProjection.empty()).thenReturn(new TestState("empty"));
         repository = new DefaultAggregateRepository<>(eventRepository, aggregateProjection);
     }
 
     @Test
-    public void readReturnsRecordWithNullOnNullStream() throws Exception {
-        returnsAggregateWithNullStateOn(null);
+    public void readReturnsRecordWithEmptyOnNullStream() throws Exception {
+        returnsAggregateWithEmptyStateOn(null);
     }
 
     @Test
-    public void readReturnsNullOnEmptyStream() throws Exception {
-        returnsAggregateWithNullStateOn(
+    public void readReturnsEmptyOnEmptyStream() throws Exception {
+        returnsAggregateWithEmptyStateOn(
                 new EventReadResult(
                         ImmutableList.of(),
                         0, 10, 11, false));
     }
 
-    private void returnsAggregateWithNullStateOn(
+    private void returnsAggregateWithEmptyStateOn(
             final EventReadResult readEventsResult) {
         when(eventRepository.read(any())).thenReturn(readEventsResult);
         ImmutableAggregate<TestState, TestEvent> aggregate = repository.load(AGGREGATE_ID_1);
@@ -60,7 +61,7 @@ public class DefaultAggregateRepositoryTest {
         verify(eventRepository).read(AGGREGATE_ID_1, 0);
         verifyNoMoreInteractions(eventRepository);
         Assert.assertNotNull(aggregate);
-        Assert.assertNull(aggregate.state());
+        Assert.assertEquals(aggregate.state().getValue(), "empty");
         Assert.assertEquals(-1, aggregate.sourceVersion());
     }
 

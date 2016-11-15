@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,30 +12,14 @@ public class DefaultMutableAggregate<TState, TEvent>
         implements MutableAggregate<TState, TEvent> {
     private final AggregateProjection<TState, TEvent> projection;
     private final String id;
-    private TState sourceState;
     private int sourceVersion;
     private TState state;
     private final List<TEvent> appliedEvents;
 
-    public DefaultMutableAggregate(
+    DefaultMutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
             final int sourceVersion,
-            @Nullable final TState sourceState) {
-        this(
-                projection,
-                id,
-                sourceVersion,
-                sourceState,
-                sourceState == null ? projection.empty() : sourceState,
-                ImmutableList.of());
-    }
-
-    public DefaultMutableAggregate(
-            @NotNull final AggregateProjection<TState, TEvent> projection,
-            @NotNull final String id,
-            final int sourceVersion,
-            @Nullable final TState sourceState,
             @NotNull final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
@@ -46,9 +29,49 @@ public class DefaultMutableAggregate<TState, TEvent>
         this.projection = projection;
         this.id = id;
         this.sourceVersion = sourceVersion;
-        this.sourceState = sourceState;
         this.state = state;
         this.appliedEvents = new ArrayList<>(events);
+    }
+
+    /**
+     * Creates a new mutable aggregate from the given projection, initialized with the empty
+     * value as defined by the projection, no events, and a "not created" version.
+     *
+     * @param projection The projection used to apply events to the state of the aggregate.
+     * @param id         The id of the aggregate.
+     * @return A new mutable aggregate with empty state and "not created" version.
+     */
+    public static <TState, TEvent> DefaultMutableAggregate<TState, TEvent> createNew(
+            final AggregateProjection<TState, TEvent> projection,
+            final String id) {
+        return new DefaultMutableAggregate<>(
+                projection,
+                id,
+                AggregateState.VERSION_NOT_CREATED,
+                projection.empty(),
+                ImmutableList.of());
+    }
+
+    /**
+     * Creates a new mutable aggregate state from the given projection, current state and version.
+     *
+     * @param projection    The projection used to apply events to the state of the aggregate.
+     * @param id            The id of the aggregate.
+     * @param sourceVersion The current version of the aggregate, in the state provided.
+     * @param state         The current state of the aggregate.
+     * @return A new mutable aggregate with the provided current state.
+     */
+    public static <TState, TEvent> DefaultMutableAggregate<TState, TEvent> fromExisting(
+            final AggregateProjection<TState, TEvent> projection,
+            final String id,
+            final int sourceVersion,
+            final TState state) {
+        return new DefaultMutableAggregate<>(
+                projection,
+                id,
+                sourceVersion,
+                state,
+                ImmutableList.of());
     }
 
     @Override
@@ -61,12 +84,6 @@ public class DefaultMutableAggregate<TState, TEvent>
     @Override
     public int sourceVersion() {
         return sourceVersion;
-    }
-
-    @Override
-    @Nullable
-    public TState sourceState() {
-        return sourceState;
     }
 
     @Override
@@ -87,7 +104,6 @@ public class DefaultMutableAggregate<TState, TEvent>
                 projection,
                 id,
                 sourceVersion,
-                sourceState,
                 state,
                 appliedEvents);
     }
@@ -98,7 +114,6 @@ public class DefaultMutableAggregate<TState, TEvent>
                 projection,
                 id,
                 sourceVersion,
-                sourceState,
                 state,
                 appliedEvents);
     }
@@ -120,8 +135,6 @@ public class DefaultMutableAggregate<TState, TEvent>
     @Override
     public void rebase(final int version) {
         this.sourceVersion = version;
-        this.sourceState = state;
         this.events().clear();
-        ;
     }
 }

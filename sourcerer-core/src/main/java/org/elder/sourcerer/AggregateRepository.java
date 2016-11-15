@@ -19,8 +19,9 @@ public interface AggregateRepository<TState, TEvent> {
      *
      * @param aggregateId The id of the aggregate to load.
      * @return A snapshot in time of the aggregate along with information such as its current
-     * version. This method should never return null, but rather an ImmutableAggregate with a null
-     * state if the aggregate is nonexistent or deleted.
+     * version. This method should never return null, but rather an ImmutableAggregate with a
+     * version of AggregateState.VERSION_NOT_CREATED (-1) if the aggregate is nonexistent or
+     * deleted.
      */
     ImmutableAggregate<TState, TEvent> load(String aggregateId);
 

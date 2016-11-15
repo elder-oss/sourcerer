@@ -116,7 +116,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             logger.debug("Reading aggregate record from stream");
             aggregate = readAndValidateAggregate(effectiveExpectedVersion);
             logger.debug("Current state of aggregate is {}",
-                    aggregate.sourceState() == null
+                    aggregate.sourceVersion() == AggregateState.VERSION_NOT_CREATED
                             ? "<not created>"
                             : "version " + aggregate.sourceVersion());
         } else {
@@ -125,9 +125,12 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         }
 
         // Bail out early if idempotent create, and already present
-        if (idempotentCreate && aggregate != null && aggregate.sourceState() != null) {
+        if (idempotentCreate
+                && aggregate != null
+                && aggregate.sourceVersion() != AggregateState.VERSION_NOT_CREATED) {
             logger.debug("Bailing out early as already created (and idempotent create set)");
-            return new CommandResult<>(aggregateId,
+            return new CommandResult<>(
+                    aggregateId,
                     aggregate.sourceVersion(),
                     aggregate.sourceVersion(),
                     ImmutableList.of());
@@ -152,7 +155,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
 
         if (atomic) {
             // Actually null safe since atomic above ...
-            if (aggregate.sourceState() != null) {
+            if (aggregate.sourceVersion() != AggregateState.VERSION_NOT_CREATED) {
                 updateExpectedVersion = ExpectedVersion.exactly(aggregate.sourceVersion());
             } else {
                 updateExpectedVersion = ExpectedVersion.notCreated();
@@ -224,21 +227,24 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             case ANY:
                 break;
             case ANY_EXISTING:
-                if (aggregate.sourceState() == null) {
+                if (aggregate.sourceVersion() == AggregateState.VERSION_NOT_CREATED) {
                     throw new UnexpectedVersionException(
-                            AggregateState.VERSION_NOT_CREATED,
+                            aggregate.sourceVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             case EXACTLY:
                 if (aggregate.sourceVersion() != effectiveExpectedVersion.getExpectedVersion()) {
-                    throw new UnexpectedVersionException(aggregate.sourceVersion(),
+                    throw new UnexpectedVersionException(
+                            aggregate.sourceVersion(),
                             effectiveExpectedVersion);
                 }
                 break;
             case NOT_CREATED:
-                if (aggregate.sourceState() != null && !idempotentCreate) {
-                    throw new UnexpectedVersionException(aggregate.sourceVersion(),
+                if (aggregate.sourceVersion() != AggregateState.VERSION_NOT_CREATED
+                        && !idempotentCreate) {
+                    throw new UnexpectedVersionException(
+                            aggregate.sourceVersion(),
                             effectiveExpectedVersion);
                 }
                 break;

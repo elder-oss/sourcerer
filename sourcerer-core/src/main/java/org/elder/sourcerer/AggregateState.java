@@ -7,9 +7,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * An aggregate state is a description of an aggregate (an entity constructed from events) as it
- * was created from a known state and optionally with additional modifications on top, applied in
- * the form of events.
+ * An aggregate state is a description of the state of an aggregate (an entity constructed from
+ * events), with the version it was constructed from if loaded from an existing persisted state,
+ * and a log of the events applied since.
  * <p>
  * Aggregates provide a convenient alternative to dealing with only events directly, and can be
  * used to track state changes and events as a unit. See ImmutableAggregate and MutableAggregate
@@ -50,16 +50,6 @@ public interface AggregateState<TState, TEvent> {
      */
     @Contract(pure = true)
     int sourceVersion();
-
-    /**
-     * Gets the state of the aggregate as loaded from an external source. Will be null if the
-     * aggregate did not already exist.
-     *
-     * @return The original state of the aggregate before the events were applied.
-     */
-    @Nullable
-    @Contract(pure = true)
-    TState sourceState();
 
     /**
      * Gets the current state of the aggregate, after the events have been applied.

@@ -40,7 +40,7 @@ public class DefaultAggregateRepository<TState, TEvent>
 
     @Override
     public ImmutableAggregate<TState, TEvent> load(final String aggregateId) {
-        TState aggregate = null;
+        TState aggregate = projection.empty();
         int currentStreamPosition = 0;
         while (true) { // Exit through return
             logger.debug("Reading events for {} from {}", aggregateId, currentStreamPosition);
@@ -50,11 +50,9 @@ public class DefaultAggregateRepository<TState, TEvent>
 
             if (readResult == null || readResult.getEvents().isEmpty()) {
                 // Not found, return empty wrapper as per contract
-                return new DefaultImmutableAggregate<>(
+                return DefaultImmutableAggregate.createNew(
                         projection,
-                        aggregateId,
-                        AggregateState.VERSION_NOT_CREATED,
-                        null);
+                        aggregateId);
             }
 
             Iterable<TEvent> events = readResult
@@ -65,7 +63,7 @@ public class DefaultAggregateRepository<TState, TEvent>
             aggregate = projection.apply(aggregateId, aggregate, events);
 
             if (readResult.isEndOfStream()) {
-                return new DefaultImmutableAggregate<>(
+                return DefaultImmutableAggregate.fromExisting(
                         projection,
                         aggregateId,
                         readResult.getLastVersion(),
@@ -118,7 +116,7 @@ public class DefaultAggregateRepository<TState, TEvent>
                 aggregateState.events(),
                 expectedVersion,
                 metadata);
-        return new DefaultImmutableAggregate<>(
+        return DefaultImmutableAggregate.fromExisting(
                 projection,
                 aggregateState.id(),
                 newVersion,

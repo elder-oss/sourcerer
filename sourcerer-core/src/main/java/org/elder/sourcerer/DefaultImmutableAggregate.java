@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -16,29 +15,13 @@ public class DefaultImmutableAggregate<TState, TEvent>
     private final AggregateProjection<TState, TEvent> projection;
     private final String id;
     private final int sourceVersion;
-    private final TState sourceState;
     private final TState state;
     private final ImmutableList<TEvent> appliedEvents;
 
-    public DefaultImmutableAggregate(
+    DefaultImmutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
             @NotNull final String id,
             final int sourceVersion,
-            @Nullable final TState sourceState) {
-        this(
-                projection,
-                id,
-                sourceVersion,
-                sourceState,
-                sourceState != null ? sourceState : projection.empty(),
-                ImmutableList.of());
-    }
-
-    public DefaultImmutableAggregate(
-            @NotNull final AggregateProjection<TState, TEvent> projection,
-            @NotNull final String id,
-            final int sourceVersion,
-            @Nullable final TState sourceState,
             @NotNull final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
@@ -47,9 +30,49 @@ public class DefaultImmutableAggregate<TState, TEvent>
         this.projection = projection;
         this.id = id;
         this.sourceVersion = sourceVersion;
-        this.sourceState = sourceState;
         this.state = state;
         this.appliedEvents = ImmutableList.copyOf(events);
+    }
+
+    /**
+     * Creates a new immutable aggregate from the given projection, initialized with the empty
+     * value as defined by the projection, no events, and a "not created" version.
+     *
+     * @param projection The projection used to apply events to the state of the aggregate.
+     * @param id         The id of the aggregate.
+     * @return A new immutable aggregate with empty state and "not created" version.
+     */
+    public static <TState, TEvent> DefaultImmutableAggregate<TState, TEvent> createNew(
+            final AggregateProjection<TState, TEvent> projection,
+            final String id) {
+        return new DefaultImmutableAggregate<>(
+                projection,
+                id,
+                AggregateState.VERSION_NOT_CREATED,
+                projection.empty(),
+                ImmutableList.of());
+    }
+
+    /**
+     * Creates a new immutable aggregate state from the given projection, current state and version.
+     *
+     * @param projection    The projection used to apply events to the state of the aggregate.
+     * @param id            The id of the aggregate.
+     * @param sourceVersion The current version of the aggregate, in the state provided.
+     * @param state         The current state of the aggregate.
+     * @return A new immutable aggregate with the provided current state.
+     */
+    public static <TState, TEvent> DefaultImmutableAggregate<TState, TEvent> fromExisting(
+            final AggregateProjection<TState, TEvent> projection,
+            final String id,
+            final int sourceVersion,
+            final TState state) {
+        return new DefaultImmutableAggregate<>(
+                projection,
+                id,
+                sourceVersion,
+                state,
+                ImmutableList.of());
     }
 
     @Override
@@ -62,12 +85,6 @@ public class DefaultImmutableAggregate<TState, TEvent>
     @Override
     public int sourceVersion() {
         return sourceVersion;
-    }
-
-    @Nullable
-    @Override
-    public TState sourceState() {
-        return sourceState;
     }
 
     @Override
@@ -95,7 +112,6 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 projection,
                 id,
                 sourceVersion,
-                sourceState,
                 state,
                 appliedEvents);
     }
@@ -109,7 +125,6 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 projection,
                 id,
                 sourceVersion,
-                sourceState,
                 newState,
                 ImmutableList.<TEvent>builder().addAll(appliedEvents).add(event).build());
     }
@@ -124,7 +139,6 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 projection,
                 id,
                 sourceVersion,
-                sourceState,
                 newState,
                 ImmutableList.<TEvent>builder().addAll(appliedEvents).addAll(events).build());
     }
@@ -136,7 +150,6 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 projection,
                 id,
                 version,
-                state,
                 state,
                 ImmutableList.of());
     }
