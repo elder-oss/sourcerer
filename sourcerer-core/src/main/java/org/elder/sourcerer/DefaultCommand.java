@@ -115,7 +115,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         if (operation.requiresState() || atomic) {
             logger.debug("Reading aggregate record from stream");
             aggregate = readAndValidateAggregate(effectiveExpectedVersion);
-            logger.debug("Current state of aggregate is {}",
+            logger.debug(
+                    "Current state of aggregate is {}",
                     aggregate.sourceVersion() == AggregateState.VERSION_NOT_CREATED
                             ? "<not created>"
                             : "version " + aggregate.sourceVersion());
@@ -196,7 +197,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             // a stream and not fail if the same stream is attempted to be created on replays.
             if (idempotentCreate) {
                 logger.debug("Idempotent create enabled, ignoring existing stream");
-                return new CommandResult<>(aggregateId,
+                return new CommandResult<>(
+                        aggregateId,
                         ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
                         ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
                         ImmutableList.of());
@@ -213,7 +215,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             return ExpectedVersion.merge(commandExpectedVersion, operationExpectedVersion);
         } catch (ConflictingExpectedVersionsException ex) {
             throw new InvalidCommandException("Conflicting expected version constraints: "
-                                              + ex.getMessage(), ex);
+                                                      + ex.getMessage(), ex);
         }
     }
 

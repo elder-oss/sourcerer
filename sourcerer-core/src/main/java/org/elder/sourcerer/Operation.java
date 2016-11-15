@@ -33,9 +33,10 @@ public interface Operation<TState, TParams, TEvent> {
      * need to be written to support retries.
      *
      * @param aggregate The state of the aggregate that the operation is executed on. A null value
-     *                  indicates that no state has been retrieved and the current state is unknown,
-     *                  whereas an aggregate state holder with null current state indicates that the
-     *                  aggregate does not currently exist.
+     *                  indicates that no state has been retrieved and the current state is unknown.
+     *                  If the aggregate is new (did not exist at the time it was loaded), this will
+     *                  be identified by the source version set to -1, the state will be the default
+     *                  empty value according to the projection and never null.
      * @param params    The arguments applied to the operation.
      * @return A list of events to be applied to the aggregate to update its state, may be empty if
      * the operation is a no-op, must not be null,
