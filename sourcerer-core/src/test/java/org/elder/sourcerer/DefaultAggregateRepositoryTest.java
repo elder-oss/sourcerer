@@ -88,7 +88,11 @@ public class DefaultAggregateRepositoryTest {
         verify(eventRepository).read(AGGREGATE_ID_1, 0);
         ArgumentCaptor<Iterable<TestEvent>> passedEvents
                 = ArgumentCaptor.forClass((Class) Iterable.class);
-        verify(aggregateProjection).apply(eq(AGGREGATE_ID_1), eq(null), passedEvents.capture());
+        verify(aggregateProjection).empty();
+        verify(aggregateProjection).apply(
+                eq(AGGREGATE_ID_1),
+                eq(new TestState("empty")),
+                passedEvents.capture());
         Assert.assertThat(
                 passedEvents.getValue(),
                 org.hamcrest.Matchers.contains(expectedEvents.toArray()));
@@ -159,6 +163,7 @@ public class DefaultAggregateRepositoryTest {
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
 
         repository.load(AGGREGATE_ID_1);
+        verify(aggregateProjection).empty();
         verify(aggregateProjection, times(2)).apply(any(), any(), (Iterable) any());
         verify(eventRepository).read(AGGREGATE_ID_1, 0);
         verify(eventRepository).read(AGGREGATE_ID_1, 2);
