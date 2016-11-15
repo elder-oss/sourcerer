@@ -75,14 +75,14 @@ public interface AggregateProjection<TState, TEvent> {
      * @return A new aggregate instance of the same type as the provided, representing a
      * snapshot-in-time state of the given aggregate with the provided event applied.
      */
-    default @NotNull TState apply(
+    @NotNull default TState apply(
             @NotNull final String id,
-            @NotNull TState state,
+            @NotNull final TState state,
             @NotNull final Iterable<? extends TEvent> events) {
+        TState updatedState = state;
         for (TEvent e : events) {
-            state = apply(id, state, e);
+            updatedState = apply(id, updatedState, e);
         }
-
-        return state;
+        return updatedState;
     }
 }
