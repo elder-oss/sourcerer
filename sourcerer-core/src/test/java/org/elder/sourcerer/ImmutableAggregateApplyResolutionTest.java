@@ -8,12 +8,12 @@ import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
 import org.elder.sourcerer.functions.UpdateHandlerSingle;
-import org.elder.sourcerer.functions.UpdateHandlerState;
+import org.elder.sourcerer.functions.UpdateHandlerAggregate;
 import org.junit.Test;
 
 import java.util.List;
@@ -97,7 +97,7 @@ public class ImmutableAggregateApplyResolutionTest {
     public void testUpdateStateOverloadWorks() {
         ImmutableAggregate<State, Event> aggregate = mock(ImmutableAggregate.class);
         aggregate.apply(this::updateState);
-        verify(aggregate, times(1)).apply(any(UpdateHandlerState.class));
+        verify(aggregate, times(1)).apply(any(UpdateHandlerAggregate.class));
         verifyNoMoreInteractions(aggregate);
     }
 
@@ -147,7 +147,7 @@ public class ImmutableAggregateApplyResolutionTest {
         ImmutableAggregate<State, Event> aggregate = mock(ImmutableAggregate.class);
         aggregate.apply(this::updateParamsState, new Params());
         verify(aggregate, times(1)).apply(
-                any(ParameterizedUpdateHandlerState.class),
+                any(ParameterizedUpdateHandlerAggregate.class),
                 any());
         verifyNoMoreInteractions(aggregate);
     }

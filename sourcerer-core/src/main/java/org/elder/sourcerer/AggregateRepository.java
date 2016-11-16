@@ -20,8 +20,7 @@ public interface AggregateRepository<TState, TEvent> {
      * @param aggregateId The id of the aggregate to load.
      * @return A snapshot in time of the aggregate along with information such as its current
      * version. This method should never return null, but rather an ImmutableAggregate with a
-     * version of AggregateState.VERSION_NOT_CREATED (-1) if the aggregate is nonexistent or
-     * deleted.
+     * version of Aggregate.VERSION_NOT_CREATED (-1) if the aggregate is nonexistent or deleted.
      */
     ImmutableAggregate<TState, TEvent> load(String aggregateId);
 
@@ -30,18 +29,18 @@ public interface AggregateRepository<TState, TEvent> {
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.
      *
-     * @param aggregateState The state of the aggregate to apply updates for.
-     * @param atomic         If true, the original version of the aggregate will be used as the
-     *                       expected version, failing the operation if other changes have taken
-     *                       place in between.
-     * @param metadata       Metadata in the form of string key/value pairs used to annotate each
-     *                       event as persisted. Metadata will not be used to reconstruct the
-     *                       aggregate from events, but can be used to append diagnostic information
-     *                       to the operation, such as who performed the action that triggered it,
-     *                       or which system that submitted the events.
+     * @param aggregate The aggregate to apply updates for.
+     * @param atomic    If true, the original version of the aggregate will be used as the expected
+     *                  version, failing the operation if other changes have taken place in
+     *                  between.
+     * @param metadata  Metadata in the form of string key/value pairs used to annotate each event
+     *                  as persisted. Metadata will not be used to reconstruct the aggregate from
+     *                  events, but can be used to append diagnostic information to the operation,
+     *                  such as who performed the action that triggered it, or which system that
+     *                  submitted the events.
      */
     ImmutableAggregate<TState, TEvent> save(
-            @NotNull AggregateState<TState, TEvent> aggregateState,
+            @NotNull Aggregate<TState, TEvent> aggregate,
             boolean atomic,
             Map<String, String> metadata);
 
@@ -50,15 +49,15 @@ public interface AggregateRepository<TState, TEvent> {
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.
      *
-     * @param aggregateState The state of the aggregate to apply updates for.
-     * @param atomic         If true, the original version of the aggregate will be used as the
-     *                       expected version, failing the operation if other changes have taken
-     *                       place in between.
+     * @param aggregate The aggregate to apply updates for.
+     * @param atomic    If true, the original version of the aggregate will be used as the expected
+     *                  version, failing the operation if other changes have taken place in
+     *                  between.
      */
     default ImmutableAggregate<TState, TEvent> save(
-            @NotNull AggregateState<TState, TEvent> aggregateState,
+            @NotNull Aggregate<TState, TEvent> aggregate,
             boolean atomic) {
-        return save(aggregateState, atomic, null);
+        return save(aggregate, atomic, null);
     }
 
     /**
@@ -66,11 +65,11 @@ public interface AggregateRepository<TState, TEvent> {
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.
      *
-     * @param aggregateState The state of the aggregate to apply updates for.
+     * @param aggregate The aggregate to apply updates for.
      */
     default ImmutableAggregate<TState, TEvent> save(
-            @NotNull AggregateState<TState, TEvent> aggregateState) {
-        return save(aggregateState, true, null);
+            @NotNull Aggregate<TState, TEvent> aggregate) {
+        return save(aggregate, true, null);
     }
 
     /**

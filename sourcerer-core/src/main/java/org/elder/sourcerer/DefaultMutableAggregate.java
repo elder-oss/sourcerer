@@ -47,7 +47,7 @@ public class DefaultMutableAggregate<TState, TEvent>
         return new DefaultMutableAggregate<>(
                 projection,
                 id,
-                AggregateState.VERSION_NOT_CREATED,
+                Aggregate.VERSION_NOT_CREATED,
                 projection.empty(),
                 ImmutableList.of());
     }

@@ -17,12 +17,12 @@ import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
 import org.elder.sourcerer.functions.UpdateHandlerSingle;
-import org.elder.sourcerer.functions.UpdateHandlerState;
+import org.elder.sourcerer.functions.UpdateHandlerAggregate;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -113,7 +113,7 @@ public class OperationsFunctionOverloadTest {
     public void testUpdateStateResolved() {
         Operation<State, Object, Event> operation =
                 Operations.updateOf(this::updateState);
-        this.assertHandlerType(operation, UpdateHandlerState.class);
+        this.assertHandlerType(operation, UpdateHandlerAggregate.class);
     }
 
     @Test
@@ -134,7 +134,7 @@ public class OperationsFunctionOverloadTest {
     public void testParameterizedUpdateStateResolved() {
         Operation<State, Params, Event> operation =
                 Operations.updateOf(this::parameterizedUpdateState);
-        this.assertHandlerType(operation, ParameterizedUpdateHandlerState.class);
+        this.assertHandlerType(operation, ParameterizedUpdateHandlerAggregate.class);
     }
 
     @Test

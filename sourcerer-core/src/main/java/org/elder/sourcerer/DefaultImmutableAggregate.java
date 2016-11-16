@@ -10,12 +10,12 @@ import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
 import org.elder.sourcerer.functions.UpdateHandlerSingle;
-import org.elder.sourcerer.functions.UpdateHandlerState;
+import org.elder.sourcerer.functions.UpdateHandlerAggregate;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -62,7 +62,7 @@ public class DefaultImmutableAggregate<TState, TEvent>
         return new DefaultImmutableAggregate<>(
                 projection,
                 id,
-                AggregateState.VERSION_NOT_CREATED,
+                Aggregate.VERSION_NOT_CREATED,
                 projection.empty(),
                 ImmutableList.of());
     }
@@ -204,8 +204,8 @@ public class DefaultImmutableAggregate<TState, TEvent>
     @NotNull
     @Override
     public ImmutableAggregate<TState, TEvent> apply(
-            @NotNull final UpdateHandlerState<TState, TEvent> handler) {
-        return handler.executeWithState(this).toImmutableAggregate();
+            @NotNull final UpdateHandlerAggregate<TState, TEvent> handler) {
+        return handler.executeWithAggregate(this).toImmutableAggregate();
     }
 
     @NotNull
@@ -241,9 +241,9 @@ public class DefaultImmutableAggregate<TState, TEvent>
     @NotNull
     @Override
     public <TParam> ImmutableAggregate<TState, TEvent> apply(
-            @NotNull final ParameterizedUpdateHandlerState<TState, TParam, TEvent> handler,
+            @NotNull final ParameterizedUpdateHandlerAggregate<TState, TParam, TEvent> handler,
             final TParam params) {
-        return handler.executeWithState(this, params).toImmutableAggregate();
+        return handler.executeWithAggregate(this, params).toImmutableAggregate();
     }
 
     @NotNull

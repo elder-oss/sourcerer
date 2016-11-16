@@ -3,10 +3,10 @@ package org.elder.sourcerer;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A projection is a function that given an aggregate and an event, returns a new aggregate
- * representing the state of the aggregate with the event applied.
+ * A projection is a function that given an aggregate state and an event, returns a new aggregate
+ * state representing the aggregate with the event applied.
  *
- * @param <TState> The type of aggregate (state) that the projection operates on
+ * @param <TState> The type of aggregate state that the projection operates on
  * @param <TEvent> The type of event that the projection is capable of applying to aggregates.
  */
 public interface AggregateProjection<TState, TEvent> {

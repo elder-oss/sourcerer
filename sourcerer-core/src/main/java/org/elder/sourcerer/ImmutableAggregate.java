@@ -8,30 +8,30 @@ import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
 import org.elder.sourcerer.functions.UpdateHandlerSingle;
-import org.elder.sourcerer.functions.UpdateHandlerState;
+import org.elder.sourcerer.functions.UpdateHandlerAggregate;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * An immutable specialization of AggregateState, implicitly bound to an aggregate projection, that
+ * An immutable specialization of Aggregate, implicitly bound to an aggregate projection, that
  * adds supports for updating state by applying events.
  *
  * @param <TState> The type representing state of an aggregate (as relevant to the domain where it
  *                 is used).
  * @param <TEvent> The type of events that can be applied to the aggregate (in the current domain).
  */
-public interface ImmutableAggregate<TState, TEvent> extends AggregateState<TState, TEvent> {
+public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TEvent> {
     /**
      * Applies a single event to the aggregate state, updating both the encapsulated state, and the
      * local log of events applied to it.
      *
      * @param event The event to apply.
-     * @return A new immutable aggregate state, representing the state of the aggregate with the
-     * event applied, together with the list of applied events.
+     * @return A new immutable aggregate, representing the aggregate with the event applied,
+     * together with the list of applied events.
      */
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(@NotNull TEvent event);
@@ -41,8 +41,8 @@ public interface ImmutableAggregate<TState, TEvent> extends AggregateState<TStat
      * and the local log of events applied to it.
      *
      * @param events The events to apply.
-     * @return A new immutable aggregate state, representing the state of the aggregate with the
-     * event applied, together with the list of applied events.
+     * @return A new immutable aggregate, representing the aggregate with the event applied,
+     * together with the list of applied events.
      */
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(@NotNull Iterable<? extends TEvent> events);
@@ -136,7 +136,7 @@ public interface ImmutableAggregate<TState, TEvent> extends AggregateState<TStat
      */
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(
-            @NotNull UpdateHandlerState<TState, TEvent> handler);
+            @NotNull UpdateHandlerAggregate<TState, TEvent> handler);
 
     /**
      * Applies the events derived from an operation handler of the given type. This method is
@@ -203,7 +203,7 @@ public interface ImmutableAggregate<TState, TEvent> extends AggregateState<TStat
      * the handler provided applied on top.
      */
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
-            @NotNull ParameterizedUpdateHandlerState<TState, TParam, TEvent> handler,
+            @NotNull ParameterizedUpdateHandlerAggregate<TState, TParam, TEvent> handler,
             TParam params);
 
     /**

@@ -117,7 +117,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             aggregate = readAndValidateAggregate(effectiveExpectedVersion);
             logger.debug(
                     "Current state of aggregate is {}",
-                    aggregate.sourceVersion() == AggregateState.VERSION_NOT_CREATED
+                    aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED
                             ? "<not created>"
                             : "version " + aggregate.sourceVersion());
         } else {
@@ -128,7 +128,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         // Bail out early if idempotent create, and already present
         if (idempotentCreate
                 && aggregate != null
-                && aggregate.sourceVersion() != AggregateState.VERSION_NOT_CREATED) {
+                && aggregate.sourceVersion() != Aggregate.VERSION_NOT_CREATED) {
             logger.debug("Bailing out early as already created (and idempotent create set)");
             return new CommandResult<>(
                     aggregateId,
@@ -156,7 +156,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
 
         if (atomic) {
             // Actually null safe since atomic above ...
-            if (aggregate.sourceVersion() != AggregateState.VERSION_NOT_CREATED) {
+            if (aggregate.sourceVersion() != Aggregate.VERSION_NOT_CREATED) {
                 updateExpectedVersion = ExpectedVersion.exactly(aggregate.sourceVersion());
             } else {
                 updateExpectedVersion = ExpectedVersion.notCreated();
@@ -229,7 +229,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             case ANY:
                 break;
             case ANY_EXISTING:
-                if (aggregate.sourceVersion() == AggregateState.VERSION_NOT_CREATED) {
+                if (aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED) {
                     throw new UnexpectedVersionException(
                             aggregate.sourceVersion(),
                             effectiveExpectedVersion);
@@ -243,7 +243,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 }
                 break;
             case NOT_CREATED:
-                if (aggregate.sourceVersion() != AggregateState.VERSION_NOT_CREATED
+                if (aggregate.sourceVersion() != Aggregate.VERSION_NOT_CREATED
                         && !idempotentCreate) {
                     throw new UnexpectedVersionException(
                             aggregate.sourceVersion(),

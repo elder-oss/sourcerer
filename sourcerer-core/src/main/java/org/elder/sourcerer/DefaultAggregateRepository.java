@@ -97,30 +97,30 @@ public class DefaultAggregateRepository<TState, TEvent>
 
     @Override
     public ImmutableAggregate<TState, TEvent> save(
-            @NotNull final AggregateState<TState, TEvent> aggregateState,
+            @NotNull final Aggregate<TState, TEvent> aggregate,
             final boolean atomic,
             final Map<String, String> metadata) {
-        Preconditions.checkNotNull(aggregateState);
+        Preconditions.checkNotNull(aggregate);
         ExpectedVersion expectedVersion;
         if (atomic) {
-            if (aggregateState.sourceVersion() == AggregateState.VERSION_NOT_CREATED) {
+            if (aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED) {
                 expectedVersion = ExpectedVersion.notCreated();
             } else {
-                expectedVersion = ExpectedVersion.exactly(aggregateState.sourceVersion());
+                expectedVersion = ExpectedVersion.exactly(aggregate.sourceVersion());
             }
         } else {
             expectedVersion = ExpectedVersion.any();
         }
         int newVersion = append(
-                aggregateState.id(),
-                aggregateState.events(),
+                aggregate.id(),
+                aggregate.events(),
                 expectedVersion,
                 metadata);
         return DefaultImmutableAggregate.fromExisting(
                 projection,
-                aggregateState.id(),
+                aggregate.id(),
                 newVersion,
-                aggregateState.state());
+                aggregate.state());
     }
 
     private String getEventType(final TEvent event) {

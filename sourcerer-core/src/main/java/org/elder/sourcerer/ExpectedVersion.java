@@ -40,7 +40,7 @@ public final class ExpectedVersion {
     public static ExpectedVersion notCreated() {
         return new ExpectedVersion(
                 ExpectedVersionType.NOT_CREATED,
-                AggregateState.VERSION_NOT_CREATED);
+                Aggregate.VERSION_NOT_CREATED);
     }
 
     public static ExpectedVersion exactly(final int version) {

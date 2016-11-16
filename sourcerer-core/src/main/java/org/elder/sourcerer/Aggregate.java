@@ -2,32 +2,30 @@ package org.elder.sourcerer;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 /**
- * An aggregate state is a description of the state of an aggregate (an entity constructed from
- * events), with the version it was constructed from if loaded from an existing persisted state,
- * and a log of the events applied since.
+ * An aggregate is an entity constructed from events), with the version it was constructed from (if
+ * loaded from an existing persisted state), and a log of the events applied since.
  * <p>
- * Aggregates provide a convenient alternative to dealing with only events directly, and can be
- * used to track state changes and events as a unit. See ImmutableAggregate and MutableAggregate
- * for implementations of this interface that supports applying new events.
+ * Aggregates provide a convenient alternative to dealing with events directly, and can be used
+ * to track state changes and events as a unit. See ImmutableAggregate and MutableAggregate for
+ * implementations of this interface that supports applying new events.
  * <p>
  * The aggregate state contains a log of events applied to it so far, as well as the current state
- * of the aggregate with the events applied. Until the events are explicitly persisted (manually
- * or through a command), they are only kept in-process and the aggregate state represents a
- * "dry run" result of committing the events.
+ * of the aggregate with the events applied. Until the events are explicitly persisted (manually or
+ * through a command), they are only kept in-process and the aggregate state represents a "dry run"
+ * result of committing the events.
  * <p>
- * A concrete aggregate is usually bound to an AggregateProjection, that provides the logic for
- * how to append the state of the aggregate given events.
+ * A concrete aggregate is usually bound to an AggregateProjection, that provides the logic for how
+ * to append the state of the aggregate given events.
  *
- * @param <TState> The type representing state of an aggregate (as relevant to the domain where it
+ * @param <TState> The type of the state of the aggregate (as relevant to the domain where it
  *                 is used).
  * @param <TEvent> The type of events that can be applied to the aggregate (in the current domain).
  */
-public interface AggregateState<TState, TEvent> {
+public interface Aggregate<TState, TEvent> {
     int VERSION_NOT_CREATED = -1;
 
     /**

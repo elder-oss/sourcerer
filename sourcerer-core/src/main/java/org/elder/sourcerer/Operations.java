@@ -12,12 +12,12 @@ import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
 import org.elder.sourcerer.functions.UpdateHandlerSingle;
-import org.elder.sourcerer.functions.UpdateHandlerState;
+import org.elder.sourcerer.functions.UpdateHandlerAggregate;
 
 /**
  * Utility functions for building functions from various method types.
@@ -95,7 +95,7 @@ public final class Operations {
      * @return An operation representing the supplied logic, with metadata.
      */
     public static <TState, TEvent> Operation<TState, Object, TEvent> updateOf(
-            final UpdateHandlerState<TState, TEvent> handler) {
+            final UpdateHandlerAggregate<TState, TEvent> handler) {
         return updateOf(handler, false);
     }
 
@@ -128,7 +128,7 @@ public final class Operations {
      * @return An operation representing the supplied logic, with metadata.
      */
     public static <TState, TParams, TEvent> Operation<TState, TParams, TEvent> updateOf(
-            final ParameterizedUpdateHandlerState<TState, TParams, TEvent> handler) {
+            final ParameterizedUpdateHandlerAggregate<TState, TParams, TEvent> handler) {
         return updateOf(handler, false);
     }
 
@@ -188,7 +188,7 @@ public final class Operations {
      * @return An operation representing the supplied logic, with metadata.
      */
     public static <TState, TEvent> Operation<TState, Object, TEvent> updateOf(
-            final UpdateHandlerState<TState, TEvent> handler,
+            final UpdateHandlerAggregate<TState, TEvent> handler,
             final boolean autoCreate) {
         ExpectedVersion expectedVersion = autoCreate
                 ? ExpectedVersion.any()
@@ -257,7 +257,7 @@ public final class Operations {
      * @return An operation representing the supplied logic, with metadata.
      */
     public static <TState, TParams, TEvent> Operation<TState, TParams, TEvent> updateOf(
-            final ParameterizedUpdateHandlerState<TState, TParams, TEvent> handler,
+            final ParameterizedUpdateHandlerAggregate<TState, TParams, TEvent> handler,
             final boolean autoCreate) {
         ExpectedVersion expectedVersion = autoCreate
                 ? ExpectedVersion.any()
