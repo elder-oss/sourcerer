@@ -182,54 +182,58 @@ public class ImmutableAggregateApplyResolutionTest {
         return null;
     }
 
-    private List<Event> appendParams(Params params) {
+    private List<Event> appendParams(final Params params) {
         return null;
     }
 
-    private Event appendParamsSingle(Params params) {
+    private Event appendParamsSingle(final Params params) {
         return null;
     }
 
-    private List<Event> update(ImmutableAggregate<State, Event> aggregate) {
+    private List<Event> update(final ImmutableAggregate<State, Event> aggregate) {
         return null;
     }
 
-    private Event updateSingle(ImmutableAggregate<State, Event> aggregate) {
+    private Event updateSingle(final ImmutableAggregate<State, Event> aggregate) {
         return null;
     }
 
     private ImmutableAggregate<State, Event> updateState(
-            ImmutableAggregate<State, Event> aggregate) {
+            final ImmutableAggregate<State, Event> aggregate) {
         return null;
     }
 
-    private List<Event> updatePojo(State state) {
+    private List<Event> updatePojo(final State state) {
         return null;
     }
 
-    private Event updatePojoSingle(State state) {
+    private Event updatePojoSingle(final State state) {
         return null;
     }
 
-    private List<Event> updateParams(ImmutableAggregate<State, Event> aggregate, Params params) {
+    private List<Event> updateParams(
+            final ImmutableAggregate<State, Event> aggregate,
+            final Params params) {
         return null;
     }
 
-    private Event updateParamsSingle(ImmutableAggregate<State, Event> aggregate, Params params) {
+    private Event updateParamsSingle(
+            final ImmutableAggregate<State, Event> aggregate,
+            final Params params) {
         return null;
     }
 
     private ImmutableAggregate<State, Event> updateParamsState(
-            ImmutableAggregate<State, Event> aggregate,
-            Params params) {
+            final ImmutableAggregate<State, Event> aggregate,
+            final Params params) {
         return null;
     }
 
-    private List<Event> updateParamsPojo(State state, Params params) {
+    private List<Event> updateParamsPojo(final State state, final Params params) {
         return null;
     }
 
-    private Event updateParamsPojoSingle(State state, Params params) {
+    private Event updateParamsPojoSingle(final State state, final Params params) {
         return null;
     }
 }
