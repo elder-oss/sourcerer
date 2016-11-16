@@ -2,6 +2,20 @@ package org.elder.sourcerer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.elder.sourcerer.functions.AppendHandler;
+import org.elder.sourcerer.functions.AppendHandlerSingle;
+import org.elder.sourcerer.functions.ParameterizedAppendHandler;
+import org.elder.sourcerer.functions.ParameterizedAppendHandlerSingle;
+import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
+import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerState;
+import org.elder.sourcerer.functions.PojoUpdateHandler;
+import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
+import org.elder.sourcerer.functions.UpdateHandler;
+import org.elder.sourcerer.functions.UpdateHandlerSingle;
+import org.elder.sourcerer.functions.UpdateHandlerState;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -141,6 +155,111 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 sourceVersion,
                 newState,
                 ImmutableList.<TEvent>builder().addAll(appliedEvents).addAll(events).build());
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final AppendHandler<TEvent> handler) {
+        return this.apply(handler.execute());
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final AppendHandlerSingle<TEvent> handler) {
+        return this.apply(handler.executeSingle());
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedAppendHandler<TParam, TEvent> handler,
+            final TParam params) {
+        return this.apply(handler.execute(params));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedAppendHandlerSingle<TParam, TEvent> handler,
+            final TParam params) {
+        return this.apply(handler.executeSingle(params));
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final UpdateHandler<TState, TEvent> handler) {
+        return this.apply(handler.execute(this));
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final UpdateHandlerSingle<TState, TEvent> handler) {
+        return this.apply(handler.executeSingle(this));
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final UpdateHandlerState<TState, TEvent> handler) {
+        return handler.executeWithState(this).toImmutableAggregate();
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final PojoUpdateHandler<TState, TEvent> handler) {
+        return this.apply(handler.execute(this.state));
+    }
+
+    @NotNull
+    @Override
+    public ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final PojoUpdateHandlerSingle<TState, TEvent> handler) {
+        return this.apply(handler.executeSingle(this.state));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedUpdateHandler<TState, TParam, TEvent> handler,
+            final TParam params) {
+        return this.apply(handler.execute(this, params));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedUpdateHandlerSingle<TState, TParam, TEvent> handler,
+            final TParam params) {
+        return this.apply(handler.executeSingle(this, params));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedUpdateHandlerState<TState, TParam, TEvent> handler,
+            final TParam params) {
+        return handler.executeWithState(this, params).toImmutableAggregate();
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedPojoUpdateHandler<TState, TParam, TEvent> handler,
+            final TParam params) {
+        return this.apply(handler.execute(this.state, params));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> apply(
+            @NotNull final ParameterizedPojoUpdateHandlerSingle<TState, TParam, TEvent> handler,
+            final TParam params) {
+        return this.apply(handler.executeSingle(this.state, params));
     }
 
     @NotNull
