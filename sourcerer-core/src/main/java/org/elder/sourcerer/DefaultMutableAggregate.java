@@ -99,7 +99,7 @@ public class DefaultMutableAggregate<TState, TEvent>
     }
 
     @Override
-    public ImmutableAggregate<TState, TEvent> toImmutableAggregate() {
+    public ImmutableAggregate<TState, TEvent> toImmutable() {
         return new DefaultImmutableAggregate<>(
                 projection,
                 id,
@@ -109,7 +109,7 @@ public class DefaultMutableAggregate<TState, TEvent>
     }
 
     @Override
-    public MutableAggregate<TState, TEvent> toMutableAggregate() {
+    public MutableAggregate<TState, TEvent> toMutable() {
         return new DefaultMutableAggregate<>(
                 projection,
                 id,

@@ -71,9 +71,9 @@ public interface Operation<TState, TParams, TEvent> {
 
     /**
      * True if the operation is atomic, i.e. would fail if there were concurrent modifications to
-     * the aggregate in between it being load, and new events being added. This will set the default
-     * value for the command when created from an operation, which can be overwritten by explicitly
-     * setting atomic to true or false on the command.
+     * the aggregate in between it being loaded, and new events being added. This will set the
+     * default value for the command when created from an operation, which can be overwritten by
+     * explicitly setting atomic to true or false on the command.
      */
     boolean atomic();
 }

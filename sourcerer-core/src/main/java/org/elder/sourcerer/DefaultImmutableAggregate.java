@@ -116,12 +116,12 @@ public class DefaultImmutableAggregate<TState, TEvent>
     }
 
     @Override
-    public ImmutableAggregate<TState, TEvent> toImmutableAggregate() {
+    public ImmutableAggregate<TState, TEvent> toImmutable() {
         return this;
     }
 
     @Override
-    public MutableAggregate<TState, TEvent> toMutableAggregate() {
+    public MutableAggregate<TState, TEvent> toMutable() {
         return new DefaultMutableAggregate<>(
                 projection,
                 id,
@@ -205,7 +205,7 @@ public class DefaultImmutableAggregate<TState, TEvent>
     @Override
     public ImmutableAggregate<TState, TEvent> apply(
             @NotNull final UpdateHandlerAggregate<TState, TEvent> handler) {
-        return handler.executeWithAggregate(this).toImmutableAggregate();
+        return handler.executeWithAggregate(this).toImmutable();
     }
 
     @NotNull
@@ -243,7 +243,7 @@ public class DefaultImmutableAggregate<TState, TEvent>
     public <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull final ParameterizedUpdateHandlerAggregate<TState, TParam, TEvent> handler,
             final TParam params) {
-        return handler.executeWithAggregate(this, params).toImmutableAggregate();
+        return handler.executeWithAggregate(this, params).toImmutable();
     }
 
     @NotNull

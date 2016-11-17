@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class SourcererCommandConfiguration<TEvent, TState>
         extends SourcererEventConfiguration<TEvent> {
-    private final Class<TState> aggregateType;
+    private final Class<TState> stateType;
     private final AggregateProjection<TState, TEvent> projection;
 
     @Autowired(required = false)
@@ -44,10 +44,10 @@ public class SourcererCommandConfiguration<TEvent, TState>
 
     protected SourcererCommandConfiguration(
             final Class<TEvent> eventType,
-            final Class<TState> aggregateType,
+            final Class<TState> stateType,
             final AggregateProjection<TState, TEvent> projection) {
         super(eventType);
-        this.aggregateType = aggregateType;
+        this.stateType = stateType;
         this.projection = projection;
     }
 

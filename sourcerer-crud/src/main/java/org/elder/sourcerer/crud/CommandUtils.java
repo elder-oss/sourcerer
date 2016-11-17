@@ -123,7 +123,7 @@ public final class CommandUtils {
     }
 
     /**
-     * Executes a command, and waits for the affected entity to be updated in the relevant load
+     * Executes a command, and waits for the affected entity to be updated in the relevant read
      * model. This method will execute the command once, propagating any exceptions immediately. If
      * the command is successful, it will use the provided assert function to check that it has been
      * created, retrying periodically as required until completed.
@@ -131,7 +131,7 @@ public final class CommandUtils {
      * @param commandFunction  A function that, when called, executes the command and returns the id
      *                         of the affected entity along with its new version.
      * @param assertFunction   A function accepting an aggregate id and version that should complete
-     *                         without exceptions if the relevant load model now has the entity with
+     *                         without exceptions if the relevant read model now has the entity with
      *                         the given id and version. On any exception (but not other
      *                         throwables), this method will be retried up to the maximum number of
      *                         attempts specified, or until successful.

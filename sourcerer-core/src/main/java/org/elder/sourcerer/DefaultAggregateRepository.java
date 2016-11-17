@@ -40,7 +40,7 @@ public class DefaultAggregateRepository<TState, TEvent>
 
     @Override
     public ImmutableAggregate<TState, TEvent> load(final String aggregateId) {
-        TState aggregate = projection.empty();
+        TState state = projection.empty();
         int currentStreamPosition = 0;
         while (true) { // Exit through return
             logger.debug("Reading events for {} from {}", aggregateId, currentStreamPosition);
@@ -60,14 +60,14 @@ public class DefaultAggregateRepository<TState, TEvent>
                     .stream()
                     .map(EventRecord::getEvent)
                     .collect(Collectors.toList());
-            aggregate = projection.apply(aggregateId, aggregate, events);
+            state = projection.apply(aggregateId, state, events);
 
             if (readResult.isEndOfStream()) {
                 return DefaultImmutableAggregate.fromExisting(
                         projection,
                         aggregateId,
                         readResult.getLastVersion(),
-                        aggregate);
+                        state);
             }
 
             currentStreamPosition = readResult.getNextVersion();

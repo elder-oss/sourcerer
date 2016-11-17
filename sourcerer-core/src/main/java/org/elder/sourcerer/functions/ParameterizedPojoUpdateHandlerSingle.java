@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.OperationHandler;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ import java.util.List;
 @FunctionalInterface
 public interface ParameterizedPojoUpdateHandlerSingle<TState, TParams, TEvent>
         extends OperationHandler<TState, TParams, TEvent> {
+    @NotNull
     TEvent executeSingle(TState state, TParams params);
 
     @Override

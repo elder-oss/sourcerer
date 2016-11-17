@@ -33,10 +33,6 @@ public interface AggregateProjection<TState, TEvent> {
      * tense, already happened events. The projection must be able to deal with any event type and
      * values of event types that may have been created in the past, substituting sane defaults for
      * missing values that may be required in later versions of the event.
-     * <p>
-     * The state provided may be null, representing a previously non-existent aggregate. For this
-     * case, the projection must be able to instantiate a new aggregate with defaults set (if
-     * applicable) and apply the given event to it.
      *
      * @param id    The id of the aggregate being projected.
      * @param state A snapshot in time state of an aggregate.
@@ -64,10 +60,6 @@ public interface AggregateProjection<TState, TEvent> {
      * tense, already happened events. The projection must be able to deal with any event type and
      * values of event types that may have been created in the past, substituting sane defaults for
      * missing values that may be required in later versions of the event.
-     * <p>
-     * The state provided may be null, representing a previously non-existent aggregate. For this
-     * case, the projection must be able to instantiate a new aggregate with defaults set (if
-     * applicable) and apply the given event to it.
      *
      * @param id     The id of the aggregate being projected.
      * @param state  A snapshot in time state of an aggregate.

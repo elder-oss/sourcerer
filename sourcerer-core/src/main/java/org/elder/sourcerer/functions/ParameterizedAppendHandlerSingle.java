@@ -3,6 +3,7 @@ package org.elder.sourcerer.functions;
 import com.google.common.collect.ImmutableList;
 import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.OperationHandler;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -14,6 +15,7 @@ import java.util.List;
 @FunctionalInterface
 public interface ParameterizedAppendHandlerSingle<TParams, TEvent>
         extends OperationHandler<Object, TParams, TEvent> {
+    @NotNull
     TEvent executeSingle(TParams params);
 
     @Override

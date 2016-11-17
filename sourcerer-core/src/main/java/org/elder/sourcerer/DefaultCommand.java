@@ -151,7 +151,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                     events);
         }
 
-        // Create/append the event stream as needed
+        // Create/update the event stream as needed
         ExpectedVersion updateExpectedVersion;
 
         if (atomic) {
@@ -214,8 +214,9 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         try {
             return ExpectedVersion.merge(commandExpectedVersion, operationExpectedVersion);
         } catch (ConflictingExpectedVersionsException ex) {
-            throw new InvalidCommandException("Conflicting expected version constraints: "
-                                                      + ex.getMessage(), ex);
+            throw new InvalidCommandException(
+                    "Conflicting expected version constraints: " + ex.getMessage(),
+                    ex);
         }
     }
 

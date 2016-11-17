@@ -28,7 +28,7 @@ public interface OperationHandler<TState, TParams, TEvent> {
      *
      * @param aggregate The aggregate that the operation is executed on.
      * @param params    The arguments applied to the operation.
-     * @return A list of events to be applied to the aggregate to append its state, may be empty if
+     * @return A list of events to be applied to the aggregate to update its state, may be empty if
      * the operation is a no-op, must not be null,
      */
     @NotNull
