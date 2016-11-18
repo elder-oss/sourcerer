@@ -1,5 +1,6 @@
 package org.elder.sourcerer.functions;
 
+import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.OperationHandler;
 
 import java.util.List;
@@ -9,7 +10,10 @@ public interface ConstructorHandler<TEvent>
         extends OperationHandler<Object, Object, TEvent> {
     List<? extends TEvent> execute();
 
-    default List<? extends TEvent> execute(final Object state, final Object params) {
+    @Override
+    default List<? extends TEvent> execute(
+            final ImmutableAggregate<Object, TEvent> aggregate,
+            final Object params) {
         return execute();
     }
 }

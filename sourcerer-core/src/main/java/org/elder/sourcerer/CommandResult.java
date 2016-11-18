@@ -45,7 +45,7 @@ public class CommandResult<TEvent> {
      * Gets the previous version of the aggregate, after the events from the command were applied.
      * This may be null in the cases where the current version is unknown, e.g. a no-op operation.
      * For non atomic operations, this may be deduced from the new version and number of events
-     * written, rather than confirmed by read from a previous state of the stream.
+     * written, rather than by explicitly reading from the stream before appending changes.
      */
     public Integer getPreviousVersion() {
         return previousVersion;

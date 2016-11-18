@@ -38,7 +38,9 @@ public final class ExpectedVersion {
     }
 
     public static ExpectedVersion notCreated() {
-        return new ExpectedVersion(ExpectedVersionType.NOT_CREATED, -1);
+        return new ExpectedVersion(
+                ExpectedVersionType.NOT_CREATED,
+                Aggregate.VERSION_NOT_CREATED);
     }
 
     public static ExpectedVersion exactly(final int version) {

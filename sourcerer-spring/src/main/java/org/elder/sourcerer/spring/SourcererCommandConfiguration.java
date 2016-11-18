@@ -31,10 +31,10 @@ import java.util.Map;
  * placed in the component scan path of your Spring application. You must also separately configure
  * a EventRepositoryFactory.
  */
-public class SourcererCommandConfiguration<TEvent, TAggregate>
+public class SourcererCommandConfiguration<TEvent, TState>
         extends SourcererEventConfiguration<TEvent> {
-    private final Class<TAggregate> aggregateType;
-    private final AggregateProjection<TAggregate, TEvent> projection;
+    private final Class<TState> stateType;
+    private final AggregateProjection<TState, TEvent> projection;
 
     @Autowired(required = false)
     private List<MetadataDecorator> metadataDecorators;
@@ -44,17 +44,17 @@ public class SourcererCommandConfiguration<TEvent, TAggregate>
 
     protected SourcererCommandConfiguration(
             final Class<TEvent> eventType,
-            final Class<TAggregate> aggregateType,
-            final AggregateProjection<TAggregate, TEvent> projection) {
+            final Class<TState> stateType,
+            final AggregateProjection<TState, TEvent> projection) {
         super(eventType);
-        this.aggregateType = aggregateType;
+        this.stateType = stateType;
         this.projection = projection;
     }
 
     @Bean
     @Lazy
     @Scope(BeanDefinition.SCOPE_SINGLETON)
-    public AggregateRepository<TAggregate, TEvent> getAggregateRepository(
+    public AggregateRepository<TState, TEvent> getAggregateRepository(
             final EventRepository<TEvent> eventRepository) {
         return new DefaultAggregateRepository<>(eventRepository, projection, this::resolveType);
     }
@@ -62,8 +62,8 @@ public class SourcererCommandConfiguration<TEvent, TAggregate>
     @Bean
     @Lazy
     @Scope(BeanDefinition.SCOPE_SINGLETON)
-    public CommandFactory<TAggregate, TEvent> getCommandFactory(
-            final AggregateRepository<TAggregate, TEvent> aggregateRepository) {
+    public CommandFactory<TState, TEvent> getCommandFactory(
+            final AggregateRepository<TState, TEvent> aggregateRepository) {
         List<CommandPostProcessor> commandPostProcessors = new ArrayList<>();
         if (metadataDecorators != null) {
             for (MetadataDecorator metadataDecorator : metadataDecorators) {

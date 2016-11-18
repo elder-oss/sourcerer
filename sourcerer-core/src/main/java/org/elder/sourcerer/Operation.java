@@ -32,12 +32,18 @@ public interface Operation<TState, TParams, TEvent> {
      * related to the aggregate it operates on other than in the form of returning events, and does
      * need to be written to support retries.
      *
-     * @param aggregate The aggregate that the operation is executed on.
+     * @param aggregate The aggregate that the operation is executed on. A null value indicates that
+     *                  no aggregate has been retrieved and the current state is unknown. If the
+     *                  aggregate is new (did not exist at the time it was loaded), this will be
+     *                  identified by the source version set to -1. The state will be the default
+     *                  empty value according to the projection and never null.
      * @param params    The arguments applied to the operation.
-     * @return A list of events to be applied to the aggregate to update its state, may be empty
-     * if the operation is a no-op, must not be null,
+     * @return A list of events to be applied to the aggregate to update its state, may be empty if
+     * the operation is a no-op, must not be null,
      */
-    @NotNull List<? extends TEvent> execute(@Nullable TState aggregate, @Nullable TParams params);
+    @NotNull List<? extends TEvent> execute(
+            @Nullable ImmutableAggregate<TState, TEvent> aggregate,
+            @Nullable TParams params);
 
     /**
      * True if this operation requires state to execute, false if not. An operation with
@@ -65,9 +71,9 @@ public interface Operation<TState, TParams, TEvent> {
 
     /**
      * True if the operation is atomic, i.e. would fail if there were concurrent modifications to
-     * the aggregate in between it being read, and new events being added. This will set the default
-     * value for the command when created from an operation, which can be overwritten by explicitly
-     * setting atomic to true or false on the command.
+     * the aggregate in between it being loaded, and new events being added. This will set the
+     * default value for the command when created from an operation, which can be overwritten by
+     * explicitly setting atomic to true or false on the command.
      */
     boolean atomic();
 }

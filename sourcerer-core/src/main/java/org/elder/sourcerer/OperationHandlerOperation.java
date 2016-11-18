@@ -42,8 +42,10 @@ public class OperationHandlerOperation<TState, TParams, TEvent>
     }
 
     @Override
-    public List<? extends TEvent> execute(final TState state, final TParams params) {
-        return handler.execute(state, params);
+    public List<? extends TEvent> execute(
+            final ImmutableAggregate<TState, TEvent> aggregate,
+            final TParams params) {
+        return handler.execute(aggregate, params);
     }
 
     @Override
@@ -64,5 +66,9 @@ public class OperationHandlerOperation<TState, TParams, TEvent>
     @Override
     public boolean atomic() {
         return atomic;
+    }
+
+    public OperationHandler<TState, TParams, TEvent> handler() {
+        return handler;
     }
 }

@@ -59,7 +59,7 @@ public interface Command<TState, TParams, TEvent> {
 
     /**
      * Sets whether or not the command is atomic. An atomic command requires the version of the
-     * aggregate when read to be the same as when updated, i.e. would fail if there were any other
+     * aggregate when loaded to be the same as when updated, i.e. would fail if there were any other
      * concurrent modifications during the execution of the command. When true, concurrent
      * modifications of the aggregate may lead to an
      * {@link org.elder.sourcerer.exceptions.UnexpectedVersionException}

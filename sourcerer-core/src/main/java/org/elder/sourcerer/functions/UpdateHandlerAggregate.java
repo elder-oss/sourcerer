@@ -1,10 +1,9 @@
 package org.elder.sourcerer.functions;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
+import org.elder.sourcerer.Aggregate;
 import org.elder.sourcerer.ImmutableAggregate;
 import org.elder.sourcerer.OperationHandler;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -17,16 +16,15 @@ import java.util.List;
  * have the same version as when the aggregate was read.
  */
 @FunctionalInterface
-public interface ParameterizedUpdateHandlerSingle<TState, TParams, TEvent>
-        extends OperationHandler<TState, TParams, TEvent> {
-    @NotNull
-    TEvent executeSingle(ImmutableAggregate<TState, TEvent> aggregate, TParams params);
+public interface UpdateHandlerAggregate<TState, TEvent>
+        extends OperationHandler<TState, Object, TEvent> {
+    Aggregate<TState, TEvent> executeWithAggregate(ImmutableAggregate<TState, TEvent> aggregate);
 
     @Override
     default List<? extends TEvent> execute(
             final ImmutableAggregate<TState, TEvent> aggregate,
-            final TParams params) {
+            final Object params) {
         Preconditions.checkNotNull(aggregate);
-        return ImmutableList.of(executeSingle(aggregate, params));
+        return executeWithAggregate(aggregate).events();
     }
 }
