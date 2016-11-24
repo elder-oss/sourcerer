@@ -9,17 +9,20 @@ import org.elder.sourcerer.functions.ParameterizedAppendHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
-import org.elder.sourcerer.functions.UpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandlerAggregate;
+import org.elder.sourcerer.functions.UpdateHandlerSingle;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 /**
  * Default sourcerer implementation of ImmutableAggregate.
@@ -264,6 +267,61 @@ public class DefaultImmutableAggregate<TState, TEvent>
 
     @NotNull
     @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull final ParameterizedUpdateHandler<TState, TParam, TEvent> handler,
+            @NotNull final Stream<TParam> params) {
+        return foldLeft(
+                params,
+                (ImmutableAggregate<TState, TEvent>) this,
+                (state, param) -> state.apply(handler, param));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull final ParameterizedUpdateHandlerSingle<TState, TParam, TEvent> handler,
+            @NotNull final Stream<TParam> params) {
+        return foldLeft(
+                params,
+                (ImmutableAggregate<TState, TEvent>) this,
+                (state, param) -> state.apply(handler, param));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull final ParameterizedUpdateHandlerAggregate<TState, TParam, TEvent> handler,
+            @NotNull final Stream<TParam> params) {
+        return foldLeft(
+                params,
+                (ImmutableAggregate<TState, TEvent>) this,
+                (state, param) -> state.apply(handler, param));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull final ParameterizedPojoUpdateHandler<TState, TParam, TEvent> handler,
+            @NotNull final Stream<TParam> params) {
+        return foldLeft(
+                params,
+                (ImmutableAggregate<TState, TEvent>) this,
+                (state, param) -> state.apply(handler, param));
+    }
+
+    @NotNull
+    @Override
+    public <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull final ParameterizedPojoUpdateHandlerSingle<TState, TParam, TEvent> handler,
+            @NotNull final Stream<TParam> params) {
+        return foldLeft(
+                params,
+                (ImmutableAggregate<TState, TEvent>) this,
+                (state, param) -> state.apply(handler, param));
+    }
+
+    @NotNull
+    @Override
     public ImmutableAggregate<TState, TEvent> rebase(final int version) {
         return new DefaultImmutableAggregate<>(
                 projection,
@@ -271,5 +329,17 @@ public class DefaultImmutableAggregate<TState, TEvent>
                 version,
                 state,
                 ImmutableList.of());
+    }
+
+    private static <T, U> U foldLeft(
+            final Stream<T> inputStream,
+            final U state,
+            final BiFunction<U, T, U> folder) {
+        U currentState = state;
+        Iterator<T> iterator = inputStream.iterator();
+        while (iterator.hasNext()) {
+            currentState = folder.apply(currentState, iterator.next());
+        }
+        return currentState;
     }
 }
