@@ -7,14 +7,17 @@ import org.elder.sourcerer.functions.ParameterizedAppendHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandler;
 import org.elder.sourcerer.functions.ParameterizedPojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandler;
-import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
 import org.elder.sourcerer.functions.ParameterizedUpdateHandlerAggregate;
+import org.elder.sourcerer.functions.ParameterizedUpdateHandlerSingle;
 import org.elder.sourcerer.functions.PojoUpdateHandler;
 import org.elder.sourcerer.functions.PojoUpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandler;
-import org.elder.sourcerer.functions.UpdateHandlerSingle;
 import org.elder.sourcerer.functions.UpdateHandlerAggregate;
+import org.elder.sourcerer.functions.UpdateHandlerSingle;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.stream.Stream;
 
 /**
  * An immutable specialization of Aggregate, implicitly bound to an aggregate projection, that
@@ -33,6 +36,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, representing the aggregate with the event applied,
      * together with the list of applied events.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(@NotNull TEvent event);
 
@@ -44,6 +48,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, representing the aggregate with the event applied,
      * together with the list of applied events.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(@NotNull Iterable<? extends TEvent> events);
 
@@ -56,6 +61,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(@NotNull AppendHandler<TEvent> handler);
 
@@ -68,6 +74,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(@NotNull AppendHandlerSingle<TEvent> handler);
 
@@ -81,6 +88,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedAppendHandler<TParam, TEvent> handler,
             TParam params);
@@ -95,6 +103,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedAppendHandlerSingle<TParam, TEvent> handler,
             TParam params);
@@ -108,6 +117,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(
             @NotNull UpdateHandler<TState, TEvent> handler);
@@ -121,6 +131,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(
             @NotNull UpdateHandlerSingle<TState, TEvent> handler);
@@ -134,6 +145,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(
             @NotNull UpdateHandlerAggregate<TState, TEvent> handler);
@@ -147,6 +159,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(
             @NotNull PojoUpdateHandler<TState, TEvent> handler);
@@ -160,6 +173,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> apply(
             @NotNull PojoUpdateHandlerSingle<TState, TEvent> handler);
@@ -174,6 +188,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedUpdateHandler<TState, TParam, TEvent> handler,
             TParam params);
@@ -188,6 +203,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedUpdateHandlerSingle<TState, TParam, TEvent> handler,
             TParam params);
@@ -202,6 +218,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedUpdateHandlerAggregate<TState, TParam, TEvent> handler,
             TParam params);
@@ -216,6 +233,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedPojoUpdateHandler<TState, TParam, TEvent> handler,
             TParam params);
@@ -230,9 +248,90 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @return A new immutable aggregate, generated from the current one with the events returned by
      * the handler provided applied on top.
      */
+    @Contract(pure = true)
     @NotNull <TParam> ImmutableAggregate<TState, TEvent> apply(
             @NotNull ParameterizedPojoUpdateHandlerSingle<TState, TParam, TEvent> handler,
             TParam params);
+
+    /**
+     * Applies a function sequentially, once for each value in the provided stream, passing the
+     * updated state on to the next invocation in turn and finally returning it. This is effectively
+     * a left fold over the provided stream with the current aggregate instance as the initial
+     * state.
+     *
+     * @param handler The handler to invoke one for each parameter in the provided stream.
+     * @param params  The parameters to apply to the handler in the order in which they appear in
+     *                the stream.
+     * @return The result of the last operation being performed in the fold.
+     */
+    @Contract(pure = true)
+    @NotNull <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull ParameterizedUpdateHandler<TState, TParam, TEvent> handler,
+            @NotNull Stream<TParam> params);
+
+    /**
+     * Applies a function sequentially, once for each value in the provided stream, passing the
+     * updated state on to the next invocation in turn and finally returning it. This is effectively
+     * a left fold over the provided stream with the current aggregate instance as the initial
+     * state.
+     *
+     * @param handler The handler to invoke one for each parameter in the provided stream.
+     * @param params  The parameters to apply to the handler in the order in which they appear in
+     *                the stream.
+     * @return The result of the last operation being performed in the fold.
+     */
+    @Contract(pure = true)
+    @NotNull <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull ParameterizedUpdateHandlerSingle<TState, TParam, TEvent> handler,
+            @NotNull Stream<TParam> params);
+
+    /**
+     * Applies a function sequentially, once for each value in the provided stream, passing the
+     * updated state on to the next invocation in turn and finally returning it. This is effectively
+     * a left fold over the provided stream with the current aggregate instance as the initial
+     * state.
+     *
+     * @param handler The handler to invoke one for each parameter in the provided stream.
+     * @param params  The parameters to apply to the handler in the order in which they appear in
+     *                the stream.
+     * @return The result of the last operation being performed in the fold.
+     */
+    @Contract(pure = true)
+    @NotNull <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull ParameterizedUpdateHandlerAggregate<TState, TParam, TEvent> handler,
+            @NotNull Stream<TParam> params);
+
+    /**
+     * Applies a function sequentially, once for each value in the provided stream, passing the
+     * updated state on to the next invocation in turn and finally returning it. This is effectively
+     * a left fold over the provided stream with the current aggregate instance as the initial
+     * state.
+     *
+     * @param handler The handler to invoke one for each parameter in the provided stream.
+     * @param params  The parameters to apply to the handler in the order in which they appear in
+     *                the stream.
+     * @return The result of the last operation being performed in the fold.
+     */
+    @Contract(pure = true)
+    @NotNull <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull ParameterizedPojoUpdateHandler<TState, TParam, TEvent> handler,
+            @NotNull Stream<TParam> params);
+
+    /**
+     * Applies a function sequentially, once for each value in the provided stream, passing the
+     * updated state on to the next invocation in turn and finally returning it. This is effectively
+     * a left fold over the provided stream with the current aggregate instance as the initial
+     * state.
+     *
+     * @param handler The handler to invoke one for each parameter in the provided stream.
+     * @param params  The parameters to apply to the handler in the order in which they appear in
+     *                the stream.
+     * @return The result of the last operation being performed in the fold.
+     */
+    @Contract(pure = true)
+    @NotNull <TParam> ImmutableAggregate<TState, TEvent> fold(
+            @NotNull ParameterizedPojoUpdateHandlerSingle<TState, TParam, TEvent> handler,
+            @NotNull Stream<TParam> params);
 
     /**
      * Create a new aggregate instance containing the same state as the current one, but with a new
@@ -243,6 +342,7 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      * @param version The new version of the aggregate.
      * @return A new aggregate representing the aggregate as starting from the current state.
      */
+    @Contract(pure = true)
     @NotNull
     ImmutableAggregate<TState, TEvent> rebase(int version);
 }
