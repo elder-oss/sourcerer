@@ -85,7 +85,7 @@ public class EventStoreEsjcEventRepositoryTest {
 
     @Test
     public void readReturnsNullOnDeleted() {
-        when(eventStore.readStreamEventsForward(any(), anyInt(), anyInt(), anyBoolean(), any()))
+        when(eventStore.readStreamEventsForward(any(), anyInt(), anyInt(), anyBoolean()))
                 .thenReturn(wrapFuture(new StreamEventsSlice(
                         SliceReadStatus.StreamDeleted,
                         "stream",
@@ -101,7 +101,7 @@ public class EventStoreEsjcEventRepositoryTest {
 
     @Test
     public void readReturnsNullOnNotFound() {
-        when(eventStore.readStreamEventsForward(any(), anyInt(), anyInt(), anyBoolean(), any()))
+        when(eventStore.readStreamEventsForward(any(), anyInt(), anyInt(), anyBoolean()))
                 .thenReturn(wrapFuture(new StreamEventsSlice(
                         SliceReadStatus.StreamNotFound,
                         "stream",
@@ -156,8 +156,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 eq("pref-" + streamId),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture(),
-                any(UserCredentials.class));
+                listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         Mockito
@@ -189,8 +188,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 anyString(),
                 any(Integer.class),
                 any(CatchUpSubscriptionSettings.class),
-                any(CatchUpSubscriptionListener.class),
-                any(UserCredentials.class)))
+                any(CatchUpSubscriptionListener.class)))
                 .thenReturn(catchUpSubscription);
 
         // Hook up fake listener, checking that we're getting notified
@@ -210,8 +208,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 eq("pref-" + streamId),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture(),
-                any(UserCredentials.class));
+                listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         listener.onClose(
@@ -260,8 +257,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 eq("pref-" + streamId),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture(),
-                any(UserCredentials.class));
+                listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         Assert.assertEquals(0, seenEvents.get());
@@ -325,8 +321,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 eq("$ce-pref"),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture(),
-                any(UserCredentials.class));
+                listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         Mockito
@@ -354,8 +349,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 anyString(),
                 any(Integer.class),
                 any(CatchUpSubscriptionSettings.class),
-                any(CatchUpSubscriptionListener.class),
-                any(UserCredentials.class)))
+                any(CatchUpSubscriptionListener.class)))
                 .thenReturn(catchUpSubscription);
 
         // Hook up fake listener, checking that we're getting notified
@@ -375,8 +369,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 eq("$ce-pref"),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture(),
-                any(UserCredentials.class));
+                listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         listener.onClose(
@@ -421,8 +414,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 eq("$ce-pref"),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture(),
-                any(UserCredentials.class));
+                listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         Assert.assertEquals(0, seenEvents.get());

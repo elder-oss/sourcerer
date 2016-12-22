@@ -28,23 +28,18 @@ public class EventStoreConfiguration {
         EventStoreBuilder builder = EventStoreBuilder
                 .newBuilder()
                 .userCredentials("admin", "changeit")
-                .failOnNoServerResponseEnabled();
+                .requireMaster(requireMaster)
+                .failOnNoServerResponse(true);
 
         if (useClusterDiscovery) {
             builder
-                    .failOnNoServerResponseEnabled()
-                    .clusterNodeDiscoveryFromDns(hostname)
-                    .clusterNodeDiscoveryFromDnsOnGosipPort(gossipPort)
-                    .clusterNodeMaxDiscoverAttempts(10)
-                    .clusterNodeDiscoverAttemptInterval(Duration.ofMillis(500));
+                    .clusterNodeUsingDns(dnsConfig -> dnsConfig
+                            .dns(hostname)
+                            .externalGossipPort(gossipPort)
+                            .maxDiscoverAttempts(10)
+                            .discoverAttemptInterval(Duration.ofMillis(500)));
         } else {
             builder.singleNodeAddress(hostname, port);
-        }
-
-        if (requireMaster) {
-            builder.requireMasterEnabled();
-        } else {
-            builder.requireMasterDisabled();
         }
 
         return builder.build();
