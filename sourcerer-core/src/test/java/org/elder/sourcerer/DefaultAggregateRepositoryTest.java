@@ -55,10 +55,10 @@ public class DefaultAggregateRepositoryTest {
 
     private void returnsAggregateWithEmptyStateOn(
             final EventReadResult readEventsResult) {
-        when(eventRepository.read(any())).thenReturn(readEventsResult);
+        when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(readEventsResult);
         ImmutableAggregate<TestState, TestEvent> aggregate = repository.load(AGGREGATE_ID_1);
 
-        verify(eventRepository).read(AGGREGATE_ID_1, 0);
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(0), anyInt());
         verifyNoMoreInteractions(eventRepository);
         Assert.assertNotNull(aggregate);
         Assert.assertEquals(aggregate.state().getValue(), "empty");
@@ -80,12 +80,12 @@ public class DefaultAggregateRepositoryTest {
         List<TestEvent> expectedEvents = ImmutableList.of(testEvent1, testEvent2);
         TestState expectedState = new TestState("state1");
 
-        when(eventRepository.read(any(), anyInt())).thenReturn(repositoryResult);
+        when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(repositoryResult);
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
 
         ImmutableAggregate<TestState, TestEvent> result = repository.load(AGGREGATE_ID_1);
 
-        verify(eventRepository).read(AGGREGATE_ID_1, 0);
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(0), anyInt());
         ArgumentCaptor<Iterable<TestEvent>> passedEvents
                 = ArgumentCaptor.forClass((Class) Iterable.class);
         verify(aggregateProjection).empty();
@@ -157,7 +157,7 @@ public class DefaultAggregateRepositoryTest {
                 new EventReadResult<>(batch2Events, 2, 2, 3, true);
         TestState expectedState = new TestState("state1");
 
-        when(eventRepository.read(any(), anyInt())).thenReturn(
+        when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(
                 repositoryResult1,
                 repositoryResult2);
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
@@ -165,8 +165,8 @@ public class DefaultAggregateRepositoryTest {
         repository.load(AGGREGATE_ID_1);
         verify(aggregateProjection).empty();
         verify(aggregateProjection, times(2)).apply(any(), any(), (Iterable) any());
-        verify(eventRepository).read(AGGREGATE_ID_1, 0);
-        verify(eventRepository).read(AGGREGATE_ID_1, 2);
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(0), anyInt());
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(2), anyInt());
         verifyNoMoreInteractions(aggregateProjection, eventRepository);
     }
 }
