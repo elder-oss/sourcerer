@@ -251,15 +251,15 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
 
     private com.github.msemys.esjc.ExpectedVersion toEsVersion(final ExpectedVersion version) {
         if (version == null) {
-            return com.github.msemys.esjc.ExpectedVersion.any();
+            return com.github.msemys.esjc.ExpectedVersion.ANY;
         } else {
             switch (version.getType()) {
                 case ANY:
-                    return com.github.msemys.esjc.ExpectedVersion.any();
+                    return com.github.msemys.esjc.ExpectedVersion.ANY;
                 case EXACTLY:
                     return com.github.msemys.esjc.ExpectedVersion.of(version.getExpectedVersion());
                 case NOT_CREATED:
-                    return com.github.msemys.esjc.ExpectedVersion.noStream();
+                    return com.github.msemys.esjc.ExpectedVersion.NO_STREAM;
                 default:
                     throw new IllegalArgumentException(
                             "Unrecognized expected version type: " + version);
@@ -289,7 +289,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 aggregateVersion,
                 event.event.eventType,
                 event.event.eventId,
-                fromEsTimestamp(event.event.created),
+                event.event.created,
                 fromEsMetadata(event.event.metadata),
                 fromEsData(event.event.data));
     }
@@ -327,15 +327,6 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         } catch (IOException ex) {
             throw new RetriableEventReadException("Internal error reading events", ex);
         }
-    }
-
-    private static Instant fromEsTimestamp(final Optional<Instant> created) {
-        if (!created.isPresent()) {
-            throw new IllegalStateException(
-                    "No time stamp returned from EventStore where expected");
-        }
-
-        return created.get();
     }
 
     private <U> U completeReadFuture(
