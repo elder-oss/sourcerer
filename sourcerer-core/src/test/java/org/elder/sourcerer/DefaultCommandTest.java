@@ -1,6 +1,7 @@
 package org.elder.sourcerer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
@@ -14,6 +15,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
@@ -187,5 +189,47 @@ public class DefaultCommandTest {
         Assert.assertThat(
                 (List<TestEvent>) commandResult.getEvents(),
                 org.hamcrest.Matchers.contains(newEvents.toArray()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void metadataTakesPriorityOverMetadataDecorators() {
+        int newVersion = 45;
+        List<TestEvent> newEvents = ImmutableList.of(new TestEvent("test"));
+        Operation operation = new OperationHandlerOperation(
+                (x, y) -> newEvents,
+                true,
+                false,
+                ExpectedVersion.any());
+
+        DefaultCommand command = new DefaultCommand(repository, operation);
+        command.addMetadata(ImmutableMap.of("key2", "value2direct"));
+        command.addMetadataDecorator(new MetadataDecorator() {
+            @Override
+            public Map<String, String> getMetadata() {
+                return ImmutableMap.of("key1", "value1", "key2", "value2decorator");
+            }
+        });
+
+        when(repository.load(any()))
+                .thenReturn(DefaultImmutableAggregate.fromExisting(
+                        mock(AggregateProjection.class),
+                        AGGREGATE_ID,
+                        42,
+                        new TestState("test")));
+        when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
+
+        command.setAggregateId(AGGREGATE_ID);
+        command.run();
+
+        ArgumentCaptor<Map<String, String>> passedMetadata
+                = ArgumentCaptor.forClass((Class) Map.class);
+        verify(repository).append(eq(AGGREGATE_ID), any(), any(), passedMetadata.capture());
+        Assert.assertEquals(
+                "value1",
+                passedMetadata.getValue().get("key1"));
+        Assert.assertEquals(
+                "value2direct",
+                passedMetadata.getValue().get("key2"));
     }
 }
