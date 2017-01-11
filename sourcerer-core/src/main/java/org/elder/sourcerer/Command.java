@@ -84,7 +84,7 @@ public interface Command<TState, TParams, TEvent> {
     /**
      * Add outright metadata to attach to each event emitted by the command when executed (if any).
      * Values for keys added later will take priority over those added earlier, and any values
-     * produced by a metadata decorator will overwrite those added explicitly.
+     * added explicitly here will take priority over those added by a metadata decorator.
      * @param metadata Metadata in the form of key value pairs to add to emitted events (if any).
      * @return The command instance that the method was invoked on, for method chaining.
      */

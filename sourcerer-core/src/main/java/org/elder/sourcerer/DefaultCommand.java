@@ -175,17 +175,25 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
 
         logger.debug("About to persist, expected version at save: {}", updateExpectedVersion);
 
-        Map<String, String> metadata = new HashMap<>(this.metadata);
+        Map<String, String> effectiveMetadata = new HashMap<>(this.metadata);
         for (MetadataDecorator metadataDecorator : metadataDecorators) {
             Map<String, String> decoratorMetadata = metadataDecorator.getMetadata();
             if (decoratorMetadata != null) {
-                metadata.putAll(decoratorMetadata);
+                effectiveMetadata.putAll(decoratorMetadata);
             }
         }
 
+        if (this.metadata != null) {
+            effectiveMetadata.putAll(this.metadata);
+        }
+
         try {
-            int newVersion =
-                    repository.append(aggregateId, events, updateExpectedVersion, metadata);
+            int newVersion = repository.append(
+                    aggregateId,
+                    events,
+                    updateExpectedVersion,
+                    effectiveMetadata);
+
             // It may be nice to sanity check here by using the expected version explicitly, but
             // this works regardless of whether we have a specific expected version ...
             // Will return -1 if we just created the stream, which is fine
