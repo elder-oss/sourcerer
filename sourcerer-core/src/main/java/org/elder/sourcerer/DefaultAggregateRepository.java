@@ -84,7 +84,7 @@ public class DefaultAggregateRepository<TState, TEvent>
         this(
                 eventRepository,
                 projection,
-                DefaultAggregateRepository::defaultResolveType,
+                typeResolver,
                 DEFAULT_MAX_EVENTS_PER_READ);
     }
 
