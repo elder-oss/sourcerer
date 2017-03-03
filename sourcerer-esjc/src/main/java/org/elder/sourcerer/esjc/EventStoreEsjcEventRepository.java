@@ -51,10 +51,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxEmitter;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -105,35 +103,57 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public Class<T> getEventType() {
+        return eventClass;
+    }
+
+    @Override
+    public EventReadResult<T> readAll(final int version, final int maxEvents) {
+        return readInternal(getCategoryStreamName(), version, maxEvents, true);
+    }
+
+    @Override
     public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
+        return readInternal(toEsStreamId(streamId), version, maxEvents, false);
+    }
+
+    private String getCategoryStreamName() {
+        return "$ce-" + streamPrefix;
+    }
+
+    private EventReadResult<T> readInternal(
+            final String internalStreamId,
+            final int version,
+            final int maxEvents,
+            final boolean resolveLinksTo) {
         int maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ);
         logger.debug(
                 "Reading from {} (in {}) (version {}) - effective max {}",
-                streamId,
+                internalStreamId,
                 streamPrefix,
                 version,
                 maxEventsPerRead);
 
         StreamEventsSlice eventsSlice = completeReadFuture(
                 eventStore.readStreamEventsForward(
-                        toEsStreamId(streamId),
+                        internalStreamId,
                         version,
                         maxEventsPerRead,
-                        false),
+                        resolveLinksTo),
                 ExpectedVersion.exactly(version));
 
         if (eventsSlice.status != SliceReadStatus.Success) {
             // Not found or deleted, same thing to us!
             logger.debug(
                     "Reading {} (in {}) returned status {}",
-                    streamId, streamPrefix, eventsSlice.status);
+                    internalStreamId, streamPrefix, eventsSlice.status);
             return null;
         }
 
         logger.debug(
                 "Read {} events from {} (version {})",
                 eventsSlice.events.size(),
-                streamId,
+                internalStreamId,
                 version);
         ImmutableList<EventRecord<T>> events = eventsSlice
                 .events
@@ -184,6 +204,27 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public int getCurrentVersion() {
+        return getStreamVersionInternal(getCategoryStreamName());
+    }
+
+    @Override
+    public int getCurrentVersion(final String streamId) {
+        return getStreamVersionInternal(toEsStreamId(streamId));
+    }
+
+    private int getStreamVersionInternal(final String streamName) {
+        StreamEventsSlice streamEventsSlice = completeReadFuture(
+                eventStore.readStreamEventsBackward(
+                        streamName,
+                        -1,
+                        1,
+                        false),
+                ExpectedVersion.any());
+        return streamEventsSlice.lastEventNumber;
+    }
+
+    @Override
     public Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
             final String streamId,
             final Integer fromVersion) {
@@ -209,7 +250,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                     streamPrefix, fromVersion);
         return Flux.create(emitter -> {
             final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
-                    "$ce-" + streamPrefix,
+                    getCategoryStreamName(),
                     fromVersion,
                     defaultSubscriptionSettings,
                     new EmitterListener(emitter, streamPrefix + "-all"));

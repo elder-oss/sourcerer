@@ -6,6 +6,52 @@ import java.util.List;
 
 public interface EventRepository<T> {
     /**
+     * Gets the java Class representing the runtime type that this event repository manages events
+     * for.
+     *
+     * @return A class representing the root event type for events in this repository.
+     */
+    Class<T> getEventType();
+
+    /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @param version   The version to read events from. Versions are monotonically increasing
+     *                  starting with 0, specifying a version of 0 is equivalent to reading the
+     *                  events from the beginning of the stream.
+     * @param maxEvents The maximum number of events to read in one go. Note that this may be
+     *                  truncated to a lower number by the implementation, it is not safe to assume
+     *                  that a successful read will have this many events, even if they are present
+     *                  in the underlying event store.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no events exist in this repository.
+     */
+    EventReadResult<T> readAll(int version, int maxEvents);
+
+    /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @param version The version to read events from. Versions are monotonically increasing
+     *                starting with 0, specifying a version of 0 is equivalent to reading the events
+     *                from the beginning of the stream.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no events exist in this repository.
+     */
+    default EventReadResult<T> readAll(final int version) {
+        return readAll(version, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no events exist in this repository.
+     */
+    default EventReadResult<T> readAll() {
+        return readAll(0);
+    }
+
+    /**
      * Reads all events for a given stream id from a given version and onwards.
      *
      * @param streamId  The id of the stream to read events for.
@@ -16,9 +62,8 @@ public interface EventRepository<T> {
      *                  truncated to a lower number by the implementation, it is not safe to assume
      *                  that a successful read will have this many events, even if they are present
      *                  in the underlying event store.
-     * @return An immutable list of all events for a given stream, each event annotated with
-     * additional information such as its version, unique id, and metadata - or null if no stream
-     * with the given id is found.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
      */
     EventReadResult<T> read(String streamId, int version, int maxEvents);
 
@@ -30,9 +75,8 @@ public interface EventRepository<T> {
      * @param version  The version to read events from. Versions are monotonically increasing
      *                 starting with 0, specifying a version of 0 is equivalent to reading the
      *                 events from the beginning of the stream.
-     * @return An immutable list of all events for a given stream, each event annotated with
-     * additional information such as its version, unique id, and metadata - or null if no stream
-     * with the given id is found.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
      */
     default EventReadResult<T> read(final String streamId, final int version) {
         return read(streamId, version, Integer.MAX_VALUE);
@@ -42,13 +86,30 @@ public interface EventRepository<T> {
      * Reads all events for a given stream id from the beginning.
      *
      * @param streamId The id of the stream to read events for.
-     * @return An immutable list of all events for a given stream, each event annotated with
-     * additional information such as its version, unique id, and metadata - or null if no stream
-     * with the given id is found.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
      */
     default EventReadResult<T> read(final String streamId) {
         return read(streamId, 0);
     }
+
+    /**
+     * Gets the current version (i.e. the position of the last written event) for the event
+     * repository.
+     *
+     * @return The position of the last event written to the event repository, 0 based. Returns -1
+     * if no events are available.
+     */
+    int getCurrentVersion();
+
+    /**
+     * Gets the current version (i.e. the position of the last written event) for a given stream.
+     *
+     * @param streamId The id of the stream to read events for.
+     * @return The position of the last event written to the specified stream, 0 based. Returns -1
+     * if no events are available.
+     */
+    int getCurrentVersion(String streamId);
 
     /**
      * Appends events to a new or existing stream.

@@ -87,26 +87,48 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public Class<T> getEventType() {
+        return eventClass;
+    }
+
+    @Override
+    public EventReadResult<T> readAll(final int version, final int maxEvents) {
+        return readInternal(getCategoryStreamName(), version, maxEvents, true);
+    }
+
+    @Override
     public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
+        return readInternal(toEsStreamId(streamId), version, maxEvents, false);
+    }
+
+    private String getCategoryStreamName() {
+        return "$ce-" + streamPrefix;
+    }
+
+    private EventReadResult<T> readInternal(
+            final String internalStreamId,
+            final int version,
+            final int maxEvents,
+            final boolean resolveLinksTo) {
         try {
             int maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ);
             logger.debug(
                     "Reading from {} (in {}) (version {}) - effective max {}",
-                    streamId,
+                    internalStreamId,
                     streamPrefix,
                     version,
                     maxEventsPerRead);
             ReadStreamEventsCompleted res = completeReadFuture(connection.readStreamEventsForward(
-                    toEsStreamId(streamId),
+                    internalStreamId,
                     new EventNumber.Exact(version),
                     maxEventsPerRead,
-                    false,
+                    resolveLinksTo,
                     null));
 
             logger.debug(
                     "Read {} events from {} (version {})",
                     res.eventsJava().size(),
-                    streamId,
+                    internalStreamId,
                     version);
             ImmutableList<EventRecord<T>> events = res
                     .eventsJava()
@@ -162,6 +184,28 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public int getCurrentVersion() {
+        return getStreamVersionInternal(getCategoryStreamName());
+    }
+
+    @Override
+    public int getCurrentVersion(final String streamId) {
+        return getStreamVersionInternal(toEsStreamId(streamId));
+    }
+
+    private int getStreamVersionInternal(final String internalStreamId) {
+        ReadStreamEventsCompleted result =
+                completeReadFuture(connection.readStreamEventsBackward(
+                        internalStreamId,
+                        new EventNumber.Last$(),
+                        1,
+                        false,
+                        null));
+
+        return result.lastEventNumber().value();
+    }
+
+    @Override
     public Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
             final String streamId,
             final Integer fromVersion) {
@@ -184,7 +228,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                     streamPrefix, fromVersion);
         Publisher<Event> esPublisher = connection.streamPublisher(
-                "$ce-" + streamPrefix,
+                getCategoryStreamName(),
                 fromVersion == null ? null : new EventNumber.Exact(fromVersion),
                 true,
                 null,
