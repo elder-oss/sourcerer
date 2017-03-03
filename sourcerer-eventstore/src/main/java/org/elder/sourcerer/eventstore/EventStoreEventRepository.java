@@ -88,12 +88,12 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
 
     @Override
     public EventReadResult<T> readAll(final int version, final int maxEvents) {
-        return readInternal(getCategoryStreamName(), version, maxEvents);
+        return readInternal(getCategoryStreamName(), version, maxEvents, true);
     }
 
     @Override
     public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
-        return readInternal(toEsStreamId(streamId), version, maxEvents);
+        return readInternal(toEsStreamId(streamId), version, maxEvents, false);
     }
 
     private String getCategoryStreamName() {
@@ -103,7 +103,8 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     private EventReadResult<T> readInternal(
             final String internalStreamId,
             final int version,
-            final int maxEvents) {
+            final int maxEvents,
+            final boolean resolveLinksTo) {
         try {
             int maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ);
             logger.debug(
@@ -116,7 +117,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                     internalStreamId,
                     new EventNumber.Exact(version),
                     maxEventsPerRead,
-                    false,
+                    resolveLinksTo,
                     null));
 
             logger.debug(

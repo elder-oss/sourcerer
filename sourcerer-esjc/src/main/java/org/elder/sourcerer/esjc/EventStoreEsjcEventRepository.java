@@ -104,12 +104,12 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
 
     @Override
     public EventReadResult<T> readAll(final int version, final int maxEvents) {
-        return readInternal(getCategoryStreamName(), version, maxEvents);
+        return readInternal(getCategoryStreamName(), version, maxEvents, true);
     }
 
     @Override
     public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
-        return readInternal(toEsStreamId(streamId), version, maxEvents);
+        return readInternal(toEsStreamId(streamId), version, maxEvents, false);
     }
 
     private String getCategoryStreamName() {
@@ -119,7 +119,8 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     private EventReadResult<T> readInternal(
             final String internalStreamId,
             final int version,
-            final int maxEvents) {
+            final int maxEvents,
+            final boolean resolveLinksTo) {
         int maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ);
         logger.debug(
                 "Reading from {} (in {}) (version {}) - effective max {}",
@@ -133,7 +134,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                         internalStreamId,
                         version,
                         maxEventsPerRead,
-                        false),
+                        resolveLinksTo),
                 ExpectedVersion.exactly(version));
 
         if (eventsSlice.status != SliceReadStatus.Success) {
