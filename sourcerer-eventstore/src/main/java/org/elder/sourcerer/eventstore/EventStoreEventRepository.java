@@ -87,7 +87,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
-    public EventReadResult<T> read(final int version, final int maxEvents) {
+    public EventReadResult<T> readAll(final int version, final int maxEvents) {
         return readInternal(getCategoryStreamName(), version, maxEvents);
     }
 
@@ -175,6 +175,28 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                     null,
                     version);
         }
+    }
+
+    @Override
+    public int getCurrentVersion() {
+        return getStreamVersionInternal(getCategoryStreamName());
+    }
+
+    @Override
+    public int getCurrentVersion(final String streamId) {
+        return getStreamVersionInternal(toEsStreamId(streamId));
+    }
+
+    private int getStreamVersionInternal(final String internalStreamId) {
+        ReadStreamEventsCompleted result =
+                completeReadFuture(connection.readStreamEventsBackward(
+                        internalStreamId,
+                        new EventNumber.Last$(),
+                        1,
+                        false,
+                        null));
+
+        return result.lastEventNumber().value();
     }
 
     @Override

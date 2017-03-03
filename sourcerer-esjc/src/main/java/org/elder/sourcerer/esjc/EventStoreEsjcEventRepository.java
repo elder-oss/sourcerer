@@ -51,10 +51,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxEmitter;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -105,7 +103,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
-    public EventReadResult<T> read(final int version, final int maxEvents) {
+    public EventReadResult<T> readAll(final int version, final int maxEvents) {
         return readInternal(getCategoryStreamName(), version, maxEvents);
     }
 
@@ -197,6 +195,27 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                     null,
                     version);
         }
+    }
+
+    @Override
+    public int getCurrentVersion() {
+        return getStreamVersionInternal(getCategoryStreamName());
+    }
+
+    @Override
+    public int getCurrentVersion(final String streamId) {
+        return getStreamVersionInternal(toEsStreamId(streamId));
+    }
+
+    private int getStreamVersionInternal(final String streamName) {
+        StreamEventsSlice streamEventsSlice = completeReadFuture(
+                eventStore.readStreamEventsBackward(
+                        streamName,
+                        -1,
+                        1,
+                        false),
+                ExpectedVersion.any());
+        return streamEventsSlice.lastEventNumber;
     }
 
     @Override
