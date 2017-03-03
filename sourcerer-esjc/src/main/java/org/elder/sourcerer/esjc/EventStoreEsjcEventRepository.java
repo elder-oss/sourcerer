@@ -105,18 +105,34 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public EventReadResult<T> read(final int version, final int maxEvents) {
+        return readInternal(getCategoryStreamName(), version, maxEvents);
+    }
+
+    @Override
     public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
+        return readInternal(toEsStreamId(streamId), version, maxEvents);
+    }
+
+    private String getCategoryStreamName() {
+        return "$ce-" + streamPrefix;
+    }
+
+    private EventReadResult<T> readInternal(
+            final String internalStreamId,
+            final int version,
+            final int maxEvents) {
         int maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ);
         logger.debug(
                 "Reading from {} (in {}) (version {}) - effective max {}",
-                streamId,
+                internalStreamId,
                 streamPrefix,
                 version,
                 maxEventsPerRead);
 
         StreamEventsSlice eventsSlice = completeReadFuture(
                 eventStore.readStreamEventsForward(
-                        toEsStreamId(streamId),
+                        internalStreamId,
                         version,
                         maxEventsPerRead,
                         false),
@@ -126,14 +142,14 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
             // Not found or deleted, same thing to us!
             logger.debug(
                     "Reading {} (in {}) returned status {}",
-                    streamId, streamPrefix, eventsSlice.status);
+                    internalStreamId, streamPrefix, eventsSlice.status);
             return null;
         }
 
         logger.debug(
                 "Read {} events from {} (version {})",
                 eventsSlice.events.size(),
-                streamId,
+                internalStreamId,
                 version);
         ImmutableList<EventRecord<T>> events = eventsSlice
                 .events
@@ -209,7 +225,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                     streamPrefix, fromVersion);
         return Flux.create(emitter -> {
             final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
-                    "$ce-" + streamPrefix,
+                    getCategoryStreamName(),
                     fromVersion,
                     defaultSubscriptionSettings,
                     new EmitterListener(emitter, streamPrefix + "-all"));

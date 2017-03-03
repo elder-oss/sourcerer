@@ -6,19 +6,59 @@ import java.util.List;
 
 public interface EventRepository<T> {
     /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @param version   The version to read events from. Versions are monotonically increasing
+     *                  starting with 0, specifying a version of 0 is equivalent to reading the
+     *                  events from the beginning of the stream. Using -1 will start reading from
+     *                  the end of the stream
+     * @param maxEvents The maximum number of events to read in one go. Note that this may be
+     *                  truncated to a lower number by the implementation, it is not safe to assume
+     *                  that a successful read will have this many events, even if they are present
+     *                  in the underlying event store.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
+     */
+    EventReadResult<T> read(int version, int maxEvents);
+
+    /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @param version The version to read events from. Versions are monotonically increasing
+     *                starting with 0, specifying a version of 0 is equivalent to reading the events
+     *                from the beginning of the stream. Using -1 will start reading from the end of
+     *                the stream
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
+     */
+    default EventReadResult<T> read(final int version) {
+        return read(version, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
+     */
+    default EventReadResult<T> read() {
+        return read(0);
+    }
+
+    /**
      * Reads all events for a given stream id from a given version and onwards.
      *
      * @param streamId  The id of the stream to read events for.
      * @param version   The version to read events from. Versions are monotonically increasing
      *                  starting with 0, specifying a version of 0 is equivalent to reading the
-     *                  events from the beginning of the stream.
+     *                  events from the beginning of the stream. Using -1 will start reading from
+     *                  the end of the stream
      * @param maxEvents The maximum number of events to read in one go. Note that this may be
      *                  truncated to a lower number by the implementation, it is not safe to assume
      *                  that a successful read will have this many events, even if they are present
      *                  in the underlying event store.
-     * @return An immutable list of all events for a given stream, each event annotated with
-     * additional information such as its version, unique id, and metadata - or null if no stream
-     * with the given id is found.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
      */
     EventReadResult<T> read(String streamId, int version, int maxEvents);
 
@@ -29,10 +69,10 @@ public interface EventRepository<T> {
      * @param streamId The id of the stream to read events for.
      * @param version  The version to read events from. Versions are monotonically increasing
      *                 starting with 0, specifying a version of 0 is equivalent to reading the
-     *                 events from the beginning of the stream.
-     * @return An immutable list of all events for a given stream, each event annotated with
-     * additional information such as its version, unique id, and metadata - or null if no stream
-     * with the given id is found.
+     *                 events from the beginning of the stream. Using -1 will start reading from the
+     *                 end of the stream
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
      */
     default EventReadResult<T> read(final String streamId, final int version) {
         return read(streamId, version, Integer.MAX_VALUE);
@@ -42,9 +82,8 @@ public interface EventRepository<T> {
      * Reads all events for a given stream id from the beginning.
      *
      * @param streamId The id of the stream to read events for.
-     * @return An immutable list of all events for a given stream, each event annotated with
-     * additional information such as its version, unique id, and metadata - or null if no stream
-     * with the given id is found.
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no stream was found.
      */
     default EventReadResult<T> read(final String streamId) {
         return read(streamId, 0);

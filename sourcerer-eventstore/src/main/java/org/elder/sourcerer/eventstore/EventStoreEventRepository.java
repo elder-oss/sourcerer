@@ -87,17 +87,33 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public EventReadResult<T> read(final int version, final int maxEvents) {
+        return readInternal(getCategoryStreamName(), version, maxEvents);
+    }
+
+    @Override
     public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
+        return readInternal(toEsStreamId(streamId), version, maxEvents);
+    }
+
+    private String getCategoryStreamName() {
+        return "$ce-" + streamPrefix;
+    }
+
+    private EventReadResult<T> readInternal(
+            final String internalStreamId,
+            final int version,
+            final int maxEvents) {
         try {
             int maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ);
             logger.debug(
                     "Reading from {} (in {}) (version {}) - effective max {}",
-                    streamId,
+                    internalStreamId,
                     streamPrefix,
                     version,
                     maxEventsPerRead);
             ReadStreamEventsCompleted res = completeReadFuture(connection.readStreamEventsForward(
-                    toEsStreamId(streamId),
+                    internalStreamId,
                     new EventNumber.Exact(version),
                     maxEventsPerRead,
                     false,
@@ -106,7 +122,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
             logger.debug(
                     "Read {} events from {} (version {})",
                     res.eventsJava().size(),
-                    streamId,
+                    internalStreamId,
                     version);
             ImmutableList<EventRecord<T>> events = res
                     .eventsJava()
@@ -184,7 +200,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                     streamPrefix, fromVersion);
         Publisher<Event> esPublisher = connection.streamPublisher(
-                "$ce-" + streamPrefix,
+                getCategoryStreamName(),
                 fromVersion == null ? null : new EventNumber.Exact(fromVersion),
                 true,
                 null,
