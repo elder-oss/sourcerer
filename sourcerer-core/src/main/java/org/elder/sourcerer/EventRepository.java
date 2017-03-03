@@ -6,6 +6,14 @@ import java.util.List;
 
 public interface EventRepository<T> {
     /**
+     * Gets the java Class representing the runtime type that this event repository manages events
+     * for.
+     *
+     * @return A class representing the root event type for events in this repository.
+     */
+    Class<T> getEventType();
+
+    /**
      * Reads from the stream of all events kept in the event repository.
      *
      * @param version   The version to read events from. Versions are monotonically increasing

@@ -103,6 +103,11 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
+    public Class<T> getEventType() {
+        return eventClass;
+    }
+
+    @Override
     public EventReadResult<T> readAll(final int version, final int maxEvents) {
         return readInternal(getCategoryStreamName(), version, maxEvents, true);
     }
