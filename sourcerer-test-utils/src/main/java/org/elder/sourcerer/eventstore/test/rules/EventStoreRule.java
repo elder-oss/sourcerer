@@ -18,7 +18,6 @@ import java.util.function.Function;
  * JUnit rule for starting and stopping an EventStore instance using docker.
  */
 public class EventStoreRule extends ExternalResource {
-    private static final String SERVICE_HOSTNAME = "localhost";
     private static final int SERVICE_PORT = 1113;
     private static final int PROBE_PORT = 2113;
     private static final Logger logger = LoggerFactory.getLogger(EventStoreRule.class);
@@ -51,8 +50,8 @@ public class EventStoreRule extends ExternalResource {
     }
 
     private Function<RunningDockerInstance, Boolean> livenessProbe() {
-        return instance -> {
-            int port = instance.mappedPorts().forContainerPort(PROBE_PORT);
+        return inst -> {
+            int port = inst.mappedPorts().forContainerPort(PROBE_PORT);
             try {
                 Unirest
                         .get(String.format("http://%s:%d/streams/newstream2", hostname(), port))
