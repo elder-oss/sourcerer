@@ -42,7 +42,6 @@ public class EventStoreRule extends ExternalResource {
         for (Runnable job : cleanup) {
             job.run();
         }
-        instance.stop();
     }
 
     public EventStoreRule start() {
