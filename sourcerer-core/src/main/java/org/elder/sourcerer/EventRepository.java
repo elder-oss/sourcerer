@@ -68,6 +68,22 @@ public interface EventRepository<T> {
     EventReadResult<T> read(String streamId, int version, int maxEvents);
 
     /**
+     * Reads first event for a given stream id.
+     *
+     * @param streamId  The id of the stream to read event for.
+     * @return The event, or null if no stream was found.
+     */
+    EventRecord<T> readFirst(String streamId);
+
+    /**
+     * Reads last event for a given stream id.
+     *
+     * @param streamId  The id of the stream to read event for.
+     * @return The event, or null if no stream was found.
+     */
+    EventRecord<T> readLast(String streamId);
+
+    /**
      * Reads all events for a given stream id from a given version and onwards, with no specified
      * upper bound on the number of events returned.
      *

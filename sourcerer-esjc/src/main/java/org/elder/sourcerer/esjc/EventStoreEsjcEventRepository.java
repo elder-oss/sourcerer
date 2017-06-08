@@ -117,8 +117,53 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         return readInternal(toEsStreamId(streamId), version, maxEvents, false);
     }
 
+    @Override
+    public EventRecord<T> readFirst(final String streamId) {
+        return readSingleInternal(toEsStreamId(streamId), 0, false);
+    }
+
+    @Override
+    public EventRecord<T> readLast(final String streamId) {
+        return readSingleInternal(toEsStreamId(streamId), -1, false);
+    }
+
     private String getCategoryStreamName() {
         return "$ce-" + streamPrefix;
+    }
+
+    private EventRecord<T> readSingleInternal(
+            final String internalStreamId,
+            final int eventNumber,
+            final boolean resolveLinksTo) {
+        logger.debug(
+                "Reading event {} from {} (in {})",
+                eventNumber,
+                internalStreamId,
+                streamPrefix);
+
+        StreamEventsSlice eventsSlice = completeReadFuture(
+                eventStore.readStreamEventsBackward(
+                        internalStreamId,
+                        eventNumber,
+                        1,
+                        resolveLinksTo,
+                        null),
+                ExpectedVersion.any());
+
+        if (eventsSlice.events.isEmpty()) {
+            logger.debug(
+                    "Reading {} (in {}) returned no event",
+                    internalStreamId,
+                    streamPrefix);
+            return null;
+        }
+
+        ResolvedEvent event = eventsSlice.events.get(0);
+        logger.debug(
+                "Read event from {} (version {})",
+                internalStreamId,
+                event.originalEventNumber());
+        return fromEsEvent(event);
     }
 
     private EventReadResult<T> readInternal(

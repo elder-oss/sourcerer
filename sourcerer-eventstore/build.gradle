@@ -5,5 +5,5 @@ dependencies {
     compile 'org.scala-lang.modules:scala-java8-compat_2.11:0.8.0-RC1'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
     compile 'io.netty:netty-buffer:4.1.2.Final'
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile project(':sourcerer-test-utils')
 }
