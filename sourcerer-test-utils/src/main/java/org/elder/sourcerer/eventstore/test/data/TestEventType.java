@@ -12,7 +12,7 @@ public class TestEventType {
     private TestEventType() {
     }
 
-    public TestEventType(String value) {
+    public TestEventType(final String value) {
         this.value = value;
     }
 

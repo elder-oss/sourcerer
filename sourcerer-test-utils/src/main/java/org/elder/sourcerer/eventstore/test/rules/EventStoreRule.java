@@ -58,8 +58,8 @@ public class EventStoreRule extends ExternalResource {
                         .get(String.format("http://%s:%d/streams/newstream2", hostname(), port))
                         .asJson();
                 return true;
-            } catch (UnirestException e) {
-                logger.info("Liveness probe failed", e.getMessage());
+            } catch (UnirestException ex) {
+                logger.info("Liveness probe failed", ex.getMessage());
                 return false;
             }
         };
