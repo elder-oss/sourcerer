@@ -101,8 +101,54 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
         return readInternal(toEsStreamId(streamId), version, maxEvents, false);
     }
 
+    @Override
+    public EventRecord<T> readFirst(final String streamId) {
+        return readSingleInternal(
+                toEsStreamId(streamId),
+                new EventNumber.Exact(0),
+                false);
+    }
+
+    @Override
+    public EventRecord<T> readLast(final String streamId) {
+        return readSingleInternal(
+                toEsStreamId(streamId),
+                new EventNumber.Last$(),
+                false);
+    }
+
     private String getCategoryStreamName() {
         return "$ce-" + streamPrefix;
+    }
+
+    private EventRecord<T> readSingleInternal(
+            final String internalStreamId,
+            final EventNumber eventNumber,
+            final boolean resolveLinksTo) {
+        try {
+            logger.debug(
+                    "Reading latest event from {} (in {})",
+                    internalStreamId,
+                    streamPrefix);
+
+            ReadStreamEventsCompleted res = completeReadFuture(connection.readStreamEventsBackward(
+                    internalStreamId,
+                    eventNumber,
+                    1,
+                    resolveLinksTo,
+                    null));
+
+            logger.debug("Read event from {}", internalStreamId);
+            List<Event> events = res.eventsJava();
+            if (events.isEmpty()) {
+                logger.debug("Event from {} not found", internalStreamId);
+                return null;
+            }
+
+            return fromEsEvent(events.get(0));
+        } catch (eventstore.StreamNotFoundException ex) {
+            return null;
+        }
     }
 
     private EventReadResult<T> readInternal(

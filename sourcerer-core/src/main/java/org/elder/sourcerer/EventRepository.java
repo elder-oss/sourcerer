@@ -94,6 +94,22 @@ public interface EventRepository<T> {
     }
 
     /**
+     * Reads first event for a given stream id.
+     *
+     * @param streamId  The id of the stream to read event for.
+     * @return The event, or null if no stream was found.
+     */
+    EventRecord<T> readFirst(String streamId);
+
+    /**
+     * Reads last event for a given stream id.
+     *
+     * @param streamId  The id of the stream to read event for.
+     * @return The event, or null if no stream was found.
+     */
+    EventRecord<T> readLast(String streamId);
+
+    /**
      * Gets the current version (i.e. the position of the last written event) for the event
      * repository.
      *
