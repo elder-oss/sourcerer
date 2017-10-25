@@ -4,6 +4,8 @@ import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionHandler;
 import org.elder.sourcerer.EventSubscriptionPositionSource;
 import org.elder.sourcerer.SubscriptionToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Custom subscriber to work around the fact that buffer does not appear to respect back pressure,
@@ -18,6 +20,8 @@ import org.elder.sourcerer.SubscriptionToken;
  * @param <T> The type of events the subscription handles.
  */
 public class EventSubscriptionManager<T> {
+    private static final Logger logger = LoggerFactory.getLogger(EventSubscriptionManager.class);
+
     private final SubscriptionWorker subscriptionWorker;
     private final Thread workerThread;
 
@@ -32,10 +36,17 @@ public class EventSubscriptionManager<T> {
                 subscriptionHandler,
                 batchSize);
         this.workerThread = new Thread(subscriptionWorker, "event-subscription-worker");
+        this.workerThread.setUncaughtExceptionHandler(uncaughtExceptionHandler());
     }
 
     public SubscriptionToken start() {
         workerThread.start();
         return subscriptionWorker;
+    }
+
+    private Thread.UncaughtExceptionHandler uncaughtExceptionHandler() {
+        return (thread, throwable) -> {
+            logger.error("Uncaught exception in worker - stopped: ", throwable);
+        };
     }
 }
