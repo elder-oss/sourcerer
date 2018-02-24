@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /root/project
+    working_directory: project
     docker:
       - image: circleci/openjdk:9.0-jdk-node-browsers
     steps:
