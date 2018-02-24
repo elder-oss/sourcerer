@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -186,7 +187,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                nullable(Integer.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class)))
                 .thenReturn(catchUpSubscription);
@@ -347,7 +348,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                nullable(Integer.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class)))
                 .thenReturn(catchUpSubscription);
