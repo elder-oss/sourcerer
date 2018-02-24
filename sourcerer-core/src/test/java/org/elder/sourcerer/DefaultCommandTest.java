@@ -2,6 +2,7 @@ package org.elder.sourcerer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.assertj.core.api.Assertions;
 import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
@@ -98,14 +99,14 @@ public class DefaultCommandTest {
         ArgumentCaptor<List<TestEvent>> passedEvents
                 = ArgumentCaptor.forClass((Class) List.class);
         verify(repository).append(eq(AGGREGATE_ID), passedEvents.capture(), any(), any());
-        Assert.assertThat(
-                passedEvents.getValue(),
-                org.hamcrest.Matchers.contains(newEvents.toArray()));
+        Assertions
+                .assertThat(passedEvents.getValue())
+                .contains(newEvents.toArray(new TestEvent[0]));
 
         Assert.assertEquals((long) newVersion, (long) commandResult.getNewVersion());
-        Assert.assertThat(
-                (List<TestEvent>) commandResult.getEvents(),
-                org.hamcrest.Matchers.contains(newEvents.toArray()));
+        Assertions
+                .assertThat((List<TestEvent>) commandResult.getEvents())
+                .contains(newEvents.toArray(new TestEvent[0]));
     }
 
     @Test
@@ -181,14 +182,14 @@ public class DefaultCommandTest {
         ArgumentCaptor<List<TestEvent>> passedEvents
                 = ArgumentCaptor.forClass((Class) List.class);
         verify(repository).append(eq(AGGREGATE_ID), passedEvents.capture(), any(), any());
-        Assert.assertThat(
-                passedEvents.getValue(),
-                org.hamcrest.Matchers.contains(newEvents.toArray()));
+        Assertions
+                .assertThat(passedEvents.getValue())
+                .contains(newEvents.toArray(new TestEvent[0]));
 
         Assert.assertEquals((long) newVersion, (long) commandResult.getNewVersion());
-        Assert.assertThat(
-                (List<TestEvent>) commandResult.getEvents(),
-                org.hamcrest.Matchers.contains(newEvents.toArray()));
+        Assertions
+                .assertThat((List<TestEvent>) commandResult.getEvents())
+                .contains(newEvents.toArray(new TestEvent[0]));
     }
 
     @Test

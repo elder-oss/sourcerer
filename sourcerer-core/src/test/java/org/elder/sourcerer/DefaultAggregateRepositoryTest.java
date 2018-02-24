@@ -2,6 +2,7 @@ package org.elder.sourcerer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -93,9 +94,9 @@ public class DefaultAggregateRepositoryTest {
                 eq(AGGREGATE_ID_1),
                 eq(new TestState("empty")),
                 passedEvents.capture());
-        Assert.assertThat(
-                passedEvents.getValue(),
-                org.hamcrest.Matchers.contains(expectedEvents.toArray()));
+        Assertions
+                .assertThat(passedEvents.getValue())
+                .contains(expectedEvents.toArray(new TestEvent[0]));
 
         verifyNoMoreInteractions(eventRepository, aggregateProjection);
         Assert.assertEquals(expectedState, result.state());
@@ -125,13 +126,14 @@ public class DefaultAggregateRepositoryTest {
         ArgumentCaptor<List<EventData<TestEvent>>> passedEvents
                 = ArgumentCaptor.forClass((Class) List.class);
         verify(eventRepository).append(eq(AGGREGATE_ID_1), passedEvents.capture(), any());
-        Assert.assertThat(
+        Assertions
+                .assertThat(
                 passedEvents
                         .getValue()
                         .stream()
                         .map(EventData::getEvent)
-                        .collect(Collectors.toList()),
-                org.hamcrest.Matchers.contains(events.toArray()));
+                        .collect(Collectors.toList()))
+                .contains(events.toArray(new TestEvent[0]));
     }
 
     @Test

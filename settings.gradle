@@ -2,8 +2,6 @@ include 'sourcerer-core',
         'sourcerer-crud',
         'sourcerer-esjc',
         'sourcerer-esjc-spring',
-        'sourcerer-eventstore',
-        'sourcerer-eventstore-spring',
         'sourcerer-spring',
         'sourcerer-utils',
         'sourcerer-test-utils'
