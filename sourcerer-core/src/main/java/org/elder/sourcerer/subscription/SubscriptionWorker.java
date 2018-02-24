@@ -12,7 +12,6 @@ import reactor.core.subscriber.LambdaSubscriber;
 import reactor.core.subscriber.Subscribers;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -105,8 +104,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
     private void runOneSession() throws InterruptedException {
         subscriberCount++;
         Integer subscriptionPosition = positionSource.getSubscriptionPosition();
-        BlockingQueue<Update<T>> currentUpdates =
-                new ArrayBlockingQueue<>(batchSize);
+        BlockingQueue<Update<T>> currentUpdates = new ArrayBlockingQueue<>(batchSize);
         SessionSubscriber<T> subscriber =
                 new SessionSubscriber<>(currentUpdates, "" + subscriberCount);
         LambdaSubscriber<EventSubscriptionUpdate<T>> boundedSubscriber = Subscribers.bounded(
