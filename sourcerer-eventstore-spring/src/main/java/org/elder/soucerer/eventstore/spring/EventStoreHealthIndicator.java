@@ -1,4 +1,4 @@
-package org.elder.soucerer.eventstore;
+package org.elder.soucerer.eventstore.spring;
 
 import eventstore.Position;
 import eventstore.ReadAllEventsCompleted;

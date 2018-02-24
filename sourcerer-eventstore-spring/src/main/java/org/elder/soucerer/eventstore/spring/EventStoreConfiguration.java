@@ -1,4 +1,4 @@
-package org.elder.soucerer.eventstore;
+package org.elder.soucerer.eventstore.spring;
 
 import akka.actor.ActorSystem;
 import com.fasterxml.jackson.databind.ObjectMapper;

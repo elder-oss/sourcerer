@@ -1,4 +1,4 @@
-package org.elder.sourcerer.eventstore.test.data;
+package org.elder.sourcerer.test.data;
 
 import org.elder.sourcerer.EventType;
 
