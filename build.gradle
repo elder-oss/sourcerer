@@ -4,13 +4,13 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.0.4"
-        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.1"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.2.10"
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.11.0"
     }
 }
 
 plugins {
-    id "org.sonarqube" version "2.2"
+    id "org.sonarqube" version "2.6.2"
 }
 
 apply plugin: 'io.codearte.nexus-staging'
