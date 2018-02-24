@@ -1,3 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.eventstore'
+}
+
 dependencies {
     compile project(':sourcerer-core')
     compile 'com.geteventstore:eventstore-client_2.11:2.2.2'

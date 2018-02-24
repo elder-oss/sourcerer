@@ -1,3 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.esjc'
+}
+
 dependencies {
     compile project(':sourcerer-core')
     compile 'com.github.msemys:esjc:1.7.0'

@@ -8,7 +8,7 @@ public final class EventTypeUtils {
     }
 
     /**
-     * Gets the configured repository for a given event type, assumed to be annotated with
+     * Gets the configured repository for a given event type, assumed to be annotated with.
      *
      * @param eventType The base type of events to extract a repository name for.
      */

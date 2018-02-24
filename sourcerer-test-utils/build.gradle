@@ -1,3 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.test'
+}
+
 dependencies {
     compile project(":sourcerer-core")
     compile "junit:junit:$junitVersion"

@@ -1,3 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.esjc.spring'
+}
+
 dependencies {
     compile project(':sourcerer-esjc')
     compile "org.springframework:spring-beans:$springVersion"

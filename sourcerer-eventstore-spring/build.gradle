@@ -1,3 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.eventstore.spring'
+}
+
 dependencies {
     compile project(':sourcerer-eventstore')
     compile "org.springframework:spring-beans:$springVersion"
