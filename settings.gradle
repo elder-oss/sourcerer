@@ -5,4 +5,5 @@ include 'sourcerer-core',
         'sourcerer-eventstore',
         'sourcerer-eventstore-spring',
         'sourcerer-spring',
+        'sourcerer-utils',
         'sourcerer-test-utils'

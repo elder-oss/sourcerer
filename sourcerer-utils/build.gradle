@@ -1,0 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.utils'
+}
+
+dependencies {
+    compile "com.google.guava:guava:$guavaVersion"
+}
