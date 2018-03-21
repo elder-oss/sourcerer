@@ -13,7 +13,7 @@ public class DefaultEventSubscriptionFactory<T> implements EventSubscriptionFact
     @Override
     public EventSubscription fromSubscriptionHandler(
             final EventSubscriptionHandler<T> handler,
-            final int batchSize) {
-        return new DefaultEventSubscription(repository, handler, batchSize);
+            final SubscriptionWorkerConfig config) {
+        return new DefaultEventSubscription(repository, handler, config);
     }
 }

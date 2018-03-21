@@ -6,6 +6,7 @@ import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionPositionSource;
 import org.elder.sourcerer.EventSubscriptionUpdate;
 import org.elder.sourcerer.SubscriptionToken;
+import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -111,7 +112,7 @@ public class EventSubscriptionManagerTest {
                 repository,
                 positionSource,
                 subscriptionHandler,
-                64);
+                new SubscriptionWorkerConfig().withBatchSize(64));
 
         SubscriptionToken token = subscriptionManager.start();
         sleep(5000);
@@ -154,7 +155,7 @@ public class EventSubscriptionManagerTest {
                 repository,
                 positionSource,
                 subscriptionHandler,
-                64);
+                new SubscriptionWorkerConfig().withBatchSize(64));
 
         SubscriptionToken token = subscriptionManager.start();
         sleep(100000);
@@ -187,7 +188,7 @@ public class EventSubscriptionManagerTest {
                 repository,
                 positionSource,
                 subscriptionHandler,
-                64);
+                new SubscriptionWorkerConfig().withBatchSize(64));
 
         SubscriptionToken token = subscriptionManager.start();
         sleep(100000);
@@ -220,7 +221,7 @@ public class EventSubscriptionManagerTest {
                 repository,
                 positionSource,
                 subscriptionHandler,
-                64);
+                new SubscriptionWorkerConfig().withBatchSize(64));
 
         SubscriptionToken token = subscriptionManager.start();
         sleep(100000);
