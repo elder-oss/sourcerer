@@ -59,8 +59,8 @@ subprojects {
     apply plugin: 'jacoco'
     apply plugin: 'signing'
 
-    sourceCompatibility = 1.9
-    targetCompatibility = 1.9
+    sourceCompatibility = 1.10
+    targetCompatibility = 1.10
 
     checkstyle {
         configFile = new File(rootDir, "infra/codehealth/checkstyle.xml")
