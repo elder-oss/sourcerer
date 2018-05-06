@@ -3,5 +3,4 @@ include 'sourcerer-core',
         'sourcerer-esjc',
         'sourcerer-esjc-spring',
         'sourcerer-spring',
-        'sourcerer-utils',
-        'sourcerer-test-utils'
+        'sourcerer-utils'

@@ -1,4 +1,4 @@
-package org.elder.sourcerer.test.data;
+package org.elder.sourcerer.esjc;
 
 import org.elder.sourcerer.EventType;
 

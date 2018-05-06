@@ -1,5 +1,6 @@
 module org.elder.sourcerer.esjc {
     exports org.elder.sourcerer.esjc;
+    requires annotations;
     requires org.slf4j;
     requires com.google.common;
     requires com.fasterxml.jackson.core;

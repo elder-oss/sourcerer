@@ -5,9 +5,11 @@ ext {
 dependencies {
     api project(':sourcerer-core')
     implementation project(':sourcerer-utils')
+    implementation "org.jetbrains:annotations:$jetbrainsAnnotationsVersion"
     implementation "com.github.msemys:esjc:$esjcVersion"
     implementation "com.google.guava:guava:$guavaVersion"
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "io.projectreactor:reactor-core:$reactorVersion"
-    testImplementation project(':sourcerer-test-utils')
+    testImplementation 'com.github.tddmonkey:tocker-core:0.0.14'
+    testImplementation 'com.mashape.unirest:unirest-java:1.4.9'
 }
