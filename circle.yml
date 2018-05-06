@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/openjdk:9.0-jdk-node-browsers
+      - image: circleci/openjdk:10.0.1-10-jdk-node
     steps:
       - checkout
       - run:
