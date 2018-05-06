@@ -3,5 +3,5 @@ ext {
 }
 
 dependencies {
-    compile project(':sourcerer-core')
+    implementation project(':sourcerer-core')
 }

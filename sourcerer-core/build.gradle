@@ -1,11 +1,11 @@
 ext {
-    moduleName = 'org.elder.sourcerer.core'
+    moduleName = 'org.elder.sourcerer'
 }
 
 dependencies {
-    compile 'javax.inject:javax.inject:1'
-    compile "com.google.guava:guava:$guavaVersion"
-    compile "org.reactivestreams:reactive-streams:$reactiveStreamsVersion"
-    compile "io.projectreactor:reactor-core:$reactorVersion"
-    compile 'org.jetbrains:annotations:15.0'
+    api "org.reactivestreams:reactive-streams:$reactiveStreamsVersion"
+    implementation 'javax.inject:javax.inject:1'
+    implementation "com.google.guava:guava:$guavaVersion"
+    implementation "io.projectreactor:reactor-core:$reactorVersion"
+    implementation 'org.jetbrains:annotations:15.0'
 }

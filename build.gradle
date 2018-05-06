@@ -53,6 +53,7 @@ subprojects {
     version = getVersionName()
 
     apply plugin: 'java'
+    apply plugin: 'java-library'
     apply plugin: 'maven'
     apply plugin: 'maven-publish'
     apply plugin: 'checkstyle'
@@ -86,18 +87,18 @@ subprojects {
     }
 
     dependencies {
-        compile "org.slf4j:slf4j-api:$slf4jVersion"
-        compile "org.slf4j:jcl-over-slf4j:$slf4jVersion"
-        testCompile "org.slf4j:slf4j-simple:$slf4jVersion"
-        testCompile "junit:junit:$junitVersion"
-        testCompile 'org.assertj:assertj-core:3.9.1'
-        testCompile "org.mockito:mockito-core:$mockitoVersion"
-        testCompile "org.powermock:powermock-core:$powermockVersion"
-        testCompile "org.powermock:powermock-module-junit4:$powermockVersion"
-        testCompile "org.powermock:powermock-api-mockito2:$powermockVersion"
+        implementation "org.slf4j:slf4j-api:$slf4jVersion"
+        testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+        testImplementation "org.junit.vintage:junit-vintage-engine:$junitVersion"
+        testImplementation 'org.assertj:assertj-core:3.9.1'
+        testImplementation "org.mockito:mockito-core:$mockitoVersion"
+        testImplementation "org.powermock:powermock-core:$powermockVersion"
+        testImplementation "org.powermock:powermock-module-junit4:$powermockVersion"
+        testImplementation "org.powermock:powermock-api-mockito2:$powermockVersion"
     }
 
     test {
+        useJUnitPlatform()
         reports {
             junitXml.enabled = true
             html.enabled = true

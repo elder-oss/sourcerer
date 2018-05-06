@@ -1,9 +1,9 @@
 module org.elder.sourcerer.test {
-    requires org.elder.sourcerer.core;
+    exports org.elder.sourcerer.test.data;
+    exports org.elder.sourcerer.test.rules;
+    requires org.elder.sourcerer;
     requires junit;
     requires org.slf4j;
     requires tocker.core;
     requires unirest.java;
-    exports org.elder.sourcerer.test.data;
-    exports org.elder.sourcerer.test.rules;
 }

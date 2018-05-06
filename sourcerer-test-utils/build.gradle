@@ -3,8 +3,8 @@ ext {
 }
 
 dependencies {
-    compile project(":sourcerer-core")
-    compile "junit:junit:$junitVersion"
-    compile 'com.github.tddmonkey:tocker-core:0.0.14'
-    compile 'com.mashape.unirest:unirest-java:1.4.9'
+    implementation project(":sourcerer-core")
+    implementation "junit:junit:$junitVersion"
+    implementation 'com.github.tddmonkey:tocker-core:0.0.14'
+    implementation 'com.mashape.unirest:unirest-java:1.4.9'
 }

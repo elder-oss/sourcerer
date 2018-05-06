@@ -3,9 +3,9 @@ ext {
 }
 
 dependencies {
-    compile project (':sourcerer-core')
-    compile 'javax.inject:javax.inject:1'
-    compile "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    compile "org.springframework:spring-beans:$springVersion"
-    compile "org.springframework:spring-context:$springVersion"
+    api project (':sourcerer-core')
+    implementation 'javax.inject:javax.inject:1'
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "org.springframework:spring-beans:$springVersion"
+    implementation "org.springframework:spring-context:$springVersion"
 }

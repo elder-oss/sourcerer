@@ -1,11 +1,10 @@
-// CHECKSTYLE:OFF
-module org.elder.sourcerer.core {
+module org.elder.sourcerer {
+    exports org.elder.sourcerer;
+    exports org.elder.sourcerer.exceptions;
+    exports org.elder.sourcerer.functions;
     requires javax.inject;
     requires annotations;
     requires org.slf4j;
     requires reactor.core;
     requires com.google.common;
-    exports org.elder.sourcerer;
-    exports org.elder.sourcerer.exceptions;
-    exports org.elder.sourcerer.functions;
 }

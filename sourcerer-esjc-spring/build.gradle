@@ -3,8 +3,10 @@ ext {
 }
 
 dependencies {
-    compile project(':sourcerer-esjc')
-    compile "org.springframework:spring-beans:$springVersion"
-    compile "org.springframework:spring-context:$springVersion"
-    compile "org.springframework.boot:spring-boot-actuator:$springBootVersion"
+    api project(':sourcerer-esjc')
+    implementation "com.github.msemys:esjc:$esjcVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "org.springframework:spring-beans:$springVersion"
+    implementation "org.springframework:spring-context:$springVersion"
+    implementation "org.springframework.boot:spring-boot-actuator:$springBootVersion"
 }
