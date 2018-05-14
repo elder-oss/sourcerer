@@ -4,6 +4,7 @@ import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionHandler;
 import org.elder.sourcerer.EventSubscriptionPositionSource;
 import org.elder.sourcerer.SubscriptionToken;
+import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,12 +30,12 @@ public class EventSubscriptionManager<T> {
             final EventRepository<T> repository,
             final EventSubscriptionPositionSource positionSource,
             final EventSubscriptionHandler<T> subscriptionHandler,
-            final int batchSize) {
+            final SubscriptionWorkerConfig config) {
         this.subscriptionWorker = new SubscriptionWorker<>(
                 repository,
                 positionSource,
                 subscriptionHandler,
-                batchSize);
+                config);
         this.workerThread = new Thread(subscriptionWorker, "event-subscription-worker");
         this.workerThread.setUncaughtExceptionHandler(uncaughtExceptionHandler());
     }

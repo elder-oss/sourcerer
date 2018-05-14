@@ -5,16 +5,16 @@ import org.elder.sourcerer.subscription.EventSubscriptionManager;
 public class DefaultEventSubscription<T> implements EventSubscription {
     private final EventRepository<T> repository;
     private final EventSubscriptionHandler<T> subscriptionHandler;
-    private final int batchSize;
+    private final SubscriptionWorkerConfig config;
     private EventSubscriptionPositionSource positionSource;
 
     public DefaultEventSubscription(
             final EventRepository<T> repository,
             final EventSubscriptionHandler<T> subscriptionHandler,
-            final int batchSize) {
+            final SubscriptionWorkerConfig config) {
         this.repository = repository;
         this.subscriptionHandler = subscriptionHandler;
-        this.batchSize = batchSize;
+        this.config = config;
     }
 
     @Override
@@ -28,7 +28,7 @@ public class DefaultEventSubscription<T> implements EventSubscription {
                 repository,
                 positionSource,
                 subscriptionHandler,
-                batchSize);
+                config);
         return subscriptionManager.start();
     }
 }

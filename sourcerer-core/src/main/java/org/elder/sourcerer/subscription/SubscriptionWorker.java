@@ -6,6 +6,7 @@ import org.elder.sourcerer.EventSubscriptionHandler;
 import org.elder.sourcerer.EventSubscriptionPositionSource;
 import org.elder.sourcerer.EventSubscriptionUpdate;
 import org.elder.sourcerer.SubscriptionToken;
+import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.subscriber.LambdaSubscriber;
@@ -28,25 +29,21 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
     private final AtomicInteger retryCount;
     private final AtomicBoolean cancelled;
     private final Semaphore sleeper;
-    private final int batchSize;
-    private final int initialRetryDelayMillis;
-    private final int maxRetryDelayMillis;
+    private final SubscriptionWorkerConfig config;
     private int subscriberCount;
 
     public SubscriptionWorker(
             final EventRepository<T> repository,
             final EventSubscriptionPositionSource positionSource,
             final EventSubscriptionHandler<T> handler,
-            final int batchSize) {
+            final SubscriptionWorkerConfig config) {
         this.repository = repository;
         this.positionSource = positionSource;
         this.handler = handler;
-        this.batchSize = batchSize;
+        this.config = config;
         this.cancelled = new AtomicBoolean(false);
         this.retryCount = new AtomicInteger(0);
         this.sleeper = new Semaphore(0);
-        this.initialRetryDelayMillis = 100;
-        this.maxRetryDelayMillis = 30_000;
     }
 
     @Override
@@ -104,11 +101,12 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
     private void runOneSession() throws InterruptedException {
         subscriberCount++;
         Integer subscriptionPosition = positionSource.getSubscriptionPosition();
-        BlockingQueue<Update<T>> currentUpdates = new ArrayBlockingQueue<>(batchSize);
+        BlockingQueue<Update<T>> currentUpdates =
+                new ArrayBlockingQueue<>(config.getBatchSize());
         SessionSubscriber<T> subscriber =
                 new SessionSubscriber<>(currentUpdates, "" + subscriberCount);
         LambdaSubscriber<EventSubscriptionUpdate<T>> boundedSubscriber = Subscribers.bounded(
-                batchSize,
+                config.getBatchSize(),
                 subscriber::onNext,
                 subscriber::onError,
                 subscriber::onComplete);
@@ -217,11 +215,11 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
 
     private long getCurrentRetryInterval(final int attempts) {
         // This would be a simple shift, but shift would overflow ...
-        long delay = initialRetryDelayMillis;
+        long delay = config.getInitialRetryDelayMillis();
         for (int i = 0; i < attempts; i++) {
             delay <<= 1;
-            if (delay > maxRetryDelayMillis) {
-                return maxRetryDelayMillis;
+            if (delay > config.getMaxRetryDelayMillis()) {
+                return config.getMaxRetryDelayMillis();
             }
         }
         return delay;
