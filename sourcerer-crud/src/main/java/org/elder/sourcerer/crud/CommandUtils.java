@@ -160,14 +160,8 @@ public final class CommandUtils {
             return commandResponse;
         }
 
-        int expectedVersion;
-        if (commandResponse.getPreviousVersion() != null) {
-            expectedVersion = commandResponse.getPreviousVersion() + 1;
-            logger.debug("Looking for version {} based on previous", expectedVersion);
-        } else if (commandResponse.getNewVersion() != null) {
-            expectedVersion = commandResponse.getNewVersion();
-            logger.debug("Looking for version {} based on new", expectedVersion);
-        } else {
+        Integer expectedVersion = commandResponse.getNewVersion();
+        if (expectedVersion == null) {
             throw new IllegalArgumentException("Command was not no-op but returned no version!");
         }
 
