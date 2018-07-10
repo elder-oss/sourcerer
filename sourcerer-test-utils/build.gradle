@@ -1,7 +1,0 @@
-dependencies {
-    compile project(":sourcerer-core")
-    compile 'com.github.msemys:esjc:1.7.0'
-    compile 'junit:junit:4.11'
-    compile 'com.github.tddmonkey:tocker-core:0.0.14'
-    compile 'com.mashape.unirest:unirest-java:1.4.9'
-}

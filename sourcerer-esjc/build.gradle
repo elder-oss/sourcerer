@@ -1,7 +1,15 @@
+ext {
+    moduleName = 'org.elder.sourcerer.esjc'
+}
+
 dependencies {
-    compile project(':sourcerer-core')
-    compile 'com.github.msemys:esjc:1.7.0'
-    compile 'com.google.guava:guava:19.0'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
-    testCompile project(':sourcerer-test-utils')
+    api project(':sourcerer-core')
+    implementation project(':sourcerer-utils')
+    implementation "org.jetbrains:annotations:$jetbrainsAnnotationsVersion"
+    implementation "com.github.msemys:esjc:$esjcVersion"
+    implementation "com.google.guava:guava:$guavaVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "io.projectreactor:reactor-core:$reactorVersion"
+    testImplementation 'com.github.tddmonkey:tocker-core:0.0.14'
+    testImplementation 'com.mashape.unirest:unirest-java:1.4.9'
 }

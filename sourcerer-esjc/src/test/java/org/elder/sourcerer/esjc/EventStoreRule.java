@@ -1,4 +1,4 @@
-package org.elder.sourcerer.eventstore.test.rules;
+package org.elder.sourcerer.esjc;
 
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;

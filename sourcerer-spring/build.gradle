@@ -1,7 +1,11 @@
+ext {
+    moduleName = 'org.elder.sourcerer.spring'
+}
+
 dependencies {
-    compile project (':sourcerer-core')
-    compile 'javax.inject:javax.inject:1'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
-    compile 'org.springframework:spring-beans:4.2.6.RELEASE'
-    compile 'org.springframework:spring-context:4.2.6.RELEASE'
+    api project (':sourcerer-core')
+    implementation 'javax.inject:javax.inject:1'
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "org.springframework:spring-beans:$springVersion"
+    implementation "org.springframework:spring-context:$springVersion"
 }

@@ -1,3 +1,7 @@
+ext {
+    moduleName = 'org.elder.sourcerer.crud'
+}
+
 dependencies {
-    compile project(':sourcerer-core')
+    implementation project(':sourcerer-core')
 }

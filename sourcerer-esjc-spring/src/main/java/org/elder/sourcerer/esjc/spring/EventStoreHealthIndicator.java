@@ -1,4 +1,4 @@
-package org.elder.soucerer.eventstore;
+package org.elder.sourcerer.esjc.spring;
 
 import com.github.msemys.esjc.AllEventsSlice;
 import com.github.msemys.esjc.EventStore;
