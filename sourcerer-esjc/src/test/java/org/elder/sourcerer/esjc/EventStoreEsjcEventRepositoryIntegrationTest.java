@@ -8,11 +8,9 @@ import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.ExpectedVersion;
 import org.elder.sourcerer.eventstore.test.data.TestEventType;
-import org.elder.sourcerer.eventstore.test.rules.EventStoreRule;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -27,9 +25,6 @@ import static org.junit.Assert.assertThat;
 public class EventStoreEsjcEventRepositoryIntegrationTest {
     private static final String NAMESPACE = randomNamespace();
 
-    @ClassRule
-    public static EventStoreRule store = new EventStoreRule().start();
-
     private static EventRepository<TestEventType> repository;
     private static EventStore eventStore;
 
@@ -42,7 +37,7 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
                 .userCredentials("admin", "changeit")
                 .requireMaster(false)
                 .failOnNoServerResponse(true)
-                .singleNodeAddress(store.hostname(), store.port())
+                .singleNodeAddress("127.0.0.1", 1113)
                 .build();
 
         eventStore.connect();

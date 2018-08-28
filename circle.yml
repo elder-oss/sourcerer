@@ -3,7 +3,10 @@ jobs:
   build:
     working_directory: /root/project
     docker:
+      # Primary container where all steps run
       - image: elderhq/java-circle-image:20170502-1
+      # Secondary container with a test eventstore instance
+      - image: eventstore/eventstore:release-4.0.1
     steps:
       - checkout
       - setup_docker_engine
@@ -25,7 +28,7 @@ jobs:
             if [[ "${CIRCLE_TAG}" =~ v[0-9]+(\.[0-9]+)* ]]; then
               echo "Publishing to maven central (tag is $CIRCLE_TAG)"
               . infra/publish-artifacts-central.sh
-            else if [ -n "${CIRCLE_TAG}" ]; then
+            elif [ -n "${CIRCLE_TAG}" ]; then
               echo "Publishing to internal maven (tag is $CIRCLE_TAG)"
               . infra/publish-artifacts-internal.sh
             else
@@ -45,10 +48,3 @@ deployment:
     tag: /.*/
     commands:
       - echo "Placeholder NOOP for tags"
-
-deployment:
-  prerelease:
-    tag: /.*/
-    owner: elder-oss
-    commands:
-      - . infra/publish-artifacts-internal.sh
