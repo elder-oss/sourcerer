@@ -7,7 +7,6 @@ repositories {
 
 dependencies {
     compile project(':sourcerer-esjc')
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.hamcrest:hamcrest-all:1.3'
