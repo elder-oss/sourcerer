@@ -34,9 +34,9 @@ class EventStreams<STATE, EVENT>(
                         .fromOperation(constructOf(UpdateHandlerAggregate { state ->
                             create(state)
                         }))
+                        .setAggregateId(id)
                         .setAtomic(true)
                         .setExpectedVersion(ExpectedVersion.notCreated())
-                        .setAggregateId(id)
                         .run())
     }
 
