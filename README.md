@@ -144,4 +144,4 @@ messaging layer can be used by implementing
 When performing a build, all tests are running, including the integration tests.
 
 The integration tests expects a test eventstore instance to be running (see
-[circle.yml](circle.yml).
+[circle.yml](circle.yml)).
