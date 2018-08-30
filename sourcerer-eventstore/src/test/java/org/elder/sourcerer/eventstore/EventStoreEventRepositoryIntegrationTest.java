@@ -10,10 +10,8 @@ import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.ExpectedVersion;
 import org.elder.sourcerer.eventstore.test.data.TestEventType;
-import org.elder.sourcerer.eventstore.test.rules.EventStoreRule;
 import org.jetbrains.annotations.NotNull;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Test;
 import scala.Option;
 
@@ -30,9 +28,6 @@ import static org.junit.Assert.assertThat;
 public class EventStoreEventRepositoryIntegrationTest {
     private static final String NAMESPACE = randomNamespace();
 
-    @ClassRule
-    public static EventStoreRule store = new EventStoreRule().start();
-
     private static EventRepository<TestEventType> repository;
 
     private final String streamId = randomStreamId();
@@ -43,7 +38,7 @@ public class EventStoreEventRepositoryIntegrationTest {
         Settings defaultSettings = Settings.Default();
 
         Settings settings = new Settings(
-                new InetSocketAddress(store.hostname(), store.port()),
+                new InetSocketAddress("127.0.0.1", 1113),
                 defaultSettings.connectionTimeout(),
                 -1,
                 defaultSettings.reconnectionDelayMin(),

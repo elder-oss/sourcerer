@@ -138,3 +138,10 @@ but not actively in use by Elder.
 Other backends such as in memory event stores or ones backed by traditional databases plus a
 messaging layer can be used by implementing
 [EventRepository](https://github.com/elder-oss/sourcerer/blob/master/sourcerer-core/src/main/java/org/elder/sourcerer/EventRepository.java).
+
+## Building project locally
+
+When performing a build, all tests are running, including the integration tests.
+
+The integration tests expects a test eventstore instance to be running (see
+[circle.yml](circle.yml)).
