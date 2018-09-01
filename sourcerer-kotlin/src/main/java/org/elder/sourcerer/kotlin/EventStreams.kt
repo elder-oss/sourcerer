@@ -1,6 +1,7 @@
 package org.elder.sourcerer.kotlin
 
 import org.elder.sourcerer.AggregateRepository
+import org.elder.sourcerer.CommandFactory
 import org.elder.sourcerer.CommandResponse
 import org.elder.sourcerer.DefaultCommandFactory
 import org.elder.sourcerer.ExpectedVersion
@@ -13,12 +14,18 @@ import org.elder.sourcerer.functions.UpdateHandlerAggregate
 /**
  * Allows for creating, updating or appending to eventstore streams.
  *
- * Kotlin wrapper for DefaultCommandFactory that simplifies its usage.
+ * Kotlin wrapper for CommandFactory that simplifies its usage.
  */
 class EventStreams<STATE, EVENT>(
-        aggregateRepository: AggregateRepository<STATE, EVENT>
+        private val commandFactory: CommandFactory<STATE, EVENT>
 ) {
-    private val commandFactory = DefaultCommandFactory(aggregateRepository)
+
+    /**
+     * Create EventStreams that uses a DefaultCommandFactory.
+     */
+    constructor(
+            aggregateRepository: AggregateRepository<STATE, EVENT>
+    ) : this(DefaultCommandFactory(aggregateRepository))
 
     /**
      * Create a new stream.
