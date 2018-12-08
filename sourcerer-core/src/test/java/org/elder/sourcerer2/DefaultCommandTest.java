@@ -37,17 +37,14 @@ public class DefaultCommandTest {
     @Test(expected = InvalidCommandException.class)
     @SuppressWarnings("unchecked")
     public void conflictingVersionsGiveInvalidCommand() {
-        PowerMockito.mockStatic(ExpectedVersion.class);
-        PowerMockito.when(ExpectedVersion.merge(any(), any()))
-                    .thenThrow(new ConflictingExpectedVersionsException(
-                            "error", null, null));
-
+        ExpectedVersion expectedVersion = ExpectedVersion.exactly(StreamVersion.ofInt(42));
         Operation operation = new OperationHandlerOperation(
                 (x, y) -> null,
                 true,
                 false,
-                ExpectedVersion.exactly(StreamVersion.ofInt(42)));
+                expectedVersion);
         DefaultCommand command = new DefaultCommand(repository, operation);
+        command.setExpectedVersion(ExpectedVersion.notCreated());
         command.setAggregateId(AGGREGATE_ID);
         command.run();
     }

@@ -59,16 +59,12 @@ sealed class ExpectedVersion {
                     // Any is always compatible with other expected version
                     newVersion
                 ExpectedVersion.AnyExisting -> when (newVersion) {
+                    ExpectedVersion.AnyExisting,
                     ExpectedVersion.Any -> ExpectedVersion.anyExisting()
                     ExpectedVersion.NotCreated -> throw ConflictingExpectedVersionsException(
                             "Cannot merge 'any existing' with 'not created'",
                             baseVersion, newVersion)
                     is ExpectedVersion.Exactly -> newVersion
-                    else ->
-                        throw RuntimeException(
-                                "Internal error, unexpected version combination merging "
-                                        + baseVersion
-                                        + " with " + newVersion)
                 }
                 is ExpectedVersion.Exactly -> when (newVersion) {
                     is ExpectedVersion.Exactly -> {
