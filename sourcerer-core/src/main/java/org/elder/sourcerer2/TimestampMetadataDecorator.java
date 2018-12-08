@@ -2,13 +2,9 @@ package org.elder.sourcerer2;
 
 import com.google.common.collect.ImmutableMap;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
 import java.time.Instant;
 import java.util.Map;
 
-@Named
-@Singleton
 public class TimestampMetadataDecorator implements MetadataDecorator {
     private static final String TIMESTAMP_KEY = "timestamp";
 

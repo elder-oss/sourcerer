@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.PooledByteBufAllocator;
 import org.elder.sourcerer2.EventData;
 import org.elder.sourcerer2.EventNormalizer;
-import org.elder.sourcerer2.EventReadResult;
+import org.elder.sourcerer2.StreamReadResult;
 import org.elder.sourcerer2.EventRecord;
 import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.EventSubscriptionUpdate;
@@ -92,12 +92,12 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
-    public EventReadResult<T> readAll(final int version, final int maxEvents) {
+    public StreamReadResult<T> readAll(final int version, final int maxEvents) {
         return readInternal(getCategoryStreamName(), version, maxEvents, true);
     }
 
     @Override
-    public EventReadResult<T> read(final String streamId, final int version, final int maxEvents) {
+    public StreamReadResult<T> read(final String streamId, final int version, final int maxEvents) {
         return readInternal(toEsStreamId(streamId), version, maxEvents, false);
     }
 
@@ -151,7 +151,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
         }
     }
 
-    private EventReadResult<T> readInternal(
+    private StreamReadResult<T> readInternal(
             final String internalStreamId,
             final int version,
             final int maxEvents,
@@ -181,7 +181,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                     .stream()
                     .map(this::fromEsEvent)
                     .collect(new ImmutableListCollector<>());
-            return new EventReadResult<>(
+            return new StreamReadResult<>(
                     events,
                     version,
                     res.lastEventNumber().value(),

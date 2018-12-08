@@ -80,7 +80,8 @@ subprojects {
     }
 
     dependencies {
-        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+        api 'org.jetbrains:annotations:15.0'
+        api "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
         implementation "org.slf4j:slf4j-api:$slf4jVersion"
         testImplementation 'junit:junit:4.12'
         testImplementation 'org.hamcrest:hamcrest-all:1.3'

@@ -2,12 +2,6 @@ package org.elder.sourcerer2;
 
 import org.junit.Test;
 
-import static org.elder.sourcerer2.ExpectedVersion.any;
-import static org.elder.sourcerer2.ExpectedVersion.anyExisting;
-import static org.elder.sourcerer2.ExpectedVersion.exactly;
-import static org.elder.sourcerer2.ExpectedVersion.merge;
-import static org.elder.sourcerer2.ExpectedVersion.notCreated;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -21,91 +15,125 @@ public class ExpectedVersionMergeTest {
 
     @Test
     public void mergeAnyAndAny() {
-        assertMerge(any(), any(), any());
+        assertMerge(ExpectedVersion.any(), ExpectedVersion.any(), ExpectedVersion.any());
     }
 
     @Test
     public void mergeAnyAndNull() {
-        assertMerge(any(), null, any());
+        assertMerge(ExpectedVersion.any(), null, ExpectedVersion.any());
     }
 
     @Test
     public void mergeAnyAndAnyExisting() {
-        assertMerge(any(), anyExisting(), anyExisting());
+        assertMerge(
+                ExpectedVersion.any(),
+                ExpectedVersion.anyExisting(),
+                ExpectedVersion.anyExisting());
     }
 
     @Test
     public void mergeAnyAndExactly() {
-        assertMerge(any(), exactly(3), exactly(3));
+        assertMerge(
+                ExpectedVersion.any(),
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)));
     }
 
     @Test
     public void mergeAnyAndNotCreated() {
-        assertMerge(any(), notCreated(), notCreated());
+        assertMerge(
+                ExpectedVersion.any(),
+                ExpectedVersion.notCreated(),
+                ExpectedVersion.notCreated());
     }
 
     // Any existing
 
     @Test
     public void mergeAnyExistingAndAnyExisting() {
-        assertMerge(anyExisting(), anyExisting(), anyExisting());
+        assertMerge(
+                ExpectedVersion.anyExisting(),
+                ExpectedVersion.anyExisting(),
+                ExpectedVersion.anyExisting());
     }
 
     @Test
     public void mergeAnyExistingAndNull() {
-        assertMerge(anyExisting(), null, anyExisting());
+        assertMerge(ExpectedVersion.anyExisting(), null, ExpectedVersion.anyExisting());
     }
 
     @Test
     public void mergeAnyExistingAndExactly() {
-        assertMerge(anyExisting(), exactly(3), exactly(3));
+        assertMerge(
+                ExpectedVersion.anyExisting(),
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)));
     }
 
     @Test
     public void mergeAnyExistingAndNotCreated() {
-        assertMergeFail(anyExisting(), notCreated());
+        assertMergeFail(ExpectedVersion.anyExisting(), ExpectedVersion.notCreated());
     }
 
     // Exactly
 
     @Test
     public void mergeExactlyAndEqualExactly() {
-        assertMerge(exactly(3), exactly(3), exactly(3));
+        assertMerge(
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)));
     }
 
     @Test
     public void mergeExactlyAndNull() {
-        assertMerge(exactly(3), null, exactly(3));
+        assertMerge(
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                null,
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)));
     }
 
     @Test
     public void mergeExactlyAndDifferentExactly() {
-        assertMergeFail(exactly(3), exactly(4));
+        assertMergeFail(
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                ExpectedVersion.exactly(StreamVersion.ofInt(4)));
     }
 
     @Test
     public void mergeExactlyAndNotCreated() {
-        assertMergeFail(exactly(3), notCreated());
+        assertMergeFail(
+                ExpectedVersion.exactly(StreamVersion.ofInt(3)),
+                ExpectedVersion.notCreated());
     }
 
     // Not created
 
     @Test
     public void mergeNotCreatedAndNotCreated() {
-        assertMerge(notCreated(), notCreated(), notCreated());
+        assertMerge(
+                ExpectedVersion.notCreated(),
+                ExpectedVersion.notCreated(),
+                ExpectedVersion.notCreated());
     }
 
     @Test
     public void mergeNotCreatedAndNull() {
-        assertMerge(notCreated(), null, notCreated());
+        assertMerge(ExpectedVersion.notCreated(), null, ExpectedVersion.notCreated());
     }
 
     private void assertMerge(
             final ExpectedVersion first,
             final ExpectedVersion second,
             final ExpectedVersion expected) {
-        assertEqual(first + " merged with " + second, expected, merge(first, second));
-        assertEqual(second + " merged with " + first, expected, merge(second, first));
+        assertEqual(
+                first + " merged with " + second,
+                expected,
+                ExpectedVersion.merge(first, second));
+        assertEqual(
+                second + " merged with " + first,
+                expected,
+                ExpectedVersion.merge(second, first));
     }
 
     private void assertMergeFail(final ExpectedVersion first, final ExpectedVersion second) {
@@ -117,18 +145,14 @@ public class ExpectedVersionMergeTest {
             final String msg,
             final ExpectedVersion actual,
             final ExpectedVersion expected) {
-        assertEquals(
-                "Version: " + msg,
-                expected.getExpectedVersion(),
-                actual.getExpectedVersion());
-        assertEquals("Type: " + msg, expected.getType(), actual.getType());
+        assertEquals("Version: " + msg, expected, actual);
     }
 
     private void assertMergeFailOneDirection(
             final ExpectedVersion first,
             final ExpectedVersion second) {
         try {
-            merge(first, second);
+            ExpectedVersion.merge(first, second);
             fail("Expected failure for merging " + first + " with " + second);
         } catch (RuntimeException ex) {
             // Success

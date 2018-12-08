@@ -5,6 +5,7 @@ import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.EventSubscriptionHandler;
 import org.elder.sourcerer2.EventSubscriptionPositionSource;
 import org.elder.sourcerer2.EventSubscriptionUpdate;
+import org.elder.sourcerer2.RepositoryVersion;
 import org.elder.sourcerer2.SubscriptionToken;
 import org.elder.sourcerer2.SubscriptionWorkerConfig;
 import org.slf4j.Logger;
@@ -100,7 +101,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
 
     private void runOneSession() throws InterruptedException {
         subscriberCount++;
-        Integer subscriptionPosition = positionSource.getSubscriptionPosition();
+        RepositoryVersion subscriptionPosition = positionSource.getSubscriptionPosition();
         BlockingQueue<Update<T>> currentUpdates =
                 new ArrayBlockingQueue<>(config.getBatchSize());
         SessionSubscriber<T> subscriber =

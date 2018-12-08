@@ -31,7 +31,7 @@ public interface Command<TState, TParams, TEvent> {
      * @param aggregateId The string id used to identify the aggregate to operate on.
      * @return The command instance that the method was invoked on, for method chaining.
      */
-    Command<TState, TParams, TEvent> setAggregateId(String aggregateId);
+    Command<TState, TParams, TEvent> setAggregateId(StreamId aggregateId);
 
     /**
      * Sets the arguments passed to the operation behind this command as the command is executed.

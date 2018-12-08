@@ -22,7 +22,7 @@ public interface AggregateRepository<TState, TEvent> {
      * version. This method should never return null, but rather an ImmutableAggregate with a
      * version of Aggregate.VERSION_NOT_CREATED (-1) if the aggregate is nonexistent or deleted.
      */
-    ImmutableAggregate<TState, TEvent> load(String aggregateId);
+    ImmutableAggregate<TState, TEvent> load(StreamId aggregateId);
 
     /**
      * Persists a given existing or new aggregate with a list of events taken from an aggregate
@@ -88,8 +88,8 @@ public interface AggregateRepository<TState, TEvent> {
      *                        information to the operation, such as who performed the action that
      *                        triggered it, or which system that submitted the events.
      */
-    int append(
-            String aggregateId,
+    StreamVersion append(
+            StreamId aggregateId,
             Iterable<? extends TEvent> events,
             ExpectedVersion expectedVersion,
             Map<String, String> metadata);
@@ -105,8 +105,8 @@ public interface AggregateRepository<TState, TEvent> {
      *                        time the append is attempted differs from the one provided, an
      *                        UnexpectedVersionException will be thrown.
      */
-    default int append(
-            final String aggregateId,
+    default StreamVersion append(
+            final StreamId aggregateId,
             final Iterable<? extends TEvent> events,
             final ExpectedVersion expectedVersion) {
         return append(aggregateId, events, expectedVersion, null);
@@ -128,8 +128,8 @@ public interface AggregateRepository<TState, TEvent> {
      *                        information to the operation, such as who performed the action that
      *                        triggered it, or which system that submitted the events.
      */
-    default int append(
-            final String aggregateId,
+    default StreamVersion append(
+            final StreamId aggregateId,
             final TEvent event,
             final ExpectedVersion expectedVersion,
             final Map<String, String> metadata) {
@@ -147,8 +147,8 @@ public interface AggregateRepository<TState, TEvent> {
      *                        time the append is attempted differs from the one provided, an
      *                        UnexpectedVersionException will be thrown.
      */
-    default int append(
-            final String aggregateId, final TEvent event, final ExpectedVersion expectedVersion) {
+    default StreamVersion append(
+            final StreamId aggregateId, final TEvent event, final ExpectedVersion expectedVersion) {
         return append(aggregateId, ImmutableList.of(event), expectedVersion, null);
     }
 }

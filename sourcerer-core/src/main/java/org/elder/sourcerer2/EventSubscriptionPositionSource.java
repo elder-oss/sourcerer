@@ -16,9 +16,9 @@ public interface EventSubscriptionPositionSource {
     /**
      * Gets the current position to start or resume a subscription from.
      *
-     * @return The numerical stream position / version to start or resume a subscription from,
+     * @return The stream position / version to start or resume a subscription from,
      * exclusive. This would normally be the version of the last event that was successfully handled
      * by the subscription. Use null to start the subscription from the beginning.
      */
-    Integer getSubscriptionPosition();
+    RepositoryVersion getSubscriptionPosition();
 }

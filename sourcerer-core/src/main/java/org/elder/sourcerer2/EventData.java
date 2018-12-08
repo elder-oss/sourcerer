@@ -12,13 +12,13 @@ import java.util.UUID;
  */
 public final class EventData<T> {
     private final String eventType;
-    private final UUID eventId;
+    private final EventId eventId;
     private final ImmutableMap<String, String> metadata;
     private final T payload;
 
     public EventData(
             final String eventType,
-            final UUID eventId,
+            final EventId eventId,
             final Map<String, String> metadata,
             final T payload) {
         this.eventType = eventType;
@@ -31,7 +31,7 @@ public final class EventData<T> {
         return eventType;
     }
 
-    public UUID getEventId() {
+    public EventId getEventId() {
         return eventId;
     }
 

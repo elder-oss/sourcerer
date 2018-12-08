@@ -1,16 +1,17 @@
 package org.elder.sourcerer2.exceptions;
 
 import org.elder.sourcerer2.ExpectedVersion;
+import org.elder.sourcerer2.StreamVersion;
 
 /**
  * Throw to indicate that the current version of a stream does not match the expected one.
  */
 public class UnexpectedVersionException extends IllegalStateException {
-    private final Integer currentVersion;
+    private final StreamVersion currentVersion;
     private final ExpectedVersion expectedVersion;
 
     public UnexpectedVersionException(
-            final Integer currentVersion,
+            final StreamVersion currentVersion,
             final ExpectedVersion expectedVersion) {
         this(formatDefaultMessage(currentVersion, expectedVersion), currentVersion,
              expectedVersion);
@@ -18,7 +19,7 @@ public class UnexpectedVersionException extends IllegalStateException {
 
     public UnexpectedVersionException(
             final String message,
-            final Integer currentVersion,
+            final StreamVersion currentVersion,
             final ExpectedVersion expectedVersion) {
         super(message);
         this.currentVersion = currentVersion;
@@ -28,7 +29,7 @@ public class UnexpectedVersionException extends IllegalStateException {
     public UnexpectedVersionException(
             final String message,
             final Throwable cause,
-            final Integer currentVersion,
+            final StreamVersion currentVersion,
             final ExpectedVersion expectedVersion) {
         super(message, cause);
         this.currentVersion = currentVersion;
@@ -37,7 +38,7 @@ public class UnexpectedVersionException extends IllegalStateException {
 
     public UnexpectedVersionException(
             final Throwable cause,
-            final Integer currentVersion,
+            final StreamVersion currentVersion,
             final ExpectedVersion expectedVersion) {
         this(formatDefaultMessage(currentVersion, expectedVersion), cause, currentVersion,
              expectedVersion);
@@ -46,7 +47,7 @@ public class UnexpectedVersionException extends IllegalStateException {
     /**
      * Gets the current version of the stream - null indicating that no current stream exists.
      */
-    public Integer getCurrentVersion() {
+    public StreamVersion getCurrentVersion() {
         return currentVersion;
     }
 
@@ -58,7 +59,7 @@ public class UnexpectedVersionException extends IllegalStateException {
     }
 
     private static String formatDefaultMessage(
-            final Integer currentVersion,
+            final StreamVersion currentVersion,
             final ExpectedVersion expectedVersion) {
         return String.format("Existing stream version %s does not match expected %s",
                              currentVersion, expectedVersion);

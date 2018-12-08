@@ -1,10 +1,14 @@
 package org.elder.sourcerer2.subscription;
 
 import com.google.common.collect.ImmutableMap;
+import org.elder.sourcerer2.EventId;
 import org.elder.sourcerer2.EventRecord;
 import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.EventSubscriptionPositionSource;
 import org.elder.sourcerer2.EventSubscriptionUpdate;
+import org.elder.sourcerer2.RepositoryVersion;
+import org.elder.sourcerer2.StreamId;
+import org.elder.sourcerer2.StreamVersion;
 import org.elder.sourcerer2.SubscriptionToken;
 import org.elder.sourcerer2.SubscriptionWorkerConfig;
 import org.junit.Ignore;
@@ -16,7 +20,6 @@ import reactor.core.publisher.WorkQueueProcessor;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.IntStream;
 
 import static org.mockito.Matchers.any;
@@ -96,9 +99,9 @@ public class EventSubscriptionManagerTest {
         WorkQueueProcessor<EventSubscriptionUpdate<String>> processor = WorkQueueProcessor.create();
         Flux<EventSubscriptionUpdate<String>> eventSource = Flux
                 .fromStream(IntStream
-                                    .range(0, 1000000)
-                                    .mapToObj(this::wrapIntAsEvent)
-                                    .map(EventSubscriptionUpdate::ofEvent))
+                        .range(0, 1000000)
+                        .mapToObj(this::wrapIntAsEvent)
+                        .map(EventSubscriptionUpdate::ofEvent))
                 .doOnNext(e -> {
                     lastProducedValue = e.getEvent().getEvent();
                 });
@@ -137,9 +140,9 @@ public class EventSubscriptionManagerTest {
                     WorkQueueProcessor.create();
             Flux<EventSubscriptionUpdate<String>> eventSource = Flux
                     .fromStream(IntStream
-                                        .range(0, 1000000)
-                                        .mapToObj(this::wrapIntAsEvent)
-                                        .map(EventSubscriptionUpdate::ofEvent))
+                            .range(0, 1000000)
+                            .mapToObj(this::wrapIntAsEvent)
+                            .map(EventSubscriptionUpdate::ofEvent))
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent().getEvent();
                     });
@@ -230,11 +233,11 @@ public class EventSubscriptionManagerTest {
 
     private EventRecord<String> wrapIntAsEvent(final int sequenceNum) {
         return new EventRecord<>(
-                "streamId",
-                sequenceNum,
-                sequenceNum,
+                EventId.newUniqueId(),
+                StreamId.ofString("streamId"),
+                StreamVersion.ofInt(sequenceNum),
+                RepositoryVersion.ofInt(1000 + sequenceNum),
                 "intEvent",
-                UUID.randomUUID(),
                 Instant.now(),
                 ImmutableMap.of(),
                 Integer.toString(sequenceNum));

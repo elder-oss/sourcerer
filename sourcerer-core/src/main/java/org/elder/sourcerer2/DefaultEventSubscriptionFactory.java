@@ -1,11 +1,8 @@
 package org.elder.sourcerer2;
 
-import javax.inject.Inject;
-
 public class DefaultEventSubscriptionFactory<T> implements EventSubscriptionFactory<T> {
     private final EventRepository<T> repository;
 
-    @Inject
     public DefaultEventSubscriptionFactory(final EventRepository<T> repository) {
         this.repository = repository;
     }

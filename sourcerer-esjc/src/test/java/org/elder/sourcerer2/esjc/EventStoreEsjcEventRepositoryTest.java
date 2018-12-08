@@ -15,7 +15,7 @@ import com.github.msemys.esjc.UserCredentials;
 import com.github.msemys.esjc.proto.EventStoreClientMessages;
 import com.github.msemys.esjc.util.UUIDConverter;
 import com.google.protobuf.ByteString;
-import org.elder.sourcerer2.EventReadResult;
+import org.elder.sourcerer2.StreamReadResult;
 import org.elder.sourcerer2.EventSubscriptionUpdate;
 import org.junit.Assert;
 import org.junit.Before;
@@ -95,7 +95,7 @@ public class EventStoreEsjcEventRepositoryTest {
                         1,
                         0,
                         false)));
-        EventReadResult<Event> response = repository.read("stream");
+        StreamReadResult<Event> response = repository.read("stream");
         Assert.assertNull(response);
     }
 
@@ -111,7 +111,7 @@ public class EventStoreEsjcEventRepositoryTest {
                         1,
                         0,
                         false)));
-        EventReadResult<Event> response = repository.read("stream");
+        StreamReadResult<Event> response = repository.read("stream");
         Assert.assertNull(response);
     }
 

@@ -35,5 +35,5 @@ public interface MutableAggregate<TState, TEvent> extends Aggregate<TState, TEve
      *
      * @param version The new version of the aggregate.
      */
-    void rebase(int version);
+    void rebase(@NotNull StreamVersion version);
 }
