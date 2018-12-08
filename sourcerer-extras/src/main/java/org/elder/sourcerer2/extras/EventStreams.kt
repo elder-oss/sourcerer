@@ -8,6 +8,7 @@ import org.elder.sourcerer2.ImmutableAggregate
 import org.elder.sourcerer2.OperationHandler
 import org.elder.sourcerer2.OperationHandlerOperation
 import org.elder.sourcerer2.Operations
+import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.functions.UpdateHandlerAggregate
 
 /**
@@ -32,7 +33,7 @@ class EventStreams<STATE, EVENT>(
      * Will fail if stream already exists.
      */
     fun create(
-            id: String,
+            id: StreamId,
             create: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
         return CommandResponse.of(
@@ -52,7 +53,7 @@ class EventStreams<STATE, EVENT>(
      * Will by default fail if stream does not exist.
      */
     fun update(
-            id: String,
+            id: StreamId,
             expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
             update: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
@@ -70,7 +71,7 @@ class EventStreams<STATE, EVENT>(
      *
      * Stream may be new or existing. No validation is performed, and nothing is read.
      */
-    fun append(id: String, operation: () -> List<EVENT>): CommandResponse {
+    fun append(id: StreamId, operation: () -> List<EVENT>): CommandResponse {
         return CommandResponse.of(
                 commandFactory
                         .fromOperation(Operations.appendOf(operation))

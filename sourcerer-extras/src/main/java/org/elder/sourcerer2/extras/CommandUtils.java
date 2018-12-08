@@ -1,5 +1,7 @@
 package org.elder.sourcerer2.extras;
 
+import org.elder.sourcerer2.StreamId;
+import org.elder.sourcerer2.StreamVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +113,8 @@ public final class CommandUtils {
      */
     public static CommandResponse executeSynchronously(
             final Supplier<CommandResponse> commandFunction,
-            final BiConsumer<String, Integer> assertFunction) {
+            final BiConsumer<StreamId, StreamVersion> assertFunction
+    ) {
         return executeSynchronously(
                 commandFunction,
                 assertFunction,
@@ -148,18 +151,19 @@ public final class CommandUtils {
      */
     public static CommandResponse executeSynchronously(
             final Supplier<CommandResponse> commandFunction,
-            final BiConsumer<String, Integer> assertFunction,
+            final BiConsumer<StreamId, StreamVersion> assertFunction,
             final Duration initialDelay,
             final Duration retryDelay,
             final double retryDelayFactor,
-            final int maxRetryAttempts) {
+            final int maxRetryAttempts
+    ) {
         CommandResponse commandResponse = commandFunction.get();
-        if (commandResponse.getNoOp() != null && commandResponse.getNoOp()) {
+        if (commandResponse.getNoOp()) {
             logger.debug("Command was no-op, not waiting around");
             return commandResponse;
         }
 
-        Integer expectedVersion = commandResponse.getNewVersion();
+        StreamVersion expectedVersion = commandResponse.getNewVersion();
         if (expectedVersion == null) {
             throw new IllegalArgumentException("Command was not no-op but returned no version!");
         }

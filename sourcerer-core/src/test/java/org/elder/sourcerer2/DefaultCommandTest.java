@@ -148,6 +148,8 @@ public class DefaultCommandTest {
                         AGGREGATE_ID,
                         StreamVersion.ofInt(42),
                         new TestState("test")));
+        when(repository.append(any(), any(), any(), any()))
+                .thenReturn(StreamVersion.ofInt(42));
         command.setAggregateId(AGGREGATE_ID);
         command.run();
 

@@ -1,6 +1,7 @@
 dependencies {
-    compile project(':sourcerer-esjc')
-    compile 'org.springframework:spring-beans:4.2.6.RELEASE'
-    compile 'org.springframework:spring-context:4.2.6.RELEASE'
-    compile 'org.springframework.boot:spring-boot-actuator:1.3.5.RELEASE'
+    api project(':sourcerer-esjc')
+    implementation "com.github.msemys:esjc:$esjcVersion"
+    implementation "org.springframework:spring-beans:$springVersion"
+    implementation "org.springframework:spring-context:$springVersion"
+    implementation "org.springframework.boot:spring-boot-actuator:$springBootVersion"
 }

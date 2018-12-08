@@ -22,7 +22,7 @@ public interface AggregateRepository<TState, TEvent> {
      * version. This method should never return null, but rather an ImmutableAggregate with a
      * version of Aggregate.VERSION_NOT_CREATED (-1) if the aggregate is nonexistent or deleted.
      */
-    ImmutableAggregate<TState, TEvent> load(StreamId aggregateId);
+    ImmutableAggregate<TState, TEvent> load(@NotNull StreamId aggregateId);
 
     /**
      * Persists a given existing or new aggregate with a list of events taken from an aggregate
@@ -39,6 +39,7 @@ public interface AggregateRepository<TState, TEvent> {
      *                  such as who performed the action that triggered it, or which system that
      *                  submitted the events.
      */
+    @NotNull
     ImmutableAggregate<TState, TEvent> save(
             @NotNull Aggregate<TState, TEvent> aggregate,
             boolean atomic,
@@ -54,6 +55,7 @@ public interface AggregateRepository<TState, TEvent> {
      *                  version, failing the operation if other changes have taken place in
      *                  between.
      */
+    @NotNull
     default ImmutableAggregate<TState, TEvent> save(
             @NotNull Aggregate<TState, TEvent> aggregate,
             boolean atomic) {
@@ -67,6 +69,7 @@ public interface AggregateRepository<TState, TEvent> {
      *
      * @param aggregate The aggregate to apply updates for.
      */
+    @NotNull
     default ImmutableAggregate<TState, TEvent> save(
             @NotNull Aggregate<TState, TEvent> aggregate) {
         return save(aggregate, true, null);
@@ -88,10 +91,11 @@ public interface AggregateRepository<TState, TEvent> {
      *                        information to the operation, such as who performed the action that
      *                        triggered it, or which system that submitted the events.
      */
+    @NotNull
     StreamVersion append(
-            StreamId aggregateId,
-            Iterable<? extends TEvent> events,
-            ExpectedVersion expectedVersion,
+            @NotNull StreamId aggregateId,
+            @NotNull Iterable<? extends TEvent> events,
+            @NotNull ExpectedVersion expectedVersion,
             Map<String, String> metadata);
 
     /**
@@ -105,10 +109,11 @@ public interface AggregateRepository<TState, TEvent> {
      *                        time the append is attempted differs from the one provided, an
      *                        UnexpectedVersionException will be thrown.
      */
+    @NotNull
     default StreamVersion append(
-            final StreamId aggregateId,
-            final Iterable<? extends TEvent> events,
-            final ExpectedVersion expectedVersion) {
+            @NotNull final StreamId aggregateId,
+            @NotNull final Iterable<? extends TEvent> events,
+            @NotNull final ExpectedVersion expectedVersion) {
         return append(aggregateId, events, expectedVersion, null);
     }
 
@@ -128,10 +133,11 @@ public interface AggregateRepository<TState, TEvent> {
      *                        information to the operation, such as who performed the action that
      *                        triggered it, or which system that submitted the events.
      */
+    @NotNull
     default StreamVersion append(
-            final StreamId aggregateId,
-            final TEvent event,
-            final ExpectedVersion expectedVersion,
+            @NotNull final StreamId aggregateId,
+            @NotNull final TEvent event,
+            @NotNull final ExpectedVersion expectedVersion,
             final Map<String, String> metadata) {
         return append(aggregateId, ImmutableList.of(event), expectedVersion, metadata);
     }
@@ -147,8 +153,12 @@ public interface AggregateRepository<TState, TEvent> {
      *                        time the append is attempted differs from the one provided, an
      *                        UnexpectedVersionException will be thrown.
      */
+    @NotNull
     default StreamVersion append(
-            final StreamId aggregateId, final TEvent event, final ExpectedVersion expectedVersion) {
+            @NotNull final StreamId aggregateId,
+            @NotNull final TEvent event,
+            @NotNull final ExpectedVersion expectedVersion
+    ) {
         return append(aggregateId, ImmutableList.of(event), expectedVersion, null);
     }
 }

@@ -15,8 +15,9 @@ import com.github.msemys.esjc.UserCredentials;
 import com.github.msemys.esjc.proto.EventStoreClientMessages;
 import com.github.msemys.esjc.util.UUIDConverter;
 import com.google.protobuf.ByteString;
-import org.elder.sourcerer2.StreamReadResult;
 import org.elder.sourcerer2.EventSubscriptionUpdate;
+import org.elder.sourcerer2.StreamId;
+import org.elder.sourcerer2.StreamReadResult;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -95,7 +96,7 @@ public class EventStoreEsjcEventRepositoryTest {
                         1,
                         0,
                         false)));
-        StreamReadResult<Event> response = repository.read("stream");
+        StreamReadResult<Event> response = repository.read(StreamId.ofString("stream"));
         Assert.assertNull(response);
     }
 
@@ -111,7 +112,7 @@ public class EventStoreEsjcEventRepositoryTest {
                         1,
                         0,
                         false)));
-        StreamReadResult<Event> response = repository.read("stream");
+        StreamReadResult<Event> response = repository.read(StreamId.ofString("stream"));
         Assert.assertNull(response);
     }
 
@@ -120,7 +121,7 @@ public class EventStoreEsjcEventRepositoryTest {
         // This is not a nice behavior, but test is to confirm root cause of issue seen live, where
         // a subscription dies and does not recover as we time out trying to stop the subscription
         // that we're currently handling an error for!
-        String streamId = "test-stream";
+        StreamId streamId = StreamId.ofString("test-stream");
 
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
@@ -153,7 +154,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 ArgumentCaptor.forClass(CatchUpSubscriptionListener.class);
 
         verify(eventStore, times(1)).subscribeToStreamFrom(
-                eq("pref-" + streamId),
+                eq("pref-" + streamId.getIdentifier()),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
                 listenerCaptor.capture());
@@ -173,7 +174,7 @@ public class EventStoreEsjcEventRepositoryTest {
 
     @Test
     public void errorPropagatedFromEsjc() throws IOException {
-        String streamId = "test-stream";
+        StreamId streamId = StreamId.ofString("test-stream");
 
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
@@ -205,7 +206,7 @@ public class EventStoreEsjcEventRepositoryTest {
                 ArgumentCaptor.forClass(CatchUpSubscriptionListener.class);
 
         verify(eventStore, times(1)).subscribeToStreamFrom(
-                eq("pref-" + streamId),
+                eq("pref-" + streamId.getIdentifier()),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
                 listenerCaptor.capture());
@@ -225,9 +226,9 @@ public class EventStoreEsjcEventRepositoryTest {
         // The ESJC client applies backpressure implicitly by blocking the callback, we need to
         // ensure that the use of Reactor doesn't introduce any issues with multiple threads
         // preventing this behavior
-        String streamId = "test-stream";
+        StreamId streamId = StreamId.ofString("test-stream");
 
-        when(reader.readValue((byte[])any())).thenReturn(new Object());
+        when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
         Publisher<EventSubscriptionUpdate<Event>> publisher = repository.getStreamPublisher(
@@ -254,29 +255,31 @@ public class EventStoreEsjcEventRepositoryTest {
                 ArgumentCaptor.forClass(CatchUpSubscriptionListener.class);
 
         verify(eventStore, times(1)).subscribeToStreamFrom(
-                eq("pref-" + streamId),
+                eq("pref-" + streamId.getIdentifier()),
                 eq(null),
                 any(CatchUpSubscriptionSettings.class),
                 listenerCaptor.capture());
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         Assert.assertEquals(0, seenEvents.get());
+        EventStoreClientMessages.EventRecord.Builder event =
+                EventStoreClientMessages.EventRecord
+                        .newBuilder()
+                        .setCreatedEpoch(2342354)
+                        .setEventStreamId("stream")
+                        .setEventId(ByteString.copyFrom(UUIDConverter.toBytes(UUID.randomUUID())))
+                        .setEventNumber(42)
+                        .setEventType("type")
+                        .setDataContentType(0)
+                        .setMetadataContentType(0)
+                        .setData(ByteString.copyFrom("{}".getBytes()));
         listener.onEvent(
                 catchUpSubscription,
                 new ResolvedEvent(
                         EventStoreClientMessages
                                 .ResolvedEvent
                                 .newBuilder()
-                                .setEvent(EventStoreClientMessages.EventRecord.newBuilder()
-                                        .setCreatedEpoch(2342354)
-                                        .setEventStreamId("stream")
-                                        .setEventId(ByteString.copyFrom(
-                                                UUIDConverter.toBytes(UUID.randomUUID())))
-                                        .setEventNumber(42)
-                                        .setEventType("type")
-                                        .setDataContentType(0)
-                                        .setMetadataContentType(0)
-                                        .setData(ByteString.copyFrom("{}".getBytes())))
+                                .setEvent(event)
                                 .setCommitPosition(0)
                                 .setPreparePosition(0)
                                 .build()));
@@ -292,7 +295,8 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Publisher<EventSubscriptionUpdate<Event>> publisher = repository.getPublisher(null);
+        Publisher<EventSubscriptionUpdate<Event>> publisher =
+                repository.getPublisher(null);
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
@@ -386,7 +390,7 @@ public class EventStoreEsjcEventRepositoryTest {
         // The ESJC client applies backpressure implicitly by blocking the callback, we need to
         // ensure that the use of Reactor doesn't introduce any issues with multiple threads
         // preventing this behavior
-        when(reader.readValue((byte[])any())).thenReturn(new Object());
+        when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
         Publisher<EventSubscriptionUpdate<Event>> publisher = repository.getPublisher(null);
@@ -418,22 +422,24 @@ public class EventStoreEsjcEventRepositoryTest {
 
         CatchUpSubscriptionListener listener = listenerCaptor.getValue();
         Assert.assertEquals(0, seenEvents.get());
+        EventStoreClientMessages.EventRecord.Builder event =
+                EventStoreClientMessages.EventRecord
+                        .newBuilder()
+                        .setCreatedEpoch(2342354)
+                        .setEventStreamId("stream")
+                        .setEventId(ByteString.copyFrom(UUIDConverter.toBytes(UUID.randomUUID())))
+                        .setEventNumber(42)
+                        .setEventType("type")
+                        .setDataContentType(0)
+                        .setMetadataContentType(0)
+                        .setData(ByteString.copyFrom("{}".getBytes()));
         listener.onEvent(
                 catchUpSubscription,
                 new ResolvedEvent(
                         EventStoreClientMessages
                                 .ResolvedEvent
                                 .newBuilder()
-                                .setEvent(EventStoreClientMessages.EventRecord.newBuilder()
-                                                  .setCreatedEpoch(2342354)
-                                                  .setEventStreamId("stream")
-                                                  .setEventId(ByteString.copyFrom(
-                                                          UUIDConverter.toBytes(UUID.randomUUID())))
-                                                  .setEventNumber(42)
-                                                  .setEventType("type")
-                                                  .setDataContentType(0)
-                                                  .setMetadataContentType(0)
-                                                  .setData(ByteString.copyFrom("{}".getBytes())))
+                                .setEvent(event)
                                 .setCommitPosition(0)
                                 .setPreparePosition(0)
                                 .build()));

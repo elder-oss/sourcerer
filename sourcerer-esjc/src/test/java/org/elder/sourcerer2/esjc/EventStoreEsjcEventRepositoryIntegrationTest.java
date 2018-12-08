@@ -3,10 +3,13 @@ package org.elder.sourcerer2.esjc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.msemys.esjc.EventStore;
 import com.github.msemys.esjc.EventStoreBuilder;
+import com.google.common.collect.ImmutableMap;
 import org.elder.sourcerer2.EventData;
+import org.elder.sourcerer2.EventId;
 import org.elder.sourcerer2.EventRecord;
 import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.ExpectedVersion;
+import org.elder.sourcerer2.StreamId;
 import org.elder.sourcerer2.eventstore.test.data.TestEventType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
@@ -28,7 +31,7 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
     private static EventRepository<TestEventType> repository;
     private static EventStore eventStore;
 
-    private final String streamId = randomStreamId();
+    private final StreamId streamId = randomStreamId();
 
     @BeforeClass
     public static void setup() {
@@ -94,8 +97,12 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
     }
 
     @NotNull
-    private EventData<TestEventType> eventData(final TestEventType type) {
-        return new EventData<>("type", UUID.randomUUID(), new HashMap<>(), type);
+    private EventData<TestEventType> eventData(final TestEventType event) {
+        return new EventData<>(
+                EventId.newUniqueId(),
+                "type",
+                ImmutableMap.of(),
+                event);
     }
 
     @NotNull
@@ -103,7 +110,7 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
         return "test_" + UUID.randomUUID().toString().replaceAll("-", "_");
     }
 
-    private static String randomStreamId() {
-        return String.format("%d", new Random().nextInt(100000));
+    private static StreamId randomStreamId() {
+        return StreamId.ofString(String.format("%d", new Random().nextInt(100000)));
     }
 }

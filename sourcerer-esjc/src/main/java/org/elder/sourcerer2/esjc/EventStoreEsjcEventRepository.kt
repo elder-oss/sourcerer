@@ -68,7 +68,7 @@ import java.util.concurrent.TimeoutException
  *
  * @param <T> The type of events managed by the event repository.
 </T> */
-class EventStoreEsjcEventRepository<T: Any>(
+class EventStoreEsjcEventRepository<T : Any>(
         private val streamPrefix: String,
         private val eventStore: EventStore,
         private val eventClass: Class<T>,
@@ -220,10 +220,7 @@ class EventStoreEsjcEventRepository<T: Any>(
 
         val nextExpectedVersion = result.nextExpectedVersion
         logger.debug("Write successful, next expected version is {}", nextExpectedVersion)
-
-        // Eventstore returns the version of the next event, but we want the one actually
-        // written by this operation, adjust by one
-        return StreamVersion.ofInt(nextExpectedVersion - 1)
+        return StreamVersion.ofInt(nextExpectedVersion)
     }
 
     override fun getCurrentVersion(): RepositoryVersion? {

@@ -6,6 +6,7 @@ import org.elder.sourcerer2.AggregateProjection
 import org.elder.sourcerer2.AggregateRepository
 import org.elder.sourcerer2.EventType
 import org.elder.sourcerer2.ExpectedVersion
+import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
 import org.elder.sourcerer2.extras.EventStreams
 import org.elder.sourcerer2.kotlin.utils.ConcurrencyProgress
@@ -23,7 +24,7 @@ import kotlin.reflect.KClass
 
 class EventStreamsIntegrationTest {
     private val eventStore = TestEventStore()
-    private val randomId = UUID.randomUUID().toString()
+    private val randomId = StreamId.ofString(UUID.randomUUID().toString())
     private val then = this
 
     private lateinit var aggregateRepository: AggregateRepository<State, Event>
@@ -89,7 +90,7 @@ class EventStreamsIntegrationTest {
         }
                 .newVersion
 
-        updateWith(ExpectedVersion.exactly(version)) {
+        updateWith(ExpectedVersion.exactly(version!!)) {
             Event.ValueSet("the-value-3")
         }
 
@@ -104,7 +105,7 @@ class EventStreamsIntegrationTest {
         }
 
         expectError(UnexpectedVersionException::class) {
-            updateWith(ExpectedVersion.exactly(version)) {
+            updateWith(ExpectedVersion.exactly(version!!)) {
                 Event.ValueSet("the-value-3")
             }
         }
@@ -190,7 +191,7 @@ class EventStreamsIntegrationTest {
     }
 
     class Projection : AggregateProjection<State, Event> {
-        override fun apply(id: String, state: State, event: Event): State {
+        override fun apply(id: StreamId, state: State, event: Event): State {
             return when (event) {
                 is Event.ValueSet -> state.copy(value = event.value)
             }

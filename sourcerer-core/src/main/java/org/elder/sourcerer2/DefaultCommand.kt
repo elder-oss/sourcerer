@@ -99,7 +99,7 @@ class DefaultCommand<TState, TParams, TEvent>(
             aggregate = readAndValidateAggregate(effectiveExpectedVersion)
             logger.debug(
                     "Current state of aggregate is {}",
-                    if (aggregate.sourceVersion() === Aggregate.VERSION_NOT_CREATED)
+                    if (aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED)
                         "<not created>"
                     else
                         "version " + aggregate.sourceVersion())
@@ -111,7 +111,8 @@ class DefaultCommand<TState, TParams, TEvent>(
         // Bail out early if idempotent create, and already present
         if (idempotentCreate
                 && aggregate != null
-                && aggregate.sourceVersion() !== Aggregate.VERSION_NOT_CREATED) {
+                && aggregate.sourceVersion() != Aggregate.VERSION_NOT_CREATED
+        ) {
             logger.debug("Bailing out early as already created (and idempotent create set)")
             return CommandResult(
                     aggregateId,
@@ -158,7 +159,7 @@ class DefaultCommand<TState, TParams, TEvent>(
 
         try {
             val newVersion = repository.append(
-                    aggregateId,
+                    aggregateId!!,
                     events,
                     updateExpectedVersion,
                     effectiveMetadata
@@ -183,29 +184,30 @@ class DefaultCommand<TState, TParams, TEvent>(
     }
 
     private fun readAndValidateAggregate(
-            effectiveExpectedVersion: ExpectedVersion): ImmutableAggregate<TState, TEvent> {
-        val aggregate = repository.load(aggregateId)
+            effectiveExpectedVersion: ExpectedVersion
+    ): ImmutableAggregate<TState, TEvent> {
+        val aggregate = repository.load(aggregateId!!)
 
         // Validate expected version early if we have state
         when (effectiveExpectedVersion) {
             ExpectedVersion.Any -> {
             }
             ExpectedVersion.AnyExisting -> {
-                if (aggregate.sourceVersion() === Aggregate.VERSION_NOT_CREATED) {
+                if (aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED) {
                     throw UnexpectedVersionException(
                             aggregate.sourceVersion(),
                             effectiveExpectedVersion)
                 }
             }
             ExpectedVersion.NotCreated -> {
-                if (aggregate.sourceVersion() !== Aggregate.VERSION_NOT_CREATED && !idempotentCreate) {
+                if (aggregate.sourceVersion() != Aggregate.VERSION_NOT_CREATED && !idempotentCreate) {
                     throw UnexpectedVersionException(
                             aggregate.sourceVersion(),
                             effectiveExpectedVersion)
                 }
             }
             is ExpectedVersion.Exactly -> {
-                if (aggregate.sourceVersion() !== effectiveExpectedVersion.streamVersion) {
+                if (aggregate.sourceVersion() != effectiveExpectedVersion.streamVersion) {
                     throw UnexpectedVersionException(
                             aggregate.sourceVersion(),
                             effectiveExpectedVersion)

@@ -7,9 +7,21 @@ import org.elder.sourcerer2.exceptions.ConflictingExpectedVersionsException
  */
 sealed class ExpectedVersion {
     data class Exactly(val streamVersion: StreamVersion) : ExpectedVersion()
-    object NotCreated : ExpectedVersion()
-    object AnyExisting : ExpectedVersion()
-    object Any : ExpectedVersion()
+    object NotCreated : ExpectedVersion() {
+        override fun toString(): String {
+            return "ExpectedVersion.NotCreated"
+        }
+    }
+    object AnyExisting : ExpectedVersion()  {
+        override fun toString(): String {
+            return "ExpectedVersion.AnyExisting"
+        }
+    }
+    object Any : ExpectedVersion()  {
+        override fun toString(): String {
+            return "ExpectedVersion.Any"
+        }
+    }
 
     companion object {
         // Java convenience methods.
