@@ -1,6 +1,0 @@
-dependencies {
-    compile project(':sourcerer-eventstore')
-    implementation "org.springframework:spring-beans:$springVersion"
-    implementation "org.springframework:spring-context:$springVersion"
-    implementation "org.springframework.boot:spring-boot-actuator:$springBootVersion"
-}
