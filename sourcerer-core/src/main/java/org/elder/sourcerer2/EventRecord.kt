@@ -31,8 +31,11 @@ data class EventRecord<T>(
         /**
          * Gets the position of this event as it relates to others in the repository it was read
          * from, e.g. in relation to all other events representing aggregates of the same type.
+         *
+         * In some contexts, this may not be known (so can be null), but it is required to be
+         * reported for all subscriptions to a repository.
          */
-        val repositoryVersion: RepositoryVersion,
+        val repositoryVersion: RepositoryVersion?,
 
         /**
          * The application provided type of this particular event.

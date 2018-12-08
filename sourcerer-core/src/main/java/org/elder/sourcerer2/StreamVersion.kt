@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonValue
  */
 data class StreamVersion @JsonCreator(mode = JsonCreator.Mode.DELEGATING) constructor(
         /**
-         * The raw version identifier, to be treated as opaque, but exposed for where a raw string
+         * The raw version id, to be treated as opaque, but exposed for where a raw string
          * needs to be persisted.
          */
         @get:JsonValue

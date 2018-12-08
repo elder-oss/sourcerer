@@ -45,7 +45,8 @@ public class UnexpectedVersionException extends IllegalStateException {
     }
 
     /**
-     * Gets the current version of the stream - null indicating that no current stream exists.
+     * Gets the current version of the stream if known. This is to be used for information
+     * / logging only and may not always be present even if the stream does exist.
      */
     public StreamVersion getCurrentVersion() {
         return currentVersion;

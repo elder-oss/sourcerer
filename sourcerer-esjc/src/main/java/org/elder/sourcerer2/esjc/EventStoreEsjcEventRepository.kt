@@ -13,7 +13,6 @@ import com.github.msemys.esjc.ResolvedEvent
 import com.github.msemys.esjc.SliceReadStatus
 import com.github.msemys.esjc.StreamEventsSlice
 import com.github.msemys.esjc.SubscriptionDropReason
-import com.github.msemys.esjc.WriteResult
 import com.github.msemys.esjc.node.cluster.ClusterException
 import com.github.msemys.esjc.operation.AccessDeniedException
 import com.github.msemys.esjc.operation.CommandNotExpectedException
@@ -31,12 +30,16 @@ import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import org.elder.sourcerer2.EventData
+import org.elder.sourcerer2.EventId
 import org.elder.sourcerer2.EventNormalizer
-import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionUpdate
 import org.elder.sourcerer2.ExpectedVersion
+import org.elder.sourcerer2.RepositoryReadResult
+import org.elder.sourcerer2.RepositoryVersion
+import org.elder.sourcerer2.StreamId
+import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.StreamVersion
 import org.elder.sourcerer2.exceptions.PermanentEventReadException
 import org.elder.sourcerer2.exceptions.PermanentEventWriteException
@@ -44,19 +47,15 @@ import org.elder.sourcerer2.exceptions.RetriableEventReadException
 import org.elder.sourcerer2.exceptions.RetriableEventWriteException
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
 import org.elder.sourcerer2.utils.ElderPreconditions
-import org.elder.sourcerer2.utils.ImmutableListCollector
 import org.reactivestreams.Publisher
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import reactor.core.publisher.Flux
 import reactor.core.publisher.FluxEmitter
-
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.stream.Collectors
 
 /**
  * Sourcerer event repository implementation using EventStore (geteventstore.com) as the underlying
@@ -69,50 +68,64 @@ import java.util.stream.Collectors
  *
  * @param <T> The type of events managed by the event repository.
 </T> */
-class EventStoreEsjcEventRepository<T>(
+class EventStoreEsjcEventRepository<T: Any>(
         private val streamPrefix: String,
         private val eventStore: EventStore,
         private val eventClass: Class<T>,
         private val objectMapper: ObjectMapper,
-        private val normalizer: EventNormalizer<T>?) : EventRepository<T> {
-    private val timeoutMillis: Long
-    private val defaultSubscriptionSettings: CatchUpSubscriptionSettings
-
-    private val categoryStreamName: String
-        get() = "\$ce-$streamPrefix"
-
-    init {
-        this.timeoutMillis = DEFAULT_TIMEOUT_MILLIS
-        // TODO: Customize these settings
-        defaultSubscriptionSettings = CatchUpSubscriptionSettings.newBuilder()
-                .resolveLinkTos(true)
-                .build()
-    }
+        private val normalizer: EventNormalizer<T>?
+) : EventRepository<T> {
+    // TODO: Customize these settings
+    private val timeoutMillis = DEFAULT_TIMEOUT_MILLIS
+    private val defaultSubscriptionSettings =
+            CatchUpSubscriptionSettings
+                    .newBuilder()
+                    .resolveLinkTos(true)
+                    .build()
+    private val categoryStreamName = "\$ce-$streamPrefix"
 
     override fun getEventType(): Class<T> {
         return eventClass
     }
 
-    fun readAll(version: Int, maxEvents: Int): StreamReadResult<T>? {
-        return readInternal(categoryStreamName, version, maxEvents, true)
+    override fun readAll(
+            version: RepositoryVersion?,
+            maxEvents: Int
+    ): RepositoryReadResult<T>? {
+        return readInternal(
+                categoryStreamName,
+                version?.toEsVersion(),
+                maxEvents,
+                true)
+                ?.toRepositoryResult()
     }
 
-    fun read(streamId: String, version: Int, maxEvents: Int): StreamReadResult<T>? {
-        return readInternal(toEsStreamId(streamId), version, maxEvents, false)
+    override fun read(
+            streamId: StreamId,
+            version: StreamVersion?,
+            maxEvents: Int
+    ): StreamReadResult<T>? {
+        return readInternal(
+                toEsStreamId(streamId),
+                version?.toEsVersion(),
+                maxEvents,
+                false)
+                ?.toStreamResult()
     }
 
-    override fun readFirst(streamId: String): EventRecord<T>? {
+    override fun readFirst(streamId: StreamId): EventRecord<T>? {
         return readSingleInternal(toEsStreamId(streamId), 0, false)
     }
 
-    override fun readLast(streamId: String): EventRecord<T>? {
+    override fun readLast(streamId: StreamId): EventRecord<T>? {
         return readSingleInternal(toEsStreamId(streamId), -1, false)
     }
 
     private fun readSingleInternal(
             internalStreamId: String,
             eventNumber: Int,
-            resolveLinksTo: Boolean): EventRecord<T>? {
+            resolveLinksTo: Boolean
+    ): EventRecord<T>? {
         logger.debug(
                 "Reading event {} from {} (in {})",
                 eventNumber,
@@ -124,8 +137,7 @@ class EventStoreEsjcEventRepository<T>(
                         internalStreamId,
                         eventNumber,
                         1,
-                        resolveLinksTo, null),
-                ExpectedVersion.any())
+                        resolveLinksTo, null))
 
         if (eventsSlice.events.isEmpty()) {
             logger.debug(
@@ -145,9 +157,14 @@ class EventStoreEsjcEventRepository<T>(
 
     private fun readInternal(
             internalStreamId: String,
-            version: Int,
+            version: Int?,
             maxEvents: Int,
-            resolveLinksTo: Boolean): StreamReadResult<T>? {
+            resolveLinksTo: Boolean
+    ): StreamEventsSlice? {
+        // For reads, sourcerer specified the version of the last event already read, which will be
+        // excluded from the new events read. Eventstore requires the version of the first event to
+        // read instead - adjust this up by and to make this right
+        val effectiveVersion = version?.let { it + 1 } ?: 0
         val maxEventsPerRead = Integer.min(maxEvents, MAX_MAX_EVENTS_PER_READ)
         logger.debug(
                 "Reading from {} (in {}) (version {}) - effective max {}",
@@ -159,10 +176,9 @@ class EventStoreEsjcEventRepository<T>(
         val eventsSlice = completeReadFuture(
                 eventStore.readStreamEventsForward(
                         internalStreamId,
-                        version,
+                        effectiveVersion,
                         maxEventsPerRead,
-                        resolveLinksTo),
-                ExpectedVersion.exactly(version))
+                        resolveLinksTo))
 
         if (eventsSlice.status != SliceReadStatus.Success) {
             // Not found or deleted, same thing to us!
@@ -177,114 +193,102 @@ class EventStoreEsjcEventRepository<T>(
                 eventsSlice.events.size,
                 internalStreamId,
                 version)
-        val events = eventsSlice
-                .events
-                .stream()
-                .map<EventRecord<T>>(Function<ResolvedEvent, EventRecord<T>> { this.fromEsEvent(it) })
-                .collect<ImmutableList<EventRecord<T>>, Builder<EventRecord<T>>>(ImmutableListCollector())
-        return StreamReadResult(
-                events,
-                eventsSlice.fromEventNumber,
-                eventsSlice.lastEventNumber,
-                eventsSlice.nextEventNumber,
-                eventsSlice.isEndOfStream)
+
+        return eventsSlice
     }
 
     override fun append(
-            streamId: String,
+            streamId: StreamId,
             events: List<EventData<T>>,
-            version: ExpectedVersion): Int {
+            version: ExpectedVersion
+    ): StreamVersion {
         Preconditions.checkNotNull(events)
         ElderPreconditions.checkNotEmpty(events)
 
-        val esEvents = events
-                .stream()
-                .map<EventData>(Function<EventData<T>, EventData> { this.toEsEventData(it) })
-                .collect<List<com.github.msemys.esjc.EventData>, Any>(Collectors.toList<EventData>())
+        val esEvents = events.map { this.toEsEventData(it) }
 
-        logger.debug("Writing {} events to stream {} (in {}) (expected version {})",
+        logger.debug(
+                "Writing {} events to stream {} (in {}) (expected version {})",
                 esEvents.size, streamId, streamPrefix, version)
-        try {
-            val result = completeWriteFuture(
-                    eventStore.appendToStream(
-                            toEsStreamId(streamId),
-                            toEsVersion(version),
-                            esEvents),
-                    version)
 
-            val nextExpectedVersion = result.nextExpectedVersion
-            logger.debug("Write successful, next expected version is {}", nextExpectedVersion)
-            return nextExpectedVersion
-        } catch (ex: WrongExpectedVersionException) {
-            logger.warn("Unexpected version when attempting append", ex)
-            throw UnexpectedVersionException(
-                    ex.message, null,
-                    version)
-        }
+        val result = completeWriteFuture(
+                eventStore.appendToStream(
+                        toEsStreamId(streamId),
+                        version.toEsVersion(),
+                        esEvents),
+                version)
 
+        val nextExpectedVersion = result.nextExpectedVersion
+        logger.debug("Write successful, next expected version is {}", nextExpectedVersion)
+
+        // Eventstore returns the version of the next event, but we want the one actually
+        // written by this operation, adjust by one
+        return StreamVersion.ofInt(nextExpectedVersion - 1)
     }
 
-    override fun getCurrentVersion(): Int {
-        return getStreamVersionInternal(categoryStreamName)
+    override fun getCurrentVersion(): RepositoryVersion? {
+        return getStreamVersionInternal(categoryStreamName)?.let { RepositoryVersion.ofInt(it) }
     }
 
-    override fun getCurrentVersion(streamId: String): Int {
-        return getStreamVersionInternal(toEsStreamId(streamId))
+    override fun getCurrentVersion(streamId: StreamId): StreamVersion? {
+        return getStreamVersionInternal(toEsStreamId(streamId))?.let { StreamVersion.ofInt(it) }
     }
 
-    private fun getStreamVersionInternal(streamName: String): Int {
+    private fun getStreamVersionInternal(streamName: String): Int? {
         val streamEventsSlice = completeReadFuture(
                 eventStore.readStreamEventsBackward(
                         streamName,
                         -1,
                         1,
-                        false),
-                ExpectedVersion.any())
-        return streamEventsSlice.lastEventNumber
+                        false))
+        return if (streamEventsSlice.status == SliceReadStatus.Success)
+            streamEventsSlice.lastEventNumber
+        else null
     }
 
-    fun getStreamPublisher(
-            streamId: String,
-            fromVersion: Int?): Publisher<EventSubscriptionUpdate<T>> {
+    override fun getStreamPublisher(
+            streamId: StreamId,
+            fromVersion: StreamVersion?
+    ): Publisher<EventSubscriptionUpdate<T>> {
         logger.info("Creating publisher for {} (in {}) (starting with version {})",
                 streamId, streamPrefix, fromVersion)
 
-        return Flux.create({ emitter ->
+        return Flux.create { emitter ->
             val subscription = eventStore.subscribeToStreamFrom(
                     toEsStreamId(streamId),
-                    fromVersion,
+                    fromVersion?.toEsVersion(),
                     defaultSubscriptionSettings,
                     EmitterListener(emitter, "$streamPrefix-$streamId"))
-            emitter.setCancellation({
+            emitter.setCancellation {
                 logger.info("Closing ESJC subscription (asynchronously)")
                 subscription.stop()
-            })
-        })
+            }
+        }
     }
 
-    fun getPublisher(fromVersion: Int?): Publisher<EventSubscriptionUpdate<T>> {
+    override fun getPublisher(fromVersion: RepositoryVersion?): Publisher<EventSubscriptionUpdate<T>> {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion)
-        return Flux.create({ emitter ->
+        return Flux.create { emitter ->
             val subscription = eventStore.subscribeToStreamFrom(
                     categoryStreamName,
-                    fromVersion,
+                    fromVersion?.toEsVersion(),
                     defaultSubscriptionSettings,
                     EmitterListener(emitter, "$streamPrefix-all"))
-            emitter.setCancellation({
+            emitter.setCancellation {
                 logger.info("Closing ESJC subscription (asynchronously)")
                 subscription.stop()
-            })
-        })
+            }
+        }
     }
 
-    private fun toEsStreamId(streamId: String): String {
-        return "$streamPrefix-$streamId"
+    private fun toEsStreamId(streamId: StreamId): String {
+        return "$streamPrefix-${streamId.identifier}"
     }
 
     private fun toEsEventData(eventData: EventData<T>): com.github.msemys.esjc.EventData {
         return com.github.msemys.esjc.EventData.newBuilder()
-                .eventId(eventData.eventId)
+                .eventId(eventData.eventId.id)
                 .type(eventData.eventType)
                 .jsonData(toEsEvent(eventData.event))
                 .jsonMetadata(toEsMetadata(eventData.metadata))
@@ -305,50 +309,47 @@ class EventStoreEsjcEventRepository<T>(
         } catch (ex: IOException) {
             throw RetriableEventWriteException("Internal error writing event", ex)
         }
-
     }
 
-    private fun toEsVersion(version: ExpectedVersion?): com.github.msemys.esjc.ExpectedVersion {
-        return if (version == null) {
-            com.github.msemys.esjc.ExpectedVersion.ANY
-        } else {
-            when (version) {
-                ExpectedVersion.Any -> com.github.msemys.esjc.ExpectedVersion.ANY
-                ExpectedVersion.AnyExisting -> com.github.msemys.esjc.ExpectedVersion.STREAM_EXISTS
-                ExpectedVersion.NotCreated -> com.github.msemys.esjc.ExpectedVersion.NO_STREAM
-                is ExpectedVersion.Exactly -> {
-                    com.github.msemys.esjc.ExpectedVersion.of(
-                            version.streamVersion.toEsjcVersion()
-                    )
-                }
-                else -> throw IllegalArgumentException(
-                        "Unrecognized expected version type: $version")
-            }
-        }
+    private fun StreamEventsSlice.toStreamResult(): StreamReadResult<T> {
+        return StreamReadResult(
+                ImmutableList.copyOf(events.map { fromEsEvent(it) }),
+                // Next is the one after the last event we've ready in eventstore, we want the
+                // reference to the one we've actually read as our reads are exclusive.
+                StreamVersion.ofInt(nextEventNumber - 1),
+                isEndOfStream
+        )
     }
 
-    private fun fromEsStreamId(streamId: String): String {
+    private fun StreamEventsSlice.toRepositoryResult(): RepositoryReadResult<T> {
+        return RepositoryReadResult(
+                ImmutableList.copyOf(events.map { fromEsEvent(it) }),
+                // Next is the one after the last event we've ready in eventstore, we want the
+                // reference to the one we've actually read as our reads are exclusive.
+                StreamVersion.ofInt(nextEventNumber - 1),
+                isEndOfStream
+        )
+    }
+
+    private fun fromEsStreamId(streamId: String): StreamId {
         // TODO: Ensure that we have a dash, handle mulitple ones sanely
-        return streamId.substring(streamId.indexOf('-') + 1)
+        return StreamId.ofString(streamId.substring(streamId.indexOf('-') + 1))
     }
 
     private fun fromEsEvent(event: ResolvedEvent): EventRecord<T> {
-        val streamVersion: Int
-        val aggregateVersion: Int
-        if (event.isResolved) {
-            aggregateVersion = event.event.eventNumber
-            streamVersion = event.link.eventNumber
-        } else {
-            aggregateVersion = event.event.eventNumber
-            streamVersion = event.event.eventNumber
-        }
+        // We only know the version within the repository if this came from a subscription,
+        // marked by the fact that this is a resolve event (from a projection) rather than a
+        // plain one.
+        val repositoryVersion =
+                if (event.isResolved) event.link.eventNumber
+                else null
 
         return EventRecord(
+                EventId.ofUuid(event.event.eventId),
                 fromEsStreamId(event.event.eventStreamId),
-                streamVersion,
-                aggregateVersion,
+                StreamVersion.ofInt(event.event.eventNumber),
+                repositoryVersion?.let { RepositoryVersion.ofInt(it) },
                 event.event.eventType,
-                event.event.eventId,
                 event.event.created,
                 fromEsMetadata(event.event.metadata),
                 fromEsData(event.event.data))
@@ -380,20 +381,17 @@ class EventStoreEsjcEventRepository<T>(
         }
 
         try {
-            return ImmutableMap.copyOf<Any, Any>(objectMapper
+            return ImmutableMap.copyOf(objectMapper
                     .readerFor(object : TypeReference<Map<String, String>>() {
-
                     })
-                    .readValue<Any>(metadata) as Map<*, *>)
+                    .readValue<Map<String, String>>(metadata))
         } catch (ex: IOException) {
             throw RetriableEventReadException("Internal error reading events", ex)
         }
 
     }
 
-    private fun <U> completeReadFuture(
-            future: CompletableFuture<U>,
-            expectedVersion: ExpectedVersion): U {
+    private fun <U> completeReadFuture(future: CompletableFuture<U>): U {
         try {
             return future.get(timeoutMillis, TimeUnit.MILLISECONDS)
         } catch (ex: InterruptedException) {
@@ -401,11 +399,7 @@ class EventStoreEsjcEventRepository<T>(
             throw RetriableEventReadException("Internal error reading event", ex)
         } catch (ex: ExecutionException) {
             if (ex.cause is EventStoreException) {
-                if (ex.cause is WrongExpectedVersionException) {
-                    throw UnexpectedVersionException(
-                            ex.cause, null,
-                            expectedVersion)
-                } else if (ex.cause is AccessDeniedException
+                if (ex.cause is AccessDeniedException
                         || ex.cause is CommandNotExpectedException
                         || ex.cause is InvalidTransactionException
                         || ex.cause is NoResultException
@@ -442,7 +436,8 @@ class EventStoreEsjcEventRepository<T>(
 
     private fun <U> completeWriteFuture(
             future: CompletableFuture<U>,
-            expectedVersion: ExpectedVersion): U {
+            expectedVersion: ExpectedVersion
+    ): U {
         try {
             return future.get(timeoutMillis, TimeUnit.MILLISECONDS)
         } catch (ex: InterruptedException) {
@@ -451,6 +446,7 @@ class EventStoreEsjcEventRepository<T>(
         } catch (ex: ExecutionException) {
             if (ex.cause is EventStoreException) {
                 if (ex.cause is WrongExpectedVersionException) {
+                    logger.warn("Unexpected version when completing EventStore write", ex.cause)
                     throw UnexpectedVersionException(
                             ex.cause, null,
                             expectedVersion)
@@ -530,7 +526,31 @@ class EventStoreEsjcEventRepository<T>(
     }
 }
 
-private fun StreamVersion.toEsjcVersion(): Int {
-    // TODO: Parse the string as an ESJC compatible version
-    TODO()
+private fun ExpectedVersion?.toEsVersion(): com.github.msemys.esjc.ExpectedVersion {
+    return when (this) {
+        null -> com.github.msemys.esjc.ExpectedVersion.ANY
+        ExpectedVersion.Any -> com.github.msemys.esjc.ExpectedVersion.ANY
+        ExpectedVersion.AnyExisting -> com.github.msemys.esjc.ExpectedVersion.STREAM_EXISTS
+        ExpectedVersion.NotCreated -> com.github.msemys.esjc.ExpectedVersion.NO_STREAM
+        is ExpectedVersion.Exactly ->
+            com.github.msemys.esjc.ExpectedVersion.of(streamVersion.toEsVersion())
+    }
+}
+
+private fun RepositoryVersion.toEsVersion(): Int {
+    return this.version.toEsVersion()
+}
+
+private fun StreamVersion.toEsVersion(): Int {
+    return this.version.toEsVersion()
+}
+
+private fun String.toEsVersion(): Int {
+    try {
+        return Integer.parseInt(this)
+    } catch (ex: NumberFormatException) {
+        throw IllegalArgumentException(
+                "Version provided (${this}) is not compatible with the ESJC driver",
+                ex)
+    }
 }

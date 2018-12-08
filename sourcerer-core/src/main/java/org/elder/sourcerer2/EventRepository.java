@@ -12,6 +12,7 @@ public interface EventRepository<T> {
      *
      * @return A class representing the root event type for events in this repository.
      */
+    @NotNull
     Class<T> getEventType();
 
     /**
@@ -76,7 +77,7 @@ public interface EventRepository<T> {
      * upper bound on the number of events returned.
      *
      * @param streamId The id of the stream to read events for.
-     * @param version  The version to read events from. The version is an opaque identifier
+     * @param version  The version to read events from. The version is an opaque id
      *                 pointing to a logical point-in-time for the event stream. Specify null
      *                 to read from the beginning of the stream.
      * @return A result record describing the outcome of the read and the events themselves, or null
@@ -143,6 +144,7 @@ public interface EventRepository<T> {
      *                 events are attempted to be added, an UnexpectedVersionException is thrown.
      * @return The current version of the stream after the append has completed.
      */
+    @NotNull
     StreamVersion append(StreamId streamId, List<EventData<T>> events, ExpectedVersion version);
 
     /**
@@ -152,15 +154,16 @@ public interface EventRepository<T> {
      * @param fromVersion The version to start subscribing from (exclusive). This would normally be
      *                    the version that has last been processed - not the version that is
      *                    expected to be returned as the first event. Use null to subscribe from
-     *                    the beginning of the stream.  If less than the current version, the
+     *                    the beginning of the stream. If less than the current version, the
      *                    publisher will start replaying historical events, and then
      *                    transparently switch to live events.
      * @return A Publisher that, when subscribed to, will start producing events for each new event
      * written to the given stream id.
      */
+    @NotNull
     Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
             @NotNull StreamId streamId,
-            RepositoryVersion fromVersion);
+            StreamVersion fromVersion);
 
     /**
      * Gets a Publisher that can be used to subscribe to all events related to this repository.
@@ -168,11 +171,12 @@ public interface EventRepository<T> {
      * @param fromVersion The version to start subscribing from (exclusive). This would normally be
      *                    the version that has last been processed - not the version that is
      *                    expected to be returned as the first event. Use null to subscribe from
-     *                    the beginning of the stream.  If less than the current version, the
+     *                    the beginning of the stream. If less than the current version, the
      *                    publisher will start replaying historical events, and then
      *                    transparently switch to live events.
      * @return A Publisher that, when subscribed to, will start producing events for each new event
      * written to any stream related to this repository.
      */
+    @NotNull
     Publisher<EventSubscriptionUpdate<T>> getPublisher(RepositoryVersion fromVersion);
 }

@@ -31,7 +31,7 @@ final class SessionSubscriber<T> {
         try {
             switch (update.getUpdateType()) {
                 case EVENT:
-                    logger.debug("Offering event {}", update.getEvent());
+                    // logger.debug("Offering event {}", update.getEvent());
                     tryOffer(Update.createEvent(update.getEvent()));
                     break;
                 case CAUGHT_UP:

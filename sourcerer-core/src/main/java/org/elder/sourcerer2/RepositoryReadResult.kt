@@ -11,11 +11,11 @@ data class RepositoryReadResult<T>(
         val events: ImmutableList<EventRecord<T>>,
 
         /**
-         * The position to use to read more events in the same stream following those returned
-         * already. This will be valid even if it is the end of the stream, and can be use to
-         * query for whether or not someone else has added events at a later stage.
+         * The position in the stream marked by the last event read. This can be used to either read
+         * more events in the stream, or to ensure that events are added atomically later on by
+         * asserting that the last event is still at this position.
          */
-        val nextVersion: RepositoryVersion,
+        val version: StreamVersion,
 
         /**
          * True if this is (currently) representing the last events of the stream.
