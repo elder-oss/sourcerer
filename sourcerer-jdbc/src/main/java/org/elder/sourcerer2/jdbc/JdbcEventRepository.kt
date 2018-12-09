@@ -1,5 +1,6 @@
 package org.elder.sourcerer2.jdbc
 
+import com.google.common.collect.ImmutableList
 import org.elder.sourcerer2.EventData
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
@@ -12,6 +13,7 @@ import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.StreamVersion
 import org.reactivestreams.Publisher
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Timestamp
 import javax.sql.DataSource
@@ -39,54 +41,85 @@ class JdbcEventRepository<T>(
             streamId: StreamId,
             version: StreamVersion?,
             maxEvents: Int
-    ): StreamReadResult<T> {
+    ): StreamReadResult<T>? {
         val effectiveMaxEvents = getMaxReadBatchSize(maxEvents)
-        return withConnection(true) {
-            val readStatement = when (version) {
-                null -> {
-                    val statement = it.prepareStatement(readStreamEventsQuery)
-                    statement.setString(0, streamId.identifier)
-                    statement.setString(1, categoryName)
-                    statement.setInt(2, effectiveMaxEvents)
-                    statement
-                }
-                else -> {
-                    val jdbcStreamVersion = version.toJdbcStreamVersion()
-                    val statement = it.prepareStatement(readStreamEventsFromQuery)
-                    statement.setString(0, streamId.identifier)
-                    statement.setString(1, categoryName)
-                    statement.setTimestamp(2, Timestamp.from(jdbcStreamVersion.timestamp))
-                    statement.setTimestamp(3, Timestamp.from(jdbcStreamVersion.timestamp))
-                    statement.setInt(4, jdbcStreamVersion.batchSequenceNr)
-                    statement.setInt(5, effectiveMaxEvents)
-                    statement
-                }
+        return withConnection(true) { connection ->
+            val readStatement = connection.createReadStreamStatement(
+                    streamId,
+                    categoryName,
+                    effectiveMaxEvents,
+                    version)
+
+            var result = readStatement.executeQuery().use {
+                processReadResults(it, effectiveMaxEvents)
             }
 
-            val events = mutableListOf<EventRecord<T>>()
-            var lastVersion: StreamVersion? = null
+            if (result == null) {
+                // No results newer than what we asked for, or stream does not exist, figure out
+                // which it is.
+                if (version == null) {
+                    // No version was provided (we're reading from the start), and we had no
+                    // results. This can only mean that the stream did not exist at the time
+                    null
+                } else {
+                    // Slow path - we have no events matching the query, this could either be from
+                    // the stream not existing at all, or us having to gone off the end - check again
+                    // if we do have any events
+                    connection.prepareStatement(readLastStreamEventQuery).use {
+                        it.setString(0, streamId.identifier)
+                        it.setString(1, categoryName)
+                        it.executeQuery().use { resultSet ->
+                            if (resultSet.next()) {
+                                // We have events in the stream, but none matching the given query.
+                                // This can happen if the previous call used up all of the events,
+                                // in which case the event returned here should match the provided
+                                // version exactly.
 
-            readStatement.use { statement ->
-                statement.executeQuery().use { resultSet ->
-                    while (resultSet.next()) {
-                        val eventRecords = readResult(resultSet)
-                        lastVersion = eventRecords.streamVersion
-                        events.add(eventRecords)
-                        resultSet.next()
+
+                                StreamReadResult(
+                                        events = ImmutableList.of(),
+                                        version = version,
+                                        isEndOfStream = true
+                                )
+                            } else {
+                                // We have no events, meaning there was no stream in the first
+                                // place, just tell the world - nothing to see here
+                                null
+                            }
+                        }
                     }
-
                 }
-            }
-
-            if (lastVersion == null) {
-                // Slow path - we have no events matching the query, this could either be from
-                // the stream not existing at all, or us having to gone off the end - check again
-                // if we do have any events
-                val statement = it.prepareStatement(readLastStreamEventQuery)
-                statement.setString(0, streamId.identifier)
-                statement.setString(1, categoryName)
 
             }
+        }
+    }
+
+    private fun processReadResults(resultSet: ResultSet, batchSize: Int): StreamReadResult<T>? {
+        val events = mutableListOf<EventRecord<T>>()
+        var lastVersion: StreamVersion? = null
+        var count = 0
+
+        while (resultSet.next()) {
+            val eventRecords = readResult(resultSet)
+            lastVersion = eventRecords.streamVersion
+            events.add(eventRecords)
+            count++
+            resultSet.next()
+        }
+
+        return if (events.isNotEmpty()) {
+            // We return end of stream at to points in time, this one if we have fewer events
+            // than the query asked for (happy path) and in the fallback logic if a query returned
+            // no results but the stream does exist.
+            StreamReadResult(
+                    events = ImmutableList.copyOf(events),
+                    version = lastVersion!!,
+                    isEndOfStream = count < batchSize)
+        } else {
+            // Nothing to see here, no results. This is either because there are no more events
+            // past the version specified, or because the stream doesn't exist at all, leave it to
+            // the main function to decide which is which
+            null
         }
     }
 
@@ -137,6 +170,35 @@ class JdbcEventRepository<T>(
             dbOperation(it)
         }
     }
+
+    private fun Connection.createReadStreamStatement(
+            streamId: StreamId,
+            categoryName: String,
+            effectiveMaxEvents: Int,
+            version: StreamVersion?
+    ): PreparedStatement {
+        return when (version) {
+            null -> {
+                val statement = prepareStatement(readStreamEventsQuery)
+                statement.setString(0, streamId.identifier)
+                statement.setString(1, categoryName)
+                statement.setInt(2, effectiveMaxEvents)
+                statement
+            }
+            else -> {
+                val jdbcStreamVersion = version.toJdbcStreamVersion()
+                val statement = prepareStatement(readStreamEventsFromQuery)
+                statement.setString(0, streamId.identifier)
+                statement.setString(1, categoryName)
+                statement.setTimestamp(2, Timestamp.from(jdbcStreamVersion.timestamp))
+                statement.setTimestamp(3, Timestamp.from(jdbcStreamVersion.timestamp))
+                statement.setInt(4, jdbcStreamVersion.batchSequenceNr)
+                statement.setInt(5, effectiveMaxEvents)
+                statement
+            }
+        }
+    }
+
     private fun makeReadLastStreamEventQuery(): String {
         return """
                 SELECT timestamp, batch_sequence_nr
@@ -172,3 +234,4 @@ class JdbcEventRepository<T>(
             """.trimIndent()
     }
 }
+
