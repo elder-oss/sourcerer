@@ -10,6 +10,8 @@ import org.elder.sourcerer2.EventRecord;
 import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.ExpectedVersion;
 import org.elder.sourcerer2.StreamId;
+import org.elder.sourcerer2.StreamReadResult;
+import org.elder.sourcerer2.StreamVersion;
 import org.elder.sourcerer2.eventstore.test.data.TestEventType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
@@ -17,7 +19,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
 
@@ -75,6 +76,20 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
         EventRecord<TestEventType> actual = repository.readLast(streamId);
 
         assertThat(actual.getEvent().getValue(), equalTo("payload-2"));
+    }
+
+    @Test
+    public void readBeyondEvent() {
+        append(new TestEventType("payload-1"));
+        append(new TestEventType("payload-2"));
+
+        StreamReadResult<TestEventType> actual = repository.read(
+                streamId,
+                StreamVersion.ofInt(0),
+                1);
+
+        int foo = 234;
+        // assertThat(actual.getEvent().getValue(), equalTo("payload-2"));
     }
 
     @Test
