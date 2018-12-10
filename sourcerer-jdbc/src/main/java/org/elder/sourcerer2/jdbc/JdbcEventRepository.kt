@@ -16,6 +16,7 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Timestamp
+import java.time.Instant
 import javax.sql.DataSource
 
 class JdbcEventRepository<T>(
@@ -50,60 +51,24 @@ class JdbcEventRepository<T>(
                     effectiveMaxEvents,
                     version)
 
-            var result = readStatement.executeQuery().use {
+            readStatement.executeQuery().use {
                 processReadResults(it, effectiveMaxEvents)
-            }
-
-            if (result == null) {
-                // No results newer than what we asked for, or stream does not exist, figure out
-                // which it is.
-                if (version == null) {
-                    // No version was provided (we're reading from the start), and we had no
-                    // results. This can only mean that the stream did not exist at the time
-                    null
-                } else {
-                    // Slow path - we have no events matching the query, this could either be from
-                    // the stream not existing at all, or us having to gone off the end - check again
-                    // if we do have any events
-                    connection.prepareStatement(readLastStreamEventQuery).use {
-                        it.setString(0, streamId.identifier)
-                        it.setString(1, categoryName)
-                        it.executeQuery().use { resultSet ->
-                            if (resultSet.next()) {
-                                // We have events in the stream, but none matching the given query.
-                                // This can happen if the previous call used up all of the events,
-                                // in which case the event returned here should match the provided
-                                // version exactly.
-
-
-                                StreamReadResult(
-                                        events = ImmutableList.of(),
-                                        version = version,
-                                        isEndOfStream = true
-                                )
-                            } else {
-                                // We have no events, meaning there was no stream in the first
-                                // place, just tell the world - nothing to see here
-                                null
-                            }
-                        }
-                    }
-                }
-
             }
         }
     }
 
-    private fun processReadResults(resultSet: ResultSet, batchSize: Int): StreamReadResult<T>? {
+    private fun processReadResults(
+            resultSet: ResultSet,
+            batchSize: Int,
+            readRow: (ResultSet) -> RowResult<T>>
+    ): JdbcReadResult<T>? {
         val events = mutableListOf<EventRecord<T>>()
-        var lastVersion: StreamVersion? = null
-        var count = 0
+        var lastVersion: String? = null
 
         while (resultSet.next()) {
-            val eventRecords = readResult(resultSet)
-            lastVersion = eventRecords.streamVersion
-            events.add(eventRecords)
-            count++
+            val eventRecord = readRow(resultSet)
+            lastVersion = eventRecord.streamVersion
+            events.add(eventRecord)
             resultSet.next()
         }
 
@@ -232,6 +197,11 @@ class JdbcEventRepository<T>(
                 ORDER BY timestamp, batch_sequence_nr
                 LIMIT ?
             """.trimIndent()
+    } companion object {
+        // Some DB engines like MySql still use a signed int internally to represent timestamps, use this as the
+        // highest safe value to use for a placeholder timestamp. The sentinel value is always created when the stream
+        // is and marks the end of the stream.
+        val SENTINEL_TIMESTAMP = Instant.ofEpochSecond(Int.MAX_VALUE.toLong())
     }
 }
 
