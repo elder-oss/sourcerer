@@ -20,6 +20,12 @@ data class JdbcEventRecord(
         val category: String,
 
         /**
+         * An integer shard 0-1023, based on the stream id. This can be used to route events in subscriptions to
+         * particular instances.
+         */
+        val shard: Int,
+
+        /**
          * The time at which the storage engine recorded the event. This may be different from the
          * time of the actual business event that the event describes. It should not be relied on to
          * compare order of events, use stream or repository version instead.
@@ -46,7 +52,7 @@ data class JdbcEventRecord(
         /**
          * The event data itself, stored as a JSON string.
          */
-        val event: String,
+        val data: String,
 
         /**
          * Other information about the event as provided when the event was persisted.

@@ -27,6 +27,6 @@ class JdbcStreamVersionTest {
         val streamVersion = StreamVersion.ofString("20180204020102.012345678:0425")
         val jdbcVersion = streamVersion.toJdbcStreamVersion()
         assertEquals(Instant.parse("2018-02-04T02:01:02.012345678Z"), jdbcVersion.timestamp)
-        assertEquals(425, jdbcVersion.batchSequenceNr)
+        assertEquals(425, jdbcVersion.transactionSequenceNr)
     }
 }

@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatterBuilder
 
 internal data class JdbcStreamVersion(
         val timestamp: Instant,
-        val batchSequenceNr: Int
+        val transactionSequenceNr: Int
 ) {
     companion object {
         val stringFormat = Regex("""\d{14}\.\d{9}:\d{4}""")
@@ -36,12 +36,12 @@ internal fun StreamVersion.toJdbcStreamVersion(): JdbcStreamVersion {
 }
 
 internal fun JdbcStreamVersion.toStreamVersion(): StreamVersion {
-    if (batchSequenceNr > 9999 || batchSequenceNr < 0) {
+    if (transactionSequenceNr > 9999 || transactionSequenceNr < 0) {
         throw IllegalArgumentException("Cannot commit more than 10,000 events in one batch")
     }
 
     val utcLocalDateTime = LocalDateTime.ofInstant(timestamp, ZoneOffset.UTC)
     return StreamVersion.ofString(
             "${JdbcStreamVersion.dateFormat.format(utcLocalDateTime)}:" +
-                    batchSequenceNr.toString().padStart(4, '0'))
+                    transactionSequenceNr.toString().padStart(4, '0'))
 }
