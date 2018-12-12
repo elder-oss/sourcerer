@@ -1,4 +1,4 @@
-package org.elder.sourcerer2.jdbc
+package org.elder.sourcerer2.dbstore
 
 import org.elder.sourcerer2.EventId
 import org.elder.sourcerer2.StreamId
@@ -7,7 +7,7 @@ import java.time.Instant
 /**
  * Direct typed representation of the data read from the database for a particular row
  */
-data class JdbcEventRecord(
+data class DbstoreEventRecord(
         /**
          * The id of the stream that this event relates to. This id is unique only within a
          * particular repository, e.g. only across events describing the same type of aggregate.
@@ -57,5 +57,5 @@ data class JdbcEventRecord(
         /**
          * Other information about the event as provided when the event was persisted.
          */
-        val metadata: Map<String, String>
+        val metadata: String
 )

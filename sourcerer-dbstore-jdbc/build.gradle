@@ -1,0 +1,5 @@
+dependencies {
+    api project(':sourcerer-core')
+    api project(':sourcerer-dbstore')
+    implementation "io.projectreactor:reactor-core:$reactorVersion"
+}

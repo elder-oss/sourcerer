@@ -1,4 +1,4 @@
-package org.elder.sourcerer2.jdbc
+package org.elder.sourcerer2.dbstore
 
 import com.google.common.collect.ImmutableList
 import org.elder.sourcerer2.EventData
@@ -12,16 +12,10 @@ import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.StreamVersion
 import org.reactivestreams.Publisher
-import java.sql.Connection
-import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.Timestamp
-import java.time.Instant
-import javax.sql.DataSource
-import kotlin.math.max
 
-internal class JdbcEventRepository<T>(
-        private val eventStore: JdbcEventStore,
+internal class DbstoreEventRepository<T>(
+        private val eventStore: DbstoreEventStore,
         private val eventType: Class<T>,
         private val categoryName: String
 ) : EventRepository<T> {
@@ -38,18 +32,18 @@ internal class JdbcEventRepository<T>(
             version: StreamVersion?,
             maxEvents: Int
     ): StreamReadResult<T>? {
-        val jdbcVersion = version?.toJdbcStreamVersion()
-        val eventRows = eventStore.readStreamEventsFromStart(streamId, categoryName, jdbcVersion, maxEvents)
+        val jdbcVersion = version?.toDbstoreStreamVersion()
+        val eventRows = eventStore.readStreamEvents(streamId, categoryName, jdbcVersion, maxEvents)
         val events = mutableListOf<EventRecord<T>>()
-        var lastVersion: JdbcStreamVersion? = null
+        var lastVersion: DbstoreStreamVersion? = null
 
         eventRows.forEach {
             when (it) {
-                is JdbcEventRow.Event -> {
+                is DbstoreEventRow.Event -> {
                     events.add(parseEvent(it))
-                    lastVersion = JdbcStreamVersion(it.eventData.timestamp, it.eventData.transactionSeqNr)
+                    lastVersion = DbstoreStreamVersion(it.eventData.timestamp, it.eventData.transactionSeqNr)
                 }
-                is JdbcEventRow.EndOfStream -> {
+                is DbstoreEventRow.EndOfStream -> {
                     return StreamReadResult(
                             events = ImmutableList.copyOf(events),
                             version = lastVersion?.toStreamVersion() ?: version,
@@ -92,7 +86,6 @@ internal class JdbcEventRepository<T>(
     override fun getPublisher(fromVersion: RepositoryVersion?): Publisher<EventSubscriptionUpdate<T>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
-
 
 
 }

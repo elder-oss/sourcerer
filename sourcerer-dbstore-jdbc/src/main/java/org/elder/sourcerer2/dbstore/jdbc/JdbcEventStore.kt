@@ -1,9 +1,11 @@
-package org.elder.sourcerer2.jdbc
+package org.elder.sourcerer2.dbstore.jdbc
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.ObjectMapper
 import org.elder.sourcerer2.EventId
 import org.elder.sourcerer2.StreamId
+import org.elder.sourcerer2.dbstore.DbstoreEventRecord
+import org.elder.sourcerer2.dbstore.DbstoreEventRow
+import org.elder.sourcerer2.dbstore.DbstoreEventStore
+import org.elder.sourcerer2.dbstore.DbstoreStreamVersion
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -14,19 +16,18 @@ import javax.sql.DataSource
 
 internal class JdbcEventStore(
         private val dataSource: DataSource,
-        private val objectMapper: ObjectMapper,
         private val eventsTableName: String,
         private val maxReadBatchSize: Int = 2048
-
-) {
-    fun readStreamEventsFromStart(
+) : DbstoreEventStore {
+    override fun readStreamEvents(
             streamId: StreamId,
             category: String,
-            fromVersion: JdbcStreamVersion? = null,
-            maxEvents: Int = Int.MAX_VALUE
-    ): List<JdbcEventRow> {
+            fromVersion: DbstoreStreamVersion?,
+            maxEvents: Int
+    ): List<DbstoreEventRow> {
         val effectiveMaxEvents = getMaxReadBatchSize(maxEvents)
         return withConnection(true) { connection ->
+            connection.commit()
             val readStatement = connection.createReadStreamStatement(
                     streamId,
                     category,
@@ -43,7 +44,7 @@ internal class JdbcEventStore(
             streamId: StreamId,
             categoryName: String,
             effectiveMaxEvents: Int,
-            fromVersion: JdbcStreamVersion?
+            fromVersion: DbstoreStreamVersion?
     ): PreparedStatement {
         return when (fromVersion) {
             null -> {
@@ -82,11 +83,11 @@ internal class JdbcEventStore(
         return minOf(requestedBatchSize, maxReadBatchSize)
     }
 
-    private fun ResultSet.readEventDataResults(): List<JdbcEventRow> {
+    private fun ResultSet.readEventDataResults(): List<DbstoreEventRow> {
         return this.readRowsWith(::readEventRow)
     }
 
-    private fun readEventRow(row: ResultSet): JdbcEventRow {
+    private fun readEventRow(row: ResultSet): DbstoreEventRow {
         val streamId = StreamId.ofString(row.getString(0))
         val category = row.getString(1)
         val shard = row.getInt(2)
@@ -95,7 +96,7 @@ internal class JdbcEventStore(
         return when (timestamp) {
             SENTINEL_TIMESTAMP ->
                 // This is the end of stream marker, only extract the bits relevant to it
-                JdbcEventRow.EndOfStream(
+                DbstoreEventRow.EndOfStream(
                         streamId = streamId,
                         category = category
                 )
@@ -104,8 +105,8 @@ internal class JdbcEventStore(
                 val eventId = EventId.ofUuid(UUID.fromString(row.getString(5)))
                 val eventType = row.getString(6)
                 val data = row.getString(7)
-                val metadata = parseMetadata(row.getString(8))
-                val event = JdbcEventRecord(
+                val metadata = row.getString(8)
+                val event = DbstoreEventRecord(
                         streamId = streamId,
                         category = category,
                         shard = shard,
@@ -116,16 +117,9 @@ internal class JdbcEventStore(
                         data = data,
                         metadata = metadata
                 )
-                JdbcEventRow.Event(event)
+                DbstoreEventRow.Event(event)
             }
         }
-    }
-
-    private fun parseMetadata(string: String): Map<String, String> {
-        return objectMapper.readValue<Map<String, String>>(
-                string,
-                object : TypeReference<Map<String, String>>() {}
-        )
     }
 
     private val makeReadLastStreamEventQuery = """
