@@ -59,10 +59,22 @@ internal class JdbcEventStore(
             expectVersion?.let { assertExpectedVersion(rowsFromExpectedEnd, events[0].eventId) }
 
             val commitTimestamp = connection.claimCommitTimestamp()
-            connection.persistEvents(commitTimestamp, events)
+            val streamShard =
+                    if (rowsFromExpectedEnd.isEmpty()) {
+                        // We have no existing string but have made it this far, which means that's OK.
+                        // Create a new one and burn in the shard.
+                        connection.insertSentinel(category, streamId)
+                    } else {
+                        // We have a stream, they'll all have the same shard, grab the one from the first record we
+                        // get our hands on, it doesn't matter if that's representing an event or the sentinel
+                        rowsFromExpectedEnd[0].getShard()
+                    }
+
+            connection.persistEvents(commitTimestamp, streamShard, events)
             connection.commit()
         }
     }
+
 
     private fun assertExistenceStatus(
             rowsFromExpectedEnd: List<DbstoreEventRow>,
@@ -137,10 +149,11 @@ internal class JdbcEventStore(
     private fun <T> withConnection(readOnly: Boolean, dbOperation: (Connection) -> T): T {
         return dataSource.connection.use {
             it.autoCommit = false
-            // TODO: Do we need this also for read queries? Probably not
-            it.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
             if (readOnly) {
                 it.isReadOnly = true
+                it.transactionIsolation = Connection.TRANSACTION_READ_COMMITTED
+            } else {
+                it.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
             }
             dbOperation(it)
         }
@@ -182,6 +195,7 @@ internal class JdbcEventStore(
                 // This is the end of stream marker, only extract the bits relevant to it
                 DbstoreEventRow.EndOfStream(
                         streamId = streamId,
+                        shard = shard,
                         category = category
                 )
             else -> {
@@ -217,12 +231,16 @@ internal class JdbcEventStore(
         return resultSet.getTimestamp(0)
     }
 
-    private fun Connection.persistEvents(commitTimestamp: Timestamp, events: List<DbstoreEventData>) {
+    private fun Connection.persistEvents(
+            commitTimestamp: Timestamp,
+            streamShard: Int,
+            events: List<DbstoreEventData>
+    ) {
         events.forEachIndexed { idx, eventData ->
             val statement = prepareStatement(writeEventDataStatement)
             statement.setString(0, eventData.streamId.identifier)
             statement.setString(1, eventData.category)
-            statement.setString(2, eventData.getShard(maxShards))
+            statement.setInt(2, streamShard)
             statement.setTimestamp(3, commitTimestamp)
             statement.setInt(4, idx)
             statement.setString(5, eventData.eventId.id.toString())
@@ -231,6 +249,22 @@ internal class JdbcEventStore(
             statement.setString(8, eventData.metadata)
             statement.execute()
         }
+    }
+
+    private fun Connection.insertSentinel(category: String, streamId: StreamId): Int {
+        val shard = Sharder.getShard(category, streamId, maxShards)
+        val statement = prepareStatement(writeEventDataStatement)
+        statement.setString(0, streamId.identifier)
+        statement.setString(1, category)
+        statement.setInt(2, shard)
+        statement.setTimestamp(3, Timestamp.from(SENTINEL_TIMESTAMP))
+        statement.setInt(4, 0)
+        statement.setString(5, UUID.randomUUID().toString())
+        statement.setString(6, "<end of stream>")
+        statement.setString(7, "")
+        statement.setString(8, "")
+        statement.execute()
+        return shard
     }
 
     private val getCommitTimestampQuery = """
@@ -289,4 +323,3 @@ internal class JdbcEventStore(
         }
     }
 }
-
