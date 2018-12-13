@@ -2,12 +2,11 @@ package org.elder.sourcerer2.dbstore
 
 import org.elder.sourcerer2.EventId
 import org.elder.sourcerer2.StreamId
-import java.time.Instant
 
 /**
- * Direct typed representation of the data read from the database for a particular row
+ * Generic representation of data to store for a particular event.
  */
-data class DbstoreEventRecord(
+data class DbstoreEventData(
         /**
          * The id of the stream that this event relates to. This id is unique only within a
          * particular repository, e.g. only across events describing the same type of aggregate.
@@ -18,25 +17,6 @@ data class DbstoreEventRecord(
          * The category of events that this event is representing (e.g. the type of aggregates that it represents).
          */
         val category: String,
-
-        /**
-         * An integer shard 0-1023, based on the stream id. This can be used to route events in subscriptions to
-         * particular instances.
-         */
-        val shard: Int,
-
-        /**
-         * The time at which the storage engine recorded the event. This may be different from the
-         * time of the actual business event that the event describes. It should not be relied on to
-         * compare order of events, use stream or repository version instead.
-         */
-        val timestamp: Instant,
-
-        /**
-         * The sequence number (starting with 0) within a transaction, used to enforce order, as all of these events
-         * will have the same exact timestamp.
-         */
-        val transactionSeqNr: Int,
 
         /**
          * Gets a globally unique id for this event. This will be unique across all events and all
@@ -59,7 +39,8 @@ data class DbstoreEventRecord(
          */
         val metadata: String
 ) {
-        fun getVersion(): DbstoreStreamVersion {
-                return DbstoreStreamVersion(timestamp, transactionSeqNr)
+        fun getShard(maxShards: Int): String? {
+
+                
         }
 }
