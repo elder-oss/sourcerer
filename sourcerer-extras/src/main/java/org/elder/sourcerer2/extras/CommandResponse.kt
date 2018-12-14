@@ -13,6 +13,7 @@ data class CommandResponse(
         val noOp: Boolean
 ) {
     companion object {
+        @JvmStatic
         fun of(result: CommandResult<*>): CommandResponse {
             return CommandResponse(
                     result.aggregateId,
