@@ -6,6 +6,7 @@ import org.elder.sourcerer2.dbstore.DbstoreEventData
 import org.elder.sourcerer2.dbstore.DbstoreEventRecord
 import org.elder.sourcerer2.dbstore.DbstoreEventRow
 import org.elder.sourcerer2.dbstore.DbstoreEventStore
+import org.elder.sourcerer2.dbstore.DbstoreRepositoryVersion
 import org.elder.sourcerer2.dbstore.DbstoreStreamVersion
 import org.elder.sourcerer2.dbstore.FoundWhenNotExpectedException
 import org.elder.sourcerer2.dbstore.FoundWithDifferentVersionException
@@ -28,9 +29,29 @@ import javax.sql.DataSource
 internal class JdbcEventStore(
         private val dataSource: DataSource,
         eventsTableName: String,
-        private val maxShards: Int = 8,
+        override val shards: Int = 8,
         private val maxReadBatchSize: Int = 2048
 ) : DbstoreEventStore {
+    override fun readRepositoryEvents(
+            category: String,
+            shard: Int?,
+            fromVersion: DbstoreRepositoryVersion?,
+            maxEvents: Int
+    ): List<DbstoreEventRow> {
+        val effectiveMaxEvents = getMaxReadBatchSize(maxEvents)
+        return withConnection(true) { connection ->
+            val readStatement = connection.createReadRepositoryStatement(
+                    category,
+                    shard,
+                    effectiveMaxEvents,
+                    fromVersion)
+
+            readStatement.executeQuery().use {
+                it.readEventRowResults()
+            }
+        }
+    }
+
     override fun readStreamEvents(
             streamId: StreamId,
             category: String,
@@ -49,7 +70,7 @@ internal class JdbcEventStore(
             expectExisting: Boolean?,
             expectVersion: DbstoreStreamVersion?,
             events: List<DbstoreEventData>
-    ) {
+    ): DbstoreStreamVersion {
         // If we have an expected version, go look for the event after that point (or the sentinel if not found),
         // if we don't, then just look for the sentinel directly.
         return withConnection(true) { connection ->
@@ -71,7 +92,6 @@ internal class JdbcEventStore(
                     }
 
             connection.persistEvents(commitTimestamp, streamShard, events)
-            connection.commit()
         }
     }
 
@@ -85,7 +105,7 @@ internal class JdbcEventStore(
             if (!expectExisting) {
                 val row = rowsFromExpectedEnd[0]
                 val currentVersionIfKnown = when (row) {
-                    is DbstoreEventRow.Event -> row.eventData.getVersion()
+                    is DbstoreEventRow.Event -> row.eventData.getStreamVersion()
                     is DbstoreEventRow.EndOfStream -> null
                 }
                 throw FoundWhenNotExpectedException(currentVersionIfKnown)
@@ -112,9 +132,50 @@ internal class JdbcEventStore(
                 // We've found some other event here, meaning someone else has managed to append events. Check if that
                 // "someone else" is actually us, in which case that's OK!
                 if (foundRow.eventData.eventId != eventBeingAppended) {
-                    throw FoundWithDifferentVersionException(foundRow.eventData.getVersion())
+                    throw FoundWithDifferentVersionException(foundRow.eventData.getStreamVersion())
                 }
             }
+        }
+    }
+
+    private fun Connection.createReadRepositoryStatement(
+            category: String,
+            shard: Int?,
+            effectiveMaxEvents: Int,
+            fromVersion: DbstoreRepositoryVersion?
+    ): PreparedStatement {
+        var i = 0
+        val query = makeReadRepositoryEventsQuery(shard != null, fromVersion != null)
+        val statement = prepareStatement(query)
+        statement.setString(i++, category)
+        shard?.let {
+            statement.setInt(i++, it)
+        }
+        fromVersion?.let {
+            statement.setTimestamp(i++, Timestamp.from(fromVersion.timestamp))
+            statement.setTimestamp(i++, Timestamp.from(fromVersion.timestamp))
+            statement.setString(i++, fromVersion.streamId.identifier)
+            statement.setString(i++, fromVersion.streamId.identifier)
+            statement.setInt(i++, fromVersion.transactionSequenceNr)
+
+        }
+        statement.setInt(i, effectiveMaxEvents)
+        return statement
+    }
+
+    private fun Connection.readStreamEvents(
+            streamId: StreamId,
+            category: String, effectiveMaxEvents: Int,
+            fromVersion: DbstoreStreamVersion?
+    ): List<DbstoreEventRow> {
+        val readStatement = createReadStreamStatement(
+                streamId,
+                category,
+                effectiveMaxEvents,
+                fromVersion)
+
+        return readStatement.executeQuery().use {
+            it.readEventRowResults()
         }
     }
 
@@ -124,25 +185,20 @@ internal class JdbcEventStore(
             effectiveMaxEvents: Int,
             fromVersion: DbstoreStreamVersion?
     ): PreparedStatement {
-        return when (fromVersion) {
-            null -> {
-                val statement = prepareStatement(readStreamEventsFromBeginningQuery)
-                statement.setString(0, streamId.identifier)
-                statement.setString(1, categoryName)
-                statement.setInt(2, effectiveMaxEvents)
-                statement
-            }
-            else -> {
-                val statement = prepareStatement(readStreamEventsFromVersionQuery)
-                statement.setString(0, streamId.identifier)
-                statement.setString(1, categoryName)
-                statement.setTimestamp(2, Timestamp.from(fromVersion.timestamp))
-                statement.setTimestamp(3, Timestamp.from(fromVersion.timestamp))
-                statement.setInt(4, fromVersion.transactionSequenceNr)
-                statement.setInt(5, effectiveMaxEvents)
-                statement
-            }
+        var i = 0
+        val query = makeReadStreamEventsQuery(fromVersion != null)
+        val statement = prepareStatement(query)
+        statement.setString(i++, streamId.identifier)
+        statement.setString(i++, categoryName)
+
+        fromVersion?.let {
+            statement.setTimestamp(i++, Timestamp.from(fromVersion.timestamp))
+            statement.setTimestamp(i++, Timestamp.from(fromVersion.timestamp))
+            statement.setInt(i++, fromVersion.transactionSequenceNr)
         }
+
+        statement.setInt(i, effectiveMaxEvents)
+        return statement
     }
 
     private fun <T> withConnection(readOnly: Boolean, dbOperation: (Connection) -> T): T {
@@ -155,23 +211,6 @@ internal class JdbcEventStore(
                 it.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
             }
             dbOperation(it)
-        }
-    }
-
-    private fun Connection.readStreamEvents(
-            streamId: StreamId,
-            category: String,
-            effectiveMaxEvents: Int,
-            fromVersion: DbstoreStreamVersion?
-    ): List<DbstoreEventRow> {
-        val readStatement = createReadStreamStatement(
-                streamId,
-                category,
-                effectiveMaxEvents,
-                fromVersion)
-
-        return readStatement.executeQuery().use {
-            it.readEventRowResults()
         }
     }
 
@@ -234,7 +273,9 @@ internal class JdbcEventStore(
             commitTimestamp: Timestamp,
             streamShard: Int,
             events: List<DbstoreEventData>
-    ) {
+    ): DbstoreStreamVersion {
+        var lastIdx = 0
+
         events.forEachIndexed { idx, eventData ->
             val statement = prepareStatement(writeEventDataStatement)
             statement.setString(0, eventData.streamId.identifier)
@@ -247,11 +288,14 @@ internal class JdbcEventStore(
             statement.setString(7, eventData.data)
             statement.setString(8, eventData.metadata)
             statement.execute()
+            lastIdx = idx
         }
+
+        return DbstoreStreamVersion(commitTimestamp.toInstant(), lastIdx)
     }
 
     private fun Connection.insertSentinel(category: String, streamId: StreamId): Int {
-        val shard = Sharder.getShard(category, streamId, maxShards)
+        val shard = Sharder.getShard(category, streamId, shards)
         val statement = prepareStatement(writeEventDataStatement)
         statement.setString(0, streamId.identifier)
         statement.setString(1, category)
@@ -276,26 +320,37 @@ internal class JdbcEventStore(
         FROM $eventsTableName
         """.trimIndent()
 
-    private val readStreamEventsPostlude = """
-        ORDER BY timestamp, batch_sequence_nr
+    private val readRepositoryShardFragment = """
+        AND shard = ?
+        """.trimIndent()
+
+    private val filterRepositoryVersionFragment = """
+        AND timestamp >= ?
+        AND (timestamp > ? OR stream_id > ? OR (stream_id = ? AND transaction_seq_nr > ?))
+        """.trimIndent()
+
+    private fun makeReadRepositoryEventsQuery(queryShard: Boolean, queryVersion: Boolean) = """
+        $readEventDataPrelude
+        WHERE category = ?
+        ${if (queryShard) readRepositoryShardFragment else ""}
+        ${if (queryVersion) filterRepositoryVersionFragment else ""}
+        ORDER BY timestamp, stream_id, batch_sequence_nr
         LIMIT ?
         """.trimIndent()
 
-    private val readStreamEventsFromBeginningQuery = """
-        $readEventDataPrelude
-        WHERE stream_id = ?
-        AND category = ?
-        $readStreamEventsPostlude
-        """.trimIndent()
-
-    private val readStreamEventsFromVersionQuery = """
-        $readEventDataPrelude
-        WHERE stream_id = ?
-        AND category = ?
+    private val filterStreamVersionFragment = """
         AND timestamp >= ?
         AND (timestamp > ? OR batch_sequence_nr > ?)
-        $readStreamEventsPostlude
-    """.trimIndent()
+        """.trimIndent()
+
+    private fun makeReadStreamEventsQuery(queryVersion: Boolean) = """
+        $readEventDataPrelude
+        WHERE stream_id = ?
+        AND category = ?
+        ${if (queryVersion) filterStreamVersionFragment else ""}
+        ORDER BY timestamp, batch_sequence_nr
+        LIMIT ?
+        """.trimIndent()
 
     private val writeEventDataStatement = """
         INSERT INTO $eventsTableName

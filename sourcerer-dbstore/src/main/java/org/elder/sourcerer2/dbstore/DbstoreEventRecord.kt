@@ -59,7 +59,11 @@ data class DbstoreEventRecord(
          */
         val metadata: String
 ) {
-        fun getVersion(): DbstoreStreamVersion {
-                return DbstoreStreamVersion(timestamp, transactionSeqNr)
-        }
+    fun getStreamVersion(): DbstoreStreamVersion {
+        return DbstoreStreamVersion(timestamp, transactionSeqNr)
+    }
+
+    fun getRepositoryVersion(): DbstoreRepositoryVersion {
+        return DbstoreRepositoryVersion(timestamp, streamId, transactionSeqNr)
+    }
 }

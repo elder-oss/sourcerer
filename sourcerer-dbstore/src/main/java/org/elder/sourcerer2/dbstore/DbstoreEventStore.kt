@@ -18,11 +18,11 @@ interface DbstoreEventStore {
      * Reads events from a given particular point in time (version) across all of the events in this repository.
      * @param shard the shard to read from, if null, events will be read across all of the shards (in order).
      */
-    fun readStreamEvents(
+    fun readRepositoryEvents(
             category: String,
             shard: Int?,
             fromVersion: DbstoreRepositoryVersion? = null,
-            maxEvents: Int = Int.MAX_VALUE
+            maxEvents: Int = 4096
     ): List<DbstoreEventRow>
 
     /**
@@ -32,7 +32,7 @@ interface DbstoreEventStore {
             streamId: StreamId,
             category: String,
             fromVersion: DbstoreStreamVersion? = null,
-            maxEvents: Int = Int.MAX_VALUE
+            maxEvents: Int = 4096
     ): List<DbstoreEventRow>
 
     /**
@@ -46,5 +46,5 @@ interface DbstoreEventStore {
             expectExisting: Boolean?,
             expectVersion: DbstoreStreamVersion?,
             events: List<DbstoreEventData>
-    )
+    ): DbstoreStreamVersion
 }

@@ -39,13 +39,13 @@ fun RepositoryVersion.toDbstoreRepositoryVersion(): DbstoreRepositoryVersion {
     return DbstoreRepositoryVersion(timestamp, streamId, sequence)
 }
 
-fun DbstoreRepositoryVersion.toRepositoryVersion(): StreamVersion {
+fun DbstoreRepositoryVersion.toRepositoryVersion(): RepositoryVersion {
     if (transactionSequenceNr > 9999 || transactionSequenceNr < 0) {
         throw IllegalArgumentException("Cannot commit more than 10,000 events in one batch")
     }
 
     val utcLocalDateTime = LocalDateTime.ofInstant(timestamp, ZoneOffset.UTC)
-    return StreamVersion.ofString(
+    return RepositoryVersion.ofString(
             "${DbstoreStreamVersion.dateFormat.format(utcLocalDateTime)}:" +
                     "$streamId:" +
                     transactionSequenceNr.toString().padStart(4, '0'))

@@ -1,9 +1,7 @@
 package org.elder.sourcerer2.dbstore
 
-import com.google.common.hash.Hashing
 import org.elder.sourcerer2.EventId
 import org.elder.sourcerer2.StreamId
-import java.nio.charset.StandardCharsets
 
 /**
  * Generic representation of data to store for a particular event.

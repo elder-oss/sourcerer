@@ -1,6 +1,9 @@
 package org.elder.sourcerer2.dbstore
 
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
 import org.elder.sourcerer2.EventData
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
@@ -12,19 +15,42 @@ import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.StreamVersion
 import org.reactivestreams.Publisher
-import java.sql.ResultSet
+import org.slf4j.LoggerFactory
 
 internal class DbstoreEventRepository<T>(
-        private val eventStore: DbstoreEventStore,
         private val eventType: Class<T>,
-        private val categoryName: String
+        private val category: String,
+        private val shard: Int?,
+        private val eventStore: DbstoreEventStore,
+        private val objectMapper: ObjectMapper
 ) : EventRepository<T> {
     override fun getEventType(): Class<T> {
         return eventType
     }
 
-    override fun readAll(version: RepositoryVersion?, maxEvents: Int): RepositoryReadResult<T> {
-        TODO()
+    override fun readAll(
+            version: RepositoryVersion?,
+            maxEvents: Int
+    ): RepositoryReadResult<T>? {
+        val dbstoreVersion = version?.toDbstoreRepositoryVersion()
+        val eventRows = eventStore.readRepositoryEvents(
+                category,
+                shard,
+                dbstoreVersion,
+                maxEvents)
+
+        return createReadResult(
+                eventRows,
+                version,
+                "$category${if (shard != null) ":$shard" else ""}",
+                { it.getRepositoryVersion().toRepositoryVersion() },
+                { events, endOfStream, newVersion ->
+                    RepositoryReadResult(
+                            events,
+                            newVersion,
+                            endOfStream)
+                }
+        )
     }
 
     override fun read(
@@ -32,32 +58,153 @@ internal class DbstoreEventRepository<T>(
             version: StreamVersion?,
             maxEvents: Int
     ): StreamReadResult<T>? {
-        val jdbcVersion = version?.toDbstoreStreamVersion()
-        val eventRows = eventStore.readStreamEvents(streamId, categoryName, jdbcVersion, maxEvents)
-        val events = mutableListOf<EventRecord<T>>()
-        var lastVersion: DbstoreStreamVersion? = null
+        val dbstoreVersion = version?.toDbstoreStreamVersion()
+        val eventRows = eventStore.readStreamEvents(streamId,
+                category, dbstoreVersion, maxEvents)
+        return createReadResult(
+                eventRows,
+                version,
+                "$category:${streamId.identifier}",
+                { it.getStreamVersion().toStreamVersion() },
+                { events, endOfStream, newVersion ->
+                    StreamReadResult(
+                            events,
+                            newVersion,
+                            endOfStream)
+                }
+        )
+    }
 
-        eventRows.forEach {
-            when (it) {
-                is DbstoreEventRow.Event -> {
-                    events.add(parseEvent(it))
-                    lastVersion = DbstoreStreamVersion(it.eventData.timestamp, it.eventData.transactionSeqNr)
-                }
-                is DbstoreEventRow.EndOfStream -> {
-                    return StreamReadResult(
-                            events = ImmutableList.copyOf(events),
-                            version = lastVersion?.toStreamVersion() ?: version,
-                            isEndOfStream = true
-                    )
-                }
-            }
+    override fun append(
+            streamId: StreamId,
+            events: MutableList<EventData<T>>,
+            version: ExpectedVersion?
+    ): StreamVersion {
+        try {
+            val newVersion = eventStore.appendStreamEvents(
+                    streamId,
+                    category,
+                    version?.toExpectExisting(),
+                    version?.toExpectVersion(),
+                    events.map { toDbstoreEventData(streamId, it) }
+            )
+            return newVersion.toStreamVersion()
+        } catch (ex: DbstoreUnexpectedVersionException) {
+            TODO()
         }
     }
 
-    private fun readResult(resultSet: ResultSet): EventRecord<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun toDbstoreEventData(
+            streamId: StreamId,
+            eventData: EventData<T>
+    ): DbstoreEventData {
+        return DbstoreEventData(
+                streamId = streamId,
+                category = category,
+                eventId = eventData.eventId,
+                eventType = eventData.eventType,
+                data = serializeEvent(eventData.event),
+                metadata = serializeMetadata(eventData.metadata)
+        )
     }
 
+    private fun serializeMetadata(metadata: Map<String, String>): String {
+        // TODO: Handle errors more nicely
+        return objectMapper.writeValueAsString(metadata)
+    }
+
+    private fun serializeEvent(event: T): String {
+        // TODO: Handle errors more nicely
+        return objectMapper.writeValueAsString(event)
+    }
+
+    private fun fromDbstoreEventRecord(record: DbstoreEventRecord): EventRecord<T> {
+        return EventRecord(
+                eventId = record.eventId,
+                streamId = record.streamId,
+                streamVersion = record.getStreamVersion().toStreamVersion(),
+                repositoryVersion = record.getRepositoryVersion().toRepositoryVersion(),
+                eventType = record.eventType,
+                timestamp = record.timestamp,
+                metadata = parseMetadata(record.metadata),
+                event = parseEvent(record.data)
+        )
+    }
+
+    private fun parseEvent(data: String): T {
+        // TODO: Handle errors more nicely
+        return objectMapper.readValue(data, eventType)
+    }
+
+    private fun parseMetadata(metadata: String): ImmutableMap<String, String> {
+        // TODO: Handle errors more nicely
+        return objectMapper.readValue(metadata, object : TypeReference<Map<String, String>>() {})
+    }
+
+    private fun <V, R> createReadResult(
+            eventRows: List<DbstoreEventRow>,
+            version: V?,
+            streamIdentifier: String,
+            versionExtractor: (DbstoreEventRecord) -> V,
+            resultCreator: (ImmutableList<EventRecord<T>>, Boolean, V) -> R
+    ): R? {
+        val events = mutableListOf<EventRecord<T>>()
+        var lastVersion: V? = null
+        var foundEndOfStream = false
+
+        scanrows@ for (row in eventRows) {
+            when (row) {
+                is DbstoreEventRow.Event -> {
+                    events.add(fromDbstoreEventRecord(row.eventData))
+                    lastVersion = versionExtractor(row.eventData)
+                }
+                is DbstoreEventRow.EndOfStream -> {
+                    foundEndOfStream = true
+                    break@scanrows
+                }
+            }
+        }
+
+        return when {
+            lastVersion != null -> {
+                // Happy path, we have read some rows - doesn't matter if we had a version specified or not, the new
+                // version is the one of the last event read
+                logger.debug(
+                        "Read stream {} up to version {}",
+                        streamIdentifier, lastVersion
+                )
+                resultCreator(ImmutableList.copyOf(events), foundEndOfStream, lastVersion)
+            }
+            foundEndOfStream && version != null -> {
+                // We got no events but had a "from" specified, we assume the caller knows what they're talking
+                // about (the version does exist in this stream) and there are no newer events, so the version
+                //  specified is still relevant.
+                logger.debug(
+                        "Read {} - with no new events after {}",
+                        streamIdentifier, lastVersion
+                )
+
+                resultCreator(ImmutableList.copyOf(events), foundEndOfStream, version)
+            }
+            else -> {
+                // We have read no events, and found no end of stream marker, so the stream can't exist.
+                // Check for some potential weird cases that should not happen, e.g. we have an end of stream marker
+                // but no events.
+                if (foundEndOfStream) {
+                    logger.error(
+                            "Read {} from beginning and found sentinel but no events!",
+                            streamIdentifier
+                    )
+                }
+
+                logger.debug(
+                        "Read {} but found nothing",
+                        streamIdentifier, lastVersion
+                )
+                null
+            }
+        }
+    }
 
     override fun readFirst(streamId: StreamId): EventRecord<T> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -75,10 +222,6 @@ internal class DbstoreEventRepository<T>(
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun append(streamId: StreamId?, events: MutableList<EventData<T>>?, version: ExpectedVersion?): StreamVersion {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     override fun getStreamPublisher(streamId: StreamId, fromVersion: StreamVersion?): Publisher<EventSubscriptionUpdate<T>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
@@ -87,6 +230,25 @@ internal class DbstoreEventRepository<T>(
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-
+    companion object {
+        private val logger = LoggerFactory.getLogger(DbstoreEventRepository::class.java)
+    }
 }
 
+private fun ExpectedVersion.toExpectExisting(): Boolean? {
+    return when (this) {
+        is ExpectedVersion.Exactly -> true
+        ExpectedVersion.NotCreated -> false
+        ExpectedVersion.AnyExisting -> true
+        ExpectedVersion.Any -> null
+    }
+}
+
+private fun ExpectedVersion.toExpectVersion(): DbstoreStreamVersion? {
+    return when (this) {
+        is ExpectedVersion.Exactly -> streamVersion.toDbstoreStreamVersion()
+        ExpectedVersion.NotCreated,
+        ExpectedVersion.AnyExisting,
+        ExpectedVersion.Any -> null
+    }
+}

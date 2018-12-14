@@ -145,7 +145,10 @@ public interface EventRepository<T> {
      * @return The current version of the stream after the append has completed.
      */
     @NotNull
-    StreamVersion append(StreamId streamId, List<EventData<T>> events, ExpectedVersion version);
+    StreamVersion append(
+            @NotNull StreamId streamId,
+            @NotNull List<EventData<T>> events,
+            ExpectedVersion version);
 
     /**
      * Gets a Publisher that can be used to subscribe to events for a given stream id.

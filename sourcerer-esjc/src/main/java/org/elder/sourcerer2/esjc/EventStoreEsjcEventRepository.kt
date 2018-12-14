@@ -323,7 +323,7 @@ class EventStoreEsjcEventRepository<T : Any>(
                 ImmutableList.copyOf(events.map { fromEsEvent(it) }),
                 // Next is the one after the last event we've ready in eventstore, we want the
                 // reference to the one we've actually read as our reads are exclusive.
-                StreamVersion.ofInt(nextEventNumber - 1),
+                RepositoryVersion.ofInt(nextEventNumber - 1),
                 isEndOfStream
         )
     }

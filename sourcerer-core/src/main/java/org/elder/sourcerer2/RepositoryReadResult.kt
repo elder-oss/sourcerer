@@ -15,7 +15,7 @@ data class RepositoryReadResult<T>(
          * more events in the stream, or to ensure that events are added atomically later on by
          * asserting that the last event is still at this position.
          */
-        val version: StreamVersion,
+        val version: RepositoryVersion,
 
         /**
          * True if this is (currently) representing the last events of the stream.
