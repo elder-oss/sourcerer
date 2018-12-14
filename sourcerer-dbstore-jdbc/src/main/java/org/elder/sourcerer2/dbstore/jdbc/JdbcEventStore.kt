@@ -27,7 +27,7 @@ import javax.sql.DataSource
  */
 internal class JdbcEventStore(
         private val dataSource: DataSource,
-        private val eventsTableName: String,
+        eventsTableName: String,
         private val maxShards: Int = 8,
         private val maxReadBatchSize: Int = 2048
 ) : DbstoreEventStore {
@@ -67,14 +67,13 @@ internal class JdbcEventStore(
                     } else {
                         // We have a stream, they'll all have the same shard, grab the one from the first record we
                         // get our hands on, it doesn't matter if that's representing an event or the sentinel
-                        rowsFromExpectedEnd[0].getShard()
+                        rowsFromExpectedEnd[0].getRowShard()
                     }
 
             connection.persistEvents(commitTimestamp, streamShard, events)
             connection.commit()
         }
     }
-
 
     private fun assertExistenceStatus(
             rowsFromExpectedEnd: List<DbstoreEventRow>,
