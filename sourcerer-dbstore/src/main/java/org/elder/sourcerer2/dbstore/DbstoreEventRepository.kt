@@ -15,6 +15,7 @@ import org.elder.sourcerer2.RepositoryVersion
 import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.StreamVersion
+import org.elder.sourcerer2.exceptions.UnexpectedVersionException
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 
@@ -97,7 +98,23 @@ internal class DbstoreEventRepository<T>(
             )
             return newVersion.toStreamVersion()
         } catch (ex: DbstoreUnexpectedVersionException) {
-            TODO()
+            when (ex) {
+                is NotFoundWhenExpectedException -> throw UnexpectedVersionException(
+                        "Stream was not found when expected to exist",
+                        null,
+                        version
+                )
+                is FoundWhenNotExpectedException -> throw UnexpectedVersionException(
+                        "Stream was found when expected not to exist",
+                        ex.currentVersion?.toStreamVersion(),
+                        version
+                )
+                is FoundWithDifferentVersionException -> throw UnexpectedVersionException(
+                        "Stream was found with conflicting version",
+                        ex.currentVersion?.toStreamVersion(),
+                        version
+                )
+            }
         }
     }
 
@@ -144,9 +161,13 @@ internal class DbstoreEventRepository<T>(
         return normalizeEvent(rawEvent)
     }
 
-    private fun parseMetadata(metadata: String): ImmutableMap<String, String> {
+    private fun parseMetadata(metadataStr: String): ImmutableMap<String, String> {
         // TODO: Handle errors more nicely
-        return objectMapper.readValue(metadata, object : TypeReference<Map<String, String>>() {})
+        val metadata = objectMapper.readValue<Map<String, String>>(
+                metadataStr,
+                object : TypeReference<Map<String, String>>() {}
+        )
+        return ImmutableMap.copyOf(metadata)
     }
 
     private fun <V, R> createReadResult(

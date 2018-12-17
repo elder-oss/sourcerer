@@ -73,7 +73,7 @@ class JdbcEventStore(
     ): DbstoreStreamVersion {
         // If we have an expected version, go look for the event after that point (or the sentinel if not found),
         // if we don't, then just look for the sentinel directly.
-        return withConnection(true) { connection ->
+        return withConnection(false) { connection ->
             val fromVersion = expectVersion ?: SENTINEL_VERSION
             val rowsFromExpectedEnd = connection.readStreamEvents(streamId, category, 1, fromVersion)
             expectExisting?.let { assertExistenceStatus(rowsFromExpectedEnd, it) }
@@ -204,13 +204,23 @@ class JdbcEventStore(
     private fun <T> withConnection(readOnly: Boolean, dbOperation: (Connection) -> T): T {
         return dataSource.connection.use {
             it.autoCommit = false
+            var committed = false
             if (readOnly) {
                 it.isReadOnly = true
                 it.transactionIsolation = Connection.TRANSACTION_READ_COMMITTED
             } else {
                 it.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
             }
-            dbOperation(it)
+            try {
+                val result = dbOperation(it)
+                it.commit()
+                committed = true
+                result
+            } finally {
+                if (!readOnly && !committed) {
+                    it.rollback()
+                }
+            }
         }
     }
 
@@ -223,10 +233,10 @@ class JdbcEventStore(
     }
 
     private fun readEventRow(row: ResultSet): DbstoreEventRow {
-        val streamId = StreamId.ofString(row.getString(0))
-        val category = row.getString(1)
-        val shard = row.getInt(2)
-        val timestamp = row.getTimestamp(3).toInstant()
+        val streamId = StreamId.ofString(row.getString(1))
+        val category = row.getString(2)
+        val shard = row.getInt(3)
+        val timestamp = row.getTimestamp(4).toInstant()
 
         return when (timestamp) {
             SENTINEL_TIMESTAMP ->
@@ -237,11 +247,11 @@ class JdbcEventStore(
                         category = category
                 )
             else -> {
-                val transactionSeqNr = row.getInt(4)
-                val eventId = EventId.ofUuid(UUID.fromString(row.getString(5)))
-                val eventType = row.getString(6)
-                val data = row.getString(7)
-                val metadata = row.getString(8)
+                val transactionSeqNr = row.getInt(5)
+                val eventId = EventId.ofUuid(UUID.fromString(row.getString(6)))
+                val eventType = row.getString(7)
+                val data = row.getString(8)
+                val metadata = row.getString(9)
                 val event = DbstoreEventRecord(
                         streamId = streamId,
                         category = category,
@@ -266,7 +276,7 @@ class JdbcEventStore(
         // unique.
         val resultSet = prepareStatement(getCommitTimestampQuery).executeQuery()
         resultSet.next()
-        return resultSet.getTimestamp(0)
+        return resultSet.getTimestamp(1)
     }
 
     private fun Connection.persistEvents(
@@ -313,8 +323,11 @@ class JdbcEventStore(
     }
 
     private val getCommitTimestampQuery = """
-        SELECT GREATEST(UTC_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))) AS commit_timestamp
+        SELECT COALESCE(
+          GREATEST(UTC_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))),
+          UTC_TIMESTAMP(6)) AS commit_timestamp
         FROM $eventsTableName
+        WHERE timestamp < UNIX_TIMESTAMP($SENTINEL_TIMESTAMP_UNIX)
         """.trimIndent()
 
     private val readEventDataPrelude = """
@@ -364,7 +377,8 @@ class JdbcEventStore(
         // Some DB engines like MySql still use a signed int internally to represent timestamps, use this as the
         // highest safe value to use for a placeholder timestamp. The sentinel value is always created when the stream
         // is and marks the end of the stream.
-        val SENTINEL_TIMESTAMP: Instant = Instant.ofEpochSecond(Int.MAX_VALUE.toLong())
+        const val SENTINEL_TIMESTAMP_UNIX = Int.MAX_VALUE.toLong()
+        val SENTINEL_TIMESTAMP: Instant = Instant.ofEpochSecond(SENTINEL_TIMESTAMP_UNIX)
         val SENTINEL_VERSION = DbstoreStreamVersion(SENTINEL_TIMESTAMP, 0)
 
         private fun <T> ResultSet.readRowsWith(readEventRow: (ResultSet) -> T): List<T> {

@@ -14,8 +14,14 @@ object Sharder {
                 .putString(category, StandardCharsets.UTF_8)
                 .putString(streamId.identifier, StandardCharsets.UTF_8)
                 .hash()
-                .asInt() % maxShards
+                .asInt()
+                .getShard(maxShards)
     }
 
     private val shardHashFunction = Hashing.murmur3_128()
+}
+
+private fun Int.getShard(maxShards: Int): Int {
+    val remainder = this % maxShards
+    return if (remainder < 0) remainder + maxShards else remainder
 }
