@@ -336,13 +336,13 @@ class JdbcEventStore(
         WHERE category = ?
         ${if (queryShard) readRepositoryShardFragment else ""}
         ${if (queryVersion) filterRepositoryVersionFragment else ""}
-        ORDER BY timestamp, stream_id, batch_sequence_nr
+        ORDER BY timestamp, stream_id, transaction_seq_nr
         LIMIT ?
         """.trimIndent()
 
     private val filterStreamVersionFragment = """
         AND timestamp >= ?
-        AND (timestamp > ? OR batch_sequence_nr > ?)
+        AND (timestamp > ? OR transaction_seq_nr > ?)
         """.trimIndent()
 
     private fun makeReadStreamEventsQuery(queryVersion: Boolean) = """
@@ -350,7 +350,7 @@ class JdbcEventStore(
         WHERE stream_id = ?
         AND category = ?
         ${if (queryVersion) filterStreamVersionFragment else ""}
-        ORDER BY timestamp, batch_sequence_nr
+        ORDER BY timestamp, transaction_seq_nr
         LIMIT ?
         """.trimIndent()
 
