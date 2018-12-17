@@ -144,7 +144,7 @@ class JdbcEventStore(
             effectiveMaxEvents: Int,
             fromVersion: DbstoreRepositoryVersion?
     ): PreparedStatement {
-        var i = 0
+        var i = 1
         val query = makeReadRepositoryEventsQuery(shard != null, fromVersion != null)
         val statement = prepareStatement(query)
         statement.setString(i++, category)
@@ -185,7 +185,7 @@ class JdbcEventStore(
             effectiveMaxEvents: Int,
             fromVersion: DbstoreStreamVersion?
     ): PreparedStatement {
-        var i = 0
+        var i = 1
         val query = makeReadStreamEventsQuery(fromVersion != null)
         val statement = prepareStatement(query)
         statement.setString(i++, streamId.identifier)
@@ -277,16 +277,17 @@ class JdbcEventStore(
         var lastIdx = 0
 
         events.forEachIndexed { idx, eventData ->
+            var i = 1
             val statement = prepareStatement(writeEventDataStatement)
-            statement.setString(0, eventData.streamId.identifier)
-            statement.setString(1, eventData.category)
-            statement.setInt(2, streamShard)
-            statement.setTimestamp(3, commitTimestamp)
-            statement.setInt(4, idx)
-            statement.setString(5, eventData.eventId.id.toString())
-            statement.setString(6, eventData.eventType)
-            statement.setString(7, eventData.data)
-            statement.setString(8, eventData.metadata)
+            statement.setString(i++, eventData.streamId.identifier)
+            statement.setString(i++, eventData.category)
+            statement.setInt(i++, streamShard)
+            statement.setTimestamp(i++, commitTimestamp)
+            statement.setInt(i++, idx)
+            statement.setString(i++, eventData.eventId.id.toString())
+            statement.setString(i++, eventData.eventType)
+            statement.setString(i++, eventData.data)
+            statement.setString(i, eventData.metadata)
             statement.execute()
             lastIdx = idx
         }
@@ -295,17 +296,18 @@ class JdbcEventStore(
     }
 
     private fun Connection.insertSentinel(category: String, streamId: StreamId): Int {
+        var i = 1
         val shard = Sharder.getShard(category, streamId, shards)
         val statement = prepareStatement(writeEventDataStatement)
-        statement.setString(0, streamId.identifier)
-        statement.setString(1, category)
-        statement.setInt(2, shard)
-        statement.setTimestamp(3, Timestamp.from(SENTINEL_TIMESTAMP))
-        statement.setInt(4, 0)
-        statement.setString(5, UUID.randomUUID().toString())
-        statement.setString(6, "<end of stream>")
-        statement.setString(7, "")
-        statement.setString(8, "")
+        statement.setString(i++, streamId.identifier)
+        statement.setString(i++, category)
+        statement.setInt(i++, shard)
+        statement.setTimestamp(i++, Timestamp.from(SENTINEL_TIMESTAMP))
+        statement.setInt(i++, 0)
+        statement.setString(i++, UUID.randomUUID().toString())
+        statement.setString(i++, "<end of stream>")
+        statement.setString(i++, "")
+        statement.setString(i, "")
         statement.execute()
         return shard
     }
