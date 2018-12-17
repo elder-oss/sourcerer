@@ -2,7 +2,6 @@ package org.elder.sourcerer2.dbstore
 
 import org.elder.sourcerer2.StreamId
 
-
 interface DbstoreEventStore {
     /**
      * The number of independent shards that this repository supports. Each individual event stream will be
