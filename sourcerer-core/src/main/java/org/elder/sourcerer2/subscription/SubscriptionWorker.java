@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
     private static final Logger logger = LoggerFactory.getLogger(SubscriptionWorker.class);
     private final EventRepository<T> repository;
+    private final Integer shard;
     private final EventSubscriptionPositionSource positionSource;
     private final EventSubscriptionHandler<T> handler;
     private final AtomicInteger retryCount;
@@ -35,10 +36,12 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
 
     public SubscriptionWorker(
             final EventRepository<T> repository,
+            final Integer shard,
             final EventSubscriptionPositionSource positionSource,
             final EventSubscriptionHandler<T> handler,
             final SubscriptionWorkerConfig config) {
         this.repository = repository;
+        this.shard = shard;
         this.positionSource = positionSource;
         this.handler = handler;
         this.config = config;
@@ -114,7 +117,9 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
 
         try {
             logger.info("Subscribing to event store ...");
-            repository.getPublisher(subscriptionPosition).subscribe(boundedSubscriber);
+            repository
+                    .getRepositoryPublisher(subscriptionPosition, shard)
+                    .subscribe(boundedSubscriber);
             while (processUpdates(currentUpdates)) {
                 logger.debug("Processed updates, will do more");
                 retryCount.set(0);

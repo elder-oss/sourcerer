@@ -1,11 +1,21 @@
 package org.elder.sourcerer2;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import java.util.List;
 
 public interface EventRepository<T> {
+    /**
+     * Gets the number of distinct shards supported by this event repository. Shard allow for all
+     * events for a category to be read or subscribed to in parallel streams, where each individual
+     * event stream is always mapped to the same shard. If this returns null, then shards are not
+     * supported.
+     */
+    @Nullable
+    Integer getShards();
+
     /**
      * Gets the java Class representing the runtime type that this event repository manages events
      * for.
@@ -22,6 +32,8 @@ public interface EventRepository<T> {
      *                  an event stream in batches, this would be the version returned from the last
      *                  read event, not the version expected to be read next. Use null to read the
      *                  stream from the very beginning.
+     * @param shard     The shard to read from. If specified, this must be in the range from 0
+     *                  (inclusive) to the value returned by getShards() (exclusive)
      * @param maxEvents The maximum number of events to read in one go. Note that this may be
      *                  truncated to a lower number by the implementation, it is not safe to assume
      *                  that a successful read will have this many events, even if they are present
@@ -29,7 +41,26 @@ public interface EventRepository<T> {
      * @return A result record describing the outcome of the read and the events themselves, or null
      * if no events exist in this repository.
      */
-    RepositoryReadResult<T> readAll(RepositoryVersion version, int maxEvents);
+    RepositoryReadResult<T> readAll(
+            RepositoryVersion version,
+            Integer shard,
+            int maxEvents);
+
+    /**
+     * Reads from the stream of all events kept in the event repository.
+     *
+     * @param version The position in the event stream to read events after. When reading from
+     *                an event stream in batches, this would be the version returned from the last
+     *                read event, not the version expected to be read next. Use null to read the
+     *                stream from the very beginning.
+     * @param shard   The shard to read from. If specified, this must be in the range from 0
+     *                (inclusive) to the value returned by getShards() (exclusive)
+     * @return A result record describing the outcome of the read and the events themselves, or null
+     * if no events exist in this repository.
+     */
+    default RepositoryReadResult<T> readAll(final RepositoryVersion version, Integer shard) {
+        return readAll(version, shard, Integer.MAX_VALUE);
+    }
 
     /**
      * Reads from the stream of all events kept in the event repository.
@@ -42,7 +73,7 @@ public interface EventRepository<T> {
      * if no events exist in this repository.
      */
     default RepositoryReadResult<T> readAll(final RepositoryVersion version) {
-        return readAll(version, Integer.MAX_VALUE);
+        return readAll(version, null, Integer.MAX_VALUE);
     }
 
     /**
@@ -52,7 +83,7 @@ public interface EventRepository<T> {
      * if no events exist in this repository.
      */
     default RepositoryReadResult<T> readAll() {
-        return readAll(null);
+        return readAll(null, null);
     }
 
     /**
@@ -100,40 +131,6 @@ public interface EventRepository<T> {
     }
 
     /**
-     * Reads first event for a given stream id.
-     *
-     * @param streamId The id of the stream to read event for.
-     * @return The event, or null if no stream was found.
-     */
-    EventRecord<T> readFirst(@NotNull StreamId streamId);
-
-    /**
-     * Reads last event for a given stream id.
-     *
-     * @param streamId The id of the stream to read event for.
-     * @return The event, or null if no stream was found.
-     */
-    EventRecord<T> readLast(@NotNull StreamId streamId);
-
-    /**
-     * Gets the current version (i.e. the position of the last written event) for the event
-     * repository.
-     *
-     * @return The position of the last event written to the event repository. Returns null
-     * if no events are available.
-     */
-    RepositoryVersion getCurrentVersion();
-
-    /**
-     * Gets the current version (i.e. the position of the last written event) for a given stream.
-     *
-     * @param streamId The id of the stream to read events for.
-     * @return The position of the last event written to the specified stream. Returns null
-     * if no events are available.
-     */
-    StreamVersion getCurrentVersion(@NotNull StreamId streamId);
-
-    /**
      * Appends events to a new or existing stream.
      *
      * @param streamId The stream to append events to.
@@ -177,9 +174,13 @@ public interface EventRepository<T> {
      *                    the beginning of the stream. If less than the current version, the
      *                    publisher will start replaying historical events, and then
      *                    transparently switch to live events.
+     * @param shard       The shard to read from. If specified, this must be in the range from 0
+     *                    (inclusive) to the value returned by getShards() (exclusive)
      * @return A Publisher that, when subscribed to, will start producing events for each new event
      * written to any stream related to this repository.
      */
     @NotNull
-    Publisher<EventSubscriptionUpdate<T>> getPublisher(RepositoryVersion fromVersion);
+    Publisher<EventSubscriptionUpdate<T>> getRepositoryPublisher(
+            RepositoryVersion fromVersion,
+            Integer shard);
 }

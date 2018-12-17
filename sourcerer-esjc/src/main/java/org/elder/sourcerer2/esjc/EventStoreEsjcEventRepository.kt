@@ -84,14 +84,23 @@ class EventStoreEsjcEventRepository<T : Any>(
                     .build()
     private val categoryStreamName = "\$ce-$streamPrefix"
 
+    override fun getShards(): Int? {
+        return null
+    }
+
     override fun getEventType(): Class<T> {
         return eventClass
     }
 
     override fun readAll(
             version: RepositoryVersion?,
+            shard: Int?,
             maxEvents: Int
     ): RepositoryReadResult<T>? {
+        if (shard != null) {
+            throw UnsupportedOperationException("The ESJC repository does not support sharding")
+        }
+
         return readInternal(
                 categoryStreamName,
                 version?.toEsVersion(),
@@ -111,48 +120,6 @@ class EventStoreEsjcEventRepository<T : Any>(
                 maxEvents,
                 false)
                 ?.toStreamResult()
-    }
-
-    override fun readFirst(streamId: StreamId): EventRecord<T>? {
-        return readSingleInternal(toEsStreamId(streamId), 0, false)
-    }
-
-    override fun readLast(streamId: StreamId): EventRecord<T>? {
-        return readSingleInternal(toEsStreamId(streamId), -1, false)
-    }
-
-    private fun readSingleInternal(
-            internalStreamId: String,
-            eventNumber: Int,
-            resolveLinksTo: Boolean
-    ): EventRecord<T>? {
-        logger.debug(
-                "Reading event {} from {} (in {})",
-                eventNumber,
-                internalStreamId,
-                streamPrefix)
-
-        val eventsSlice = completeReadFuture(
-                eventStore.readStreamEventsBackward(
-                        internalStreamId,
-                        eventNumber,
-                        1,
-                        resolveLinksTo, null))
-
-        if (eventsSlice.events.isEmpty()) {
-            logger.debug(
-                    "Reading {} (in {}) returned no event",
-                    internalStreamId,
-                    streamPrefix)
-            return null
-        }
-
-        val event = eventsSlice.events[0]
-        logger.debug(
-                "Read event from {} (version {})",
-                internalStreamId,
-                event.originalEventNumber())
-        return fromEsEvent(event)
     }
 
     private fun readInternal(
@@ -223,26 +190,6 @@ class EventStoreEsjcEventRepository<T : Any>(
         return StreamVersion.ofInt(nextExpectedVersion)
     }
 
-    override fun getCurrentVersion(): RepositoryVersion? {
-        return getStreamVersionInternal(categoryStreamName)?.let { RepositoryVersion.ofInt(it) }
-    }
-
-    override fun getCurrentVersion(streamId: StreamId): StreamVersion? {
-        return getStreamVersionInternal(toEsStreamId(streamId))?.let { StreamVersion.ofInt(it) }
-    }
-
-    private fun getStreamVersionInternal(streamName: String): Int? {
-        val streamEventsSlice = completeReadFuture(
-                eventStore.readStreamEventsBackward(
-                        streamName,
-                        -1,
-                        1,
-                        false))
-        return if (streamEventsSlice.status == SliceReadStatus.Success)
-            streamEventsSlice.lastEventNumber
-        else null
-    }
-
     override fun getStreamPublisher(
             streamId: StreamId,
             fromVersion: StreamVersion?
@@ -263,7 +210,14 @@ class EventStoreEsjcEventRepository<T : Any>(
         }
     }
 
-    override fun getPublisher(fromVersion: RepositoryVersion?): Publisher<EventSubscriptionUpdate<T>> {
+    override fun getRepositoryPublisher(
+            fromVersion: RepositoryVersion?,
+            shard: Int?
+    ): Publisher<EventSubscriptionUpdate<T>> {
+        if (shard != null) {
+            throw UnsupportedOperationException("The ESJC repository does not support sharding")
+        }
+
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion)
         return Flux.create { emitter ->

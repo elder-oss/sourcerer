@@ -6,7 +6,6 @@ import com.github.msemys.esjc.EventStoreBuilder;
 import com.google.common.collect.ImmutableMap;
 import org.elder.sourcerer2.EventData;
 import org.elder.sourcerer2.EventId;
-import org.elder.sourcerer2.EventRecord;
 import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.ExpectedVersion;
 import org.elder.sourcerer2.StreamId;
@@ -21,10 +20,6 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Random;
 import java.util.UUID;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 public class EventStoreEsjcEventRepositoryIntegrationTest {
     private static final String NAMESPACE = randomNamespace();
@@ -58,25 +53,6 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
         eventStore.disconnect();
     }
 
-    @Test
-    public void readFirstEvent() {
-        append(new TestEventType("payload-1"));
-        append(new TestEventType("payload-2"));
-
-        EventRecord<TestEventType> actual = repository.readFirst(streamId);
-
-        assertThat(actual.getEvent().getValue(), equalTo("payload-1"));
-    }
-
-    @Test
-    public void readLastEvent() {
-        append(new TestEventType("payload-1"));
-        append(new TestEventType("payload-2"));
-
-        EventRecord<TestEventType> actual = repository.readLast(streamId);
-
-        assertThat(actual.getEvent().getValue(), equalTo("payload-2"));
-    }
 
     @Test
     public void readBeyondEvent() {
@@ -90,20 +66,6 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
 
         int foo = 234;
         // assertThat(actual.getEvent().getValue(), equalTo("payload-2"));
-    }
-
-    @Test
-    public void readLastReturnsNullForMissingStream() {
-        EventRecord<TestEventType> actual = repository.readLast(streamId);
-
-        assertThat(actual, nullValue());
-    }
-
-    @Test
-    public void readFirstReturnsNullForMissingStream() {
-        EventRecord<TestEventType> actual = repository.readFirst(streamId);
-
-        assertThat(actual, nullValue());
     }
 
     private void append(final TestEventType type) {

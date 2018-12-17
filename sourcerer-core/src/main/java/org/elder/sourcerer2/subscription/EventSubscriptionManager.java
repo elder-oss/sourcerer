@@ -28,11 +28,13 @@ public class EventSubscriptionManager<T> {
 
     public EventSubscriptionManager(
             final EventRepository<T> repository,
+            final Integer shard,
             final EventSubscriptionPositionSource positionSource,
             final EventSubscriptionHandler<T> subscriptionHandler,
             final SubscriptionWorkerConfig config) {
         this.subscriptionWorker = new SubscriptionWorker<>(
                 repository,
+                shard,
                 positionSource,
                 subscriptionHandler,
                 config);

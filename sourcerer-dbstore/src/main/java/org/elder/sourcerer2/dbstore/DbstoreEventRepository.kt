@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import org.elder.sourcerer2.EventData
+import org.elder.sourcerer2.EventNormalizer
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionUpdate
@@ -19,17 +20,23 @@ import org.slf4j.LoggerFactory
 
 internal class DbstoreEventRepository<T>(
         private val eventType: Class<T>,
+        private val supportedShards: Int?,
         private val category: String,
-        private val shard: Int?,
         private val eventStore: DbstoreEventStore,
-        private val objectMapper: ObjectMapper
+        private val objectMapper: ObjectMapper,
+        private val normalizer: EventNormalizer<T>?
 ) : EventRepository<T> {
+    override fun getShards(): Int? {
+        return supportedShards
+    }
+
     override fun getEventType(): Class<T> {
         return eventType
     }
 
     override fun readAll(
             version: RepositoryVersion?,
+            shard: Int?,
             maxEvents: Int
     ): RepositoryReadResult<T>? {
         val dbstoreVersion = version?.toDbstoreRepositoryVersion()
@@ -133,7 +140,8 @@ internal class DbstoreEventRepository<T>(
 
     private fun parseEvent(data: String): T {
         // TODO: Handle errors more nicely
-        return objectMapper.readValue(data, eventType)
+        val rawEvent = objectMapper.readValue(data, eventType)
+        return normalizeEvent(rawEvent)
     }
 
     private fun parseMetadata(metadata: String): ImmutableMap<String, String> {
@@ -206,28 +214,23 @@ internal class DbstoreEventRepository<T>(
         }
     }
 
-    override fun readFirst(streamId: StreamId): EventRecord<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun readLast(streamId: StreamId): EventRecord<T> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getCurrentVersion(): RepositoryVersion {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getCurrentVersion(streamId: StreamId): StreamVersion {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     override fun getStreamPublisher(streamId: StreamId, fromVersion: StreamVersion?): Publisher<EventSubscriptionUpdate<T>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun getPublisher(fromVersion: RepositoryVersion?): Publisher<EventSubscriptionUpdate<T>> {
+    override fun getRepositoryPublisher(
+            fromVersion: RepositoryVersion?,
+            shard: Int?
+    ): Publisher<EventSubscriptionUpdate<T>> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    private fun normalizeEvent(rawEvent: T): T {
+        return if (normalizer != null) {
+            normalizer.normalizeEvent(rawEvent)
+        } else {
+            rawEvent
+        }
     }
 
     companion object {

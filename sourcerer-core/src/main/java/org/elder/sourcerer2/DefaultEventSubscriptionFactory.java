@@ -10,7 +10,9 @@ public class DefaultEventSubscriptionFactory<T> implements EventSubscriptionFact
     @Override
     public EventSubscription fromSubscriptionHandler(
             final EventSubscriptionHandler<T> handler,
-            final SubscriptionWorkerConfig config) {
-        return new DefaultEventSubscription(repository, handler, config);
+            final SubscriptionWorkerConfig config,
+            final Integer shard
+    ) {
+        return new DefaultEventSubscription(repository, shard, handler, config);
     }
 }

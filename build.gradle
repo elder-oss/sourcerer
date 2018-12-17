@@ -10,7 +10,7 @@ buildscript {
 }
 
 plugins {
-    id "org.sonarqube" version "2.6.1"
+    id "org.sonarqube" version "2.6.2"
 }
 
 apply plugin: 'io.codearte.nexus-staging'
@@ -133,13 +133,7 @@ subprojects {
         }
 
         repositories {
-            maven {
-                credentials {
-                    username property("sourcerer_nexus_username")
-                    password property("sourcerer_nexus_password")
-                }
-                url property("sourcerer_nexus_releaseUrl")
-            }
+            mavenLocal()
         }
     }
 
