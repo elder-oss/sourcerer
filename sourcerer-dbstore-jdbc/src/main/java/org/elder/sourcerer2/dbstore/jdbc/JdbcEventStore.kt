@@ -313,7 +313,7 @@ class JdbcEventStore(
     }
 
     private val getCommitTimestampQuery = """
-        SELECT GREATER(UTC_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))) AS commit_timestamp
+        SELECT GREATEST(UTC_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))) AS commit_timestamp
         FROM $eventsTableName
         """.trimIndent()
 
