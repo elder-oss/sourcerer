@@ -26,7 +26,7 @@ import javax.sql.DataSource
  * timestamps. While Spanner provides monotonically increasing commit timestamps, a generic SQL backend does not. As
  * such, we need to emulate this behaviour by using locking reads.
  */
-internal class JdbcEventStore(
+class JdbcEventStore(
         private val dataSource: DataSource,
         eventsTableName: String,
         override val shards: Int = 8,
