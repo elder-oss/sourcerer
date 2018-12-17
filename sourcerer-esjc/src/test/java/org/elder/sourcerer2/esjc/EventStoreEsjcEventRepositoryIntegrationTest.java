@@ -53,7 +53,6 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
         eventStore.disconnect();
     }
 
-
     @Test
     public void readBeyondEvent() {
         append(new TestEventType("payload-1"));
