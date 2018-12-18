@@ -15,15 +15,14 @@ data class DbstoreEventRecord(
         val streamId: StreamId,
 
         /**
-         * The category of events that this event is representing (e.g. the type of aggregates that it represents).
+         * A numerical stable hash for the individual stream that this event came from.
          */
-        val category: String,
+        val streamHash: Int,
 
         /**
-         * An integer shard 0-1023, based on the stream id. This can be used to route events in subscriptions to
-         * particular instances.
+         * The category of events that this event is representing (e.g. the type of aggregates that it represents).
          */
-        val shard: Int,
+        val repository: String,
 
         /**
          * The time at which the storage engine recorded the event. This may be different from the

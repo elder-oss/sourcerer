@@ -35,7 +35,7 @@ public final class EventTypeUtils {
         }
     }
 
-    public static EventType getEventTypeAnnotation(final Class<?> eventType) {
+    private static EventType getEventTypeAnnotation(final Class<?> eventType) {
         if (!eventType.isAnnotationPresent(EventType.class)) {
             throw new IllegalArgumentException(
                     "Provided event type does not have an EvenType annotation");

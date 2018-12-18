@@ -8,12 +8,9 @@ import org.elder.sourcerer2.StreamId
  */
 sealed class DbstoreEventRow {
     data class Event(val eventData: DbstoreEventRecord) : DbstoreEventRow()
-    data class EndOfStream(val streamId: StreamId, val category: String, val shard: Int) : DbstoreEventRow()
-
-    fun getRowShard(): Int {
-        return when (this) {
-            is Event -> eventData.shard
-            is EndOfStream -> shard
-        }
-    }
+    data class EndOfStream(
+            val streamId: StreamId,
+            val streamHash: Int,
+            val repository: String
+    ) : DbstoreEventRow()
 }

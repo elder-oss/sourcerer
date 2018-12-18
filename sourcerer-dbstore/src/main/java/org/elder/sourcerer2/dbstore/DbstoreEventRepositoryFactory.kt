@@ -1,7 +1,6 @@
 package org.elder.sourcerer2.dbstore
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.base.Preconditions
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventRepositoryFactory
 import org.elder.sourcerer2.EventTypeUtils
@@ -10,41 +9,47 @@ import java.util.regex.Pattern
 
 class DbstoreEventRepositoryFactory(
         private val eventStore: DbstoreEventStore,
-        private val supportedShards: Int?,
         private val objectMapper: ObjectMapper,
-        private val defaultNamespace: String
+        private val defaultNamespace: String,
+        private val defaultShards: Int
 ) : EventRepositoryFactory {
-
     init {
-        Preconditions.checkNotNull(eventStore)
-        Preconditions.checkNotNull(objectMapper)
-        Preconditions.checkNotNull(defaultNamespace)
-
         validateNamespace(defaultNamespace)
     }
 
     override fun <T> getEventRepository(eventType: Class<T>): EventRepository<T> {
-        return getEventRepository(eventType, defaultNamespace)
+        return getEventRepository(eventType, defaultNamespace, defaultShards)
+    }
+
+    override fun <T> getEventRepository(eventType: Class<T>, namespace: String): EventRepository<T> {
+        return getEventRepository(eventType, namespace, defaultShards)
     }
 
     override fun <T> getEventRepository(
             eventType: Class<T>,
-            namespace: String
+            namespace: String,
+            shards: Int?
     ): EventRepository<T> {
         validateNamespace(namespace)
+        val actualShards = validateShards(shards)
         val repositoryName = EventTypeUtils.getRepositoryName(eventType)
         val normalizer = EventTypeUtils.getNormalizer(eventType)
-        val category = String.format("%s:%s", namespace, repositoryName)
+        val repositoryInfo = DbstoreRepositoryInfo(
+                eventType = eventType,
+                namespace = namespace,
+                repository = repositoryName,
+                shards = actualShards,
+                normalizer = normalizer
+        )
         logger.info(
                 "Creating DbStore repository for {} with category {}",
-                eventType.simpleName, category)
-        return DbstoreEventRepository(
-                eventType,
-                supportedShards,
-                category,
-                eventStore,
-                objectMapper,
-                normalizer
+                eventType.simpleName, repositoryInfo)
+        return DbstoreEventRepository(repositoryInfo, eventStore, objectMapper)
+    }
+
+    private fun validateShards(shards: Int?): Int {
+        return shards ?: throw IllegalArgumentException(
+                "The DbStore Sourcerer repository requires a shard number to be specified"
         )
     }
 

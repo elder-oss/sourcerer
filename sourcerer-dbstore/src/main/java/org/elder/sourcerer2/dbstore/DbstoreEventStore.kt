@@ -4,23 +4,14 @@ import org.elder.sourcerer2.StreamId
 
 interface DbstoreEventStore {
     /**
-     * The number of independent shards that this repository supports. Each individual event stream will be
-     * automatically assigned to a shard when the stream is first created in the range of [0,shards). The number of
-     * shards can be configured to go up over time, but not down (or some events would be excluded). Note that as
-     * shards are assigned when the stream is first created, increasing the number of shards at a later stage will not
-     * re-balance old streams, it will only ensure that newly created streams are spread across all then available
-     * shards.
-     */
-    val shards: Int
-
-    /**
      * Reads events from a given particular point in time (version) across all of the events in this repository.
-     * @param shard the shard to read from, if null, events will be read across all of the shards (in order).
+     * @param shardRange the hash range describing a logical shard to read from. This must always be specified,
+     * to read from all events, specify the range describing all possible hash values.
      */
     fun readRepositoryEvents(
-            category: String,
-            shard: Int?,
+            repositoryInfo: DbstoreRepositoryInfo<*>,
             fromVersion: DbstoreRepositoryVersion? = null,
+            shardRange: DbstoreShardHashRange,
             maxEvents: Int = 4096
     ): List<DbstoreEventRow>
 
@@ -28,8 +19,8 @@ interface DbstoreEventStore {
      * Reads events from a given particular point in time (version) in an individual event stream.
      */
     fun readStreamEvents(
+            repositoryInfo: DbstoreRepositoryInfo<*>,
             streamId: StreamId,
-            category: String,
             fromVersion: DbstoreStreamVersion? = null,
             maxEvents: Int = 4096
     ): List<DbstoreEventRow>
@@ -40,8 +31,8 @@ interface DbstoreEventStore {
      * the expected requirements.
      */
     fun appendStreamEvents(
+            repositoryInfo: DbstoreRepositoryInfo<*>,
             streamId: StreamId,
-            category: String,
             expectExisting: Boolean?,
             expectVersion: DbstoreStreamVersion?,
             events: List<DbstoreEventData>

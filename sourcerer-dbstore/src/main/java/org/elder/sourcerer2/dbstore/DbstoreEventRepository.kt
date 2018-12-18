@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import org.elder.sourcerer2.EventData
-import org.elder.sourcerer2.EventNormalizer
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionUpdate
@@ -20,19 +19,16 @@ import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
 
 internal class DbstoreEventRepository<T>(
-        private val eventType: Class<T>,
-        private val supportedShards: Int?,
-        private val category: String,
+        private val repositoryInfo: DbstoreRepositoryInfo<T>,
         private val eventStore: DbstoreEventStore,
-        private val objectMapper: ObjectMapper,
-        private val normalizer: EventNormalizer<T>?
+        private val objectMapper: ObjectMapper
 ) : EventRepository<T> {
     override fun getShards(): Int? {
-        return supportedShards
+        return repositoryInfo.shards
     }
 
     override fun getEventType(): Class<T> {
-        return eventType
+        return repositoryInfo.eventType
     }
 
     override fun readAll(
@@ -40,17 +36,18 @@ internal class DbstoreEventRepository<T>(
             shard: Int?,
             maxEvents: Int
     ): RepositoryReadResult<T>? {
+        val shardRange = validateShard(shard)
         val dbstoreVersion = version?.toDbstoreRepositoryVersion()
         val eventRows = eventStore.readRepositoryEvents(
-                category,
-                shard,
+                repositoryInfo,
                 dbstoreVersion,
+                shardRange,
                 maxEvents)
 
         return createReadResult(
                 eventRows,
                 version,
-                "$category${if (shard != null) ":$shard" else ""}",
+                "$repositoryInfo${if (shard != null) ":$shard" else ""}",
                 { it.getRepositoryVersion().toRepositoryVersion() },
                 { events, endOfStream, newVersion ->
                     RepositoryReadResult(
@@ -67,12 +64,16 @@ internal class DbstoreEventRepository<T>(
             maxEvents: Int
     ): StreamReadResult<T>? {
         val dbstoreVersion = version?.toDbstoreStreamVersion()
-        val eventRows = eventStore.readStreamEvents(streamId,
-                category, dbstoreVersion, maxEvents)
+        val eventRows = eventStore.readStreamEvents(
+                repositoryInfo,
+                streamId,
+                dbstoreVersion,
+                maxEvents
+        )
         return createReadResult(
                 eventRows,
                 version,
-                "$category:${streamId.identifier}",
+                "${repositoryInfo.repository}:${streamId.identifier}",
                 { it.getStreamVersion().toStreamVersion() },
                 { events, endOfStream, newVersion ->
                     StreamReadResult(
@@ -90,8 +91,8 @@ internal class DbstoreEventRepository<T>(
     ): StreamVersion {
         try {
             val newVersion = eventStore.appendStreamEvents(
+                    repositoryInfo,
                     streamId,
-                    category,
                     version?.toExpectExisting(),
                     version?.toExpectVersion(),
                     events.map { toDbstoreEventData(streamId, it) }
@@ -118,13 +119,27 @@ internal class DbstoreEventRepository<T>(
         }
     }
 
+    private fun validateShard(shard: Int?): DbstoreShardHashRange {
+        return if (shard != null) {
+            if (shard < 0) {
+                throw IllegalArgumentException("Shard nunmber must be 0 or greater")
+            }
+            if (shard >= repositoryInfo.shards) {
+                throw IllegalArgumentException(
+                        "Shard number must be less than the configured number of shards: ${repositoryInfo.shards}")
+            }
+            DbstoreSharder.getShardRange(shard, repositoryInfo.shards)
+        } else {
+            DbstoreShardHashRange.COMPLETE_RANGE
+        }
+    }
+
     private fun toDbstoreEventData(
             streamId: StreamId,
             eventData: EventData<T>
     ): DbstoreEventData {
         return DbstoreEventData(
                 streamId = streamId,
-                category = category,
                 eventId = eventData.eventId,
                 eventType = eventData.eventType,
                 data = serializeEvent(eventData.event),
@@ -247,8 +262,8 @@ internal class DbstoreEventRepository<T>(
     }
 
     private fun normalizeEvent(rawEvent: T): T {
-        return if (normalizer != null) {
-            normalizer.normalizeEvent(rawEvent)
+        return if (repositoryInfo.normalizer != null) {
+            repositoryInfo.normalizer.normalizeEvent(rawEvent)
         } else {
             rawEvent
         }

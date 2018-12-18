@@ -14,11 +14,6 @@ data class DbstoreEventData(
         val streamId: StreamId,
 
         /**
-         * The category of events that this event is representing (e.g. the type of aggregates that it represents).
-         */
-        val category: String,
-
-        /**
          * Gets a globally unique id for this event. This will be unique across all events and all
          * repositories.
          */
