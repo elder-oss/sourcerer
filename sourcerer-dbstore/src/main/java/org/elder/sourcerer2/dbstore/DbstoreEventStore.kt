@@ -11,7 +11,7 @@ interface DbstoreEventStore {
     fun readRepositoryEvents(
             repositoryInfo: DbstoreRepositoryInfo<*>,
             fromVersion: DbstoreRepositoryVersion? = null,
-            shardRange: DbstoreShardHashRange,
+            shardRange: DbstoreShardHashRange = DbstoreShardHashRange.COMPLETE_RANGE,
             maxEvents: Int = 4096
     ): List<DbstoreEventRow>
 

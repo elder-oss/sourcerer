@@ -102,6 +102,7 @@ class JdbcEventStore(
 
             connection.persistEvents(
                     repositoryInfo = repositoryInfo,
+                    streamId = streamId,
                     streamHash = streamHash,
                     commitTimestamp = commitTimestamp,
                     events = events
@@ -305,6 +306,7 @@ class JdbcEventStore(
 
     private fun Connection.persistEvents(
             repositoryInfo: DbstoreRepositoryInfo<*>,
+            streamId: StreamId,
             streamHash: Int,
             commitTimestamp: Timestamp,
             events: List<DbstoreEventData>
@@ -317,7 +319,7 @@ class JdbcEventStore(
             statement.setInt(i++, streamHash)
             statement.setString(i++, repositoryInfo.namespace)
             statement.setString(i++, repositoryInfo.repository)
-            statement.setString(i++, eventData.streamId.identifier)
+            statement.setString(i++, streamId.identifier)
             statement.setTimestamp(i++, commitTimestamp)
             statement.setInt(i++, idx)
             statement.setString(i++, eventData.eventId.id.toString())
@@ -353,10 +355,10 @@ class JdbcEventStore(
 
     private val getCommitTimestampQuery = """
         SELECT COALESCE(
-          GREATEST(UTC_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))),
-          UTC_TIMESTAMP(6)) AS commit_timestamp
+          GREATEST(CURRENT_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))),
+          CURRENT_TIMESTAMP(6)) AS commit_timestamp
         FROM $eventsTableName
-        WHERE timestamp < UNIX_TIMESTAMP($SENTINEL_TIMESTAMP_UNIX)
+        WHERE timestamp < '2038-01-19 03:14:07'
         AND namespace = ?
         AND repository = ?
         """.trimIndent()

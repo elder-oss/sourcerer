@@ -95,7 +95,7 @@ internal class DbstoreEventRepository<T>(
                     streamId,
                     version?.toExpectExisting(),
                     version?.toExpectVersion(),
-                    events.map { toDbstoreEventData(streamId, it) }
+                    events.map { it.toDbstoreEventData() }
             )
             return newVersion.toStreamVersion()
         } catch (ex: DbstoreUnexpectedVersionException) {
@@ -134,16 +134,12 @@ internal class DbstoreEventRepository<T>(
         }
     }
 
-    private fun toDbstoreEventData(
-            streamId: StreamId,
-            eventData: EventData<T>
-    ): DbstoreEventData {
+    private fun EventData<T>.toDbstoreEventData(): DbstoreEventData {
         return DbstoreEventData(
-                streamId = streamId,
-                eventId = eventData.eventId,
-                eventType = eventData.eventType,
-                data = serializeEvent(eventData.event),
-                metadata = serializeMetadata(eventData.metadata)
+                eventId = eventId,
+                eventType = eventType,
+                data = serializeEvent(event),
+                metadata = serializeMetadata(metadata)
         )
     }
 

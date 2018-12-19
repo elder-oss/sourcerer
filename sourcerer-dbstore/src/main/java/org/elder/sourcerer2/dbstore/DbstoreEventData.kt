@@ -8,12 +8,6 @@ import org.elder.sourcerer2.StreamId
  */
 data class DbstoreEventData(
         /**
-         * The id of the stream that this event relates to. This id is unique only within a
-         * particular repository, e.g. only across events describing the same type of aggregate.
-         */
-        val streamId: StreamId,
-
-        /**
          * Gets a globally unique id for this event. This will be unique across all events and all
          * repositories.
          */
