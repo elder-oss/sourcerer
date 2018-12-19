@@ -1,8 +1,8 @@
 package org.elder.sourcerer2;
 
+import kotlinx.coroutines.channels.ReceiveChannel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.reactivestreams.Publisher;
 
 import java.util.List;
 
@@ -148,25 +148,10 @@ public interface EventRepository<T> {
             ExpectedVersion version);
 
     /**
-     * Gets a Publisher that can be used to subscribe to events for a given stream id.
-     *
-     * @param streamId    The id of the stream to subscribe to.
-     * @param fromVersion The version to start subscribing from (exclusive). This would normally be
-     *                    the version that has last been processed - not the version that is
-     *                    expected to be returned as the first event. Use null to subscribe from
-     *                    the beginning of the stream. If less than the current version, the
-     *                    publisher will start replaying historical events, and then
-     *                    transparently switch to live events.
-     * @return A Publisher that, when subscribed to, will start producing events for each new event
-     * written to the given stream id.
-     */
-    @NotNull
-    Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
-            @NotNull StreamId streamId,
-            StreamVersion fromVersion);
-
-    /**
-     * Gets a Publisher that can be used to subscribe to all events related to this repository.
+     * Gets a ReceiveChannel that receives events from the repository (and the specific shard
+     * if specified). Events will be produced starting with the given version (or the beginning of
+     * the repository). If the subscription is no longer used, it should be cancelled by the
+     * caller.
      *
      * @param fromVersion The version to start subscribing from (exclusive). This would normally be
      *                    the version that has last been processed - not the version that is
@@ -176,11 +161,16 @@ public interface EventRepository<T> {
      *                    transparently switch to live events.
      * @param shard       The shard to read from. If specified, this must be in the range from 0
      *                    (inclusive) to the value returned by getShards() (exclusive)
-     * @return A Publisher that, when subscribed to, will start producing events for each new event
-     * written to any stream related to this repository.
+     * @param batchSize   A hint as to the number of events to read in one go. This may be used to
+     *                    control the amount of events read for the catch up phase of a subscription
+     *                    and/or the real time one.
+     * @return A channel that will receive events from the repository. The channel should be
+     * cancelled when no longer used to free up underlying resources.
      */
     @NotNull
-    Publisher<EventSubscriptionUpdate<T>> getRepositoryPublisher(
+    ReceiveChannel<EventSubscriptionUpdate<T>> subscribe(
             RepositoryVersion fromVersion,
-            Integer shard);
+            Integer shard,
+            int batchSize
+    );
 }

@@ -107,7 +107,7 @@ public class EventSubscriptionManagerTest {
                 });
         eventSource.subscribe(processor);
 
-        when(repository.getRepositoryPublisher(any(), any())).thenReturn(processor);
+        when(repository.subscribe(any(), any())).thenReturn(processor);
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
         SlowSubscriptionHandler<String> subscriptionHandler = new SlowSubscriptionHandler<>();
 
@@ -136,7 +136,7 @@ public class EventSubscriptionManagerTest {
         EventSubscriptionPositionSource positionSource =
                 mock(EventSubscriptionPositionSource.class);
 
-        when(repository.getRepositoryPublisher(any(), any())).then(position -> {
+        when(repository.subscribe(any(), any())).then(position -> {
             WorkQueueProcessor<EventSubscriptionUpdate<String>> processor =
                     WorkQueueProcessor.create();
             Flux<EventSubscriptionUpdate<String>> eventSource = Flux
@@ -174,7 +174,7 @@ public class EventSubscriptionManagerTest {
         EventSubscriptionPositionSource positionSource =
                 mock(EventSubscriptionPositionSource.class);
 
-        when(repository.getRepositoryPublisher(any(), any())).then(position -> {
+        when(repository.subscribe(any(), any())).then(position -> {
             WorkQueueProcessor<EventRecord<String>> processor = WorkQueueProcessor.create();
             Flux<EventRecord<String>> eventSource = Flux
                     .fromStream(IntStream.range(0, 1000000).mapToObj(this::wrapIntAsEvent))
@@ -208,7 +208,7 @@ public class EventSubscriptionManagerTest {
         EventSubscriptionPositionSource positionSource =
                 mock(EventSubscriptionPositionSource.class);
 
-        when(repository.getRepositoryPublisher(any(), any())).then(position -> {
+        when(repository.subscribe(any(), any())).then(position -> {
             WorkQueueProcessor<EventRecord<String>> processor = WorkQueueProcessor.create();
             Flux<EventRecord<String>> eventSource = Flux
                     .fromStream(IntStream.range(0, 1000000).mapToObj(this::wrapIntAsEvent))

@@ -1,6 +1,14 @@
 dependencies {
     api "org.reactivestreams:reactive-streams:$reactiveStreamsApiVersion"
     api "com.google.guava:guava:$guavaVersion"
-    implementation "io.projectreactor:reactor-core:$reactorVersion"
+    api "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion") {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-common'
+    }
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$kotlinxCoroutinesVersion") {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-common'
+    }
     implementation "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
 }

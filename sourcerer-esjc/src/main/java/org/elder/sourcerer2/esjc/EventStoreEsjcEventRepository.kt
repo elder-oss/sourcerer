@@ -190,26 +190,6 @@ class EventStoreEsjcEventRepository<T : Any>(
         return StreamVersion.ofInt(nextExpectedVersion)
     }
 
-    override fun getStreamPublisher(
-            streamId: StreamId,
-            fromVersion: StreamVersion?
-    ): Publisher<EventSubscriptionUpdate<T>> {
-        logger.info("Creating publisher for {} (in {}) (starting with version {})",
-                streamId, streamPrefix, fromVersion)
-
-        return Flux.create { emitter ->
-            val subscription = eventStore.subscribeToStreamFrom(
-                    toEsStreamId(streamId),
-                    fromVersion?.toEsVersion(),
-                    defaultSubscriptionSettings,
-                    EmitterListener(emitter, "$streamPrefix-$streamId"))
-            emitter.setCancellation {
-                logger.info("Closing ESJC subscription (asynchronously)")
-                subscription.stop()
-            }
-        }
-    }
-
     override fun getRepositoryPublisher(
             fromVersion: RepositoryVersion?,
             shard: Int?

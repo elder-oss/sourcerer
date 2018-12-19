@@ -17,6 +17,7 @@ import org.elder.sourcerer2.StreamVersion
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
 import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
+import reactor.core.publisher.Flux
 
 internal class DbstoreEventRepository<T>(
         private val repositoryInfo: DbstoreRepositoryInfo<T>,
@@ -254,6 +255,7 @@ internal class DbstoreEventRepository<T>(
             fromVersion: RepositoryVersion?,
             shard: Int?
     ): Publisher<EventSubscriptionUpdate<T>> {
+        Flux.create()
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

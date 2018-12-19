@@ -13,7 +13,8 @@ public class DefaultEventSubscription<T> implements EventSubscription {
             final EventRepository<T> repository,
             final Integer shard,
             final EventSubscriptionHandler<T> subscriptionHandler,
-            final SubscriptionWorkerConfig config) {
+            final SubscriptionWorkerConfig config
+    ) {
         this.repository = repository;
         this.shard = shard;
         this.subscriptionHandler = subscriptionHandler;

@@ -15,6 +15,10 @@ public interface EventSubscription {
      * receiving events based on the current configuration of the subscription - modifications to
      * the subscription object will have no impact on current subscriptions once started.
      * <p>
+     * The subscription will automatically retry on errors and may implement a backoff scheme to
+     * do so without busy looping. Attempts will be made to keep it live until the returned token
+     * is explicitly closed.
+     * <p>
      * To stop the subscription, call .close() on the returned Closeable object. Note that, due to
      * multiple threads being used, the subscription handler may still receive events for some time
      * after close() has been called.

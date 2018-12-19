@@ -13,6 +13,6 @@ public class DefaultEventSubscriptionFactory<T> implements EventSubscriptionFact
             final SubscriptionWorkerConfig config,
             final Integer shard
     ) {
-        return new DefaultEventSubscription(repository, shard, handler, config);
+        return new DefaultEventSubscription<>(repository, shard, handler, config);
     }
 }
