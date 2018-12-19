@@ -29,6 +29,11 @@ import com.github.msemys.esjc.subscription.PersistentSubscriptionDeletedExceptio
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.launch
 import org.elder.sourcerer2.EventData
 import org.elder.sourcerer2.EventId
 import org.elder.sourcerer2.EventNormalizer
@@ -47,10 +52,7 @@ import org.elder.sourcerer2.exceptions.RetriableEventReadException
 import org.elder.sourcerer2.exceptions.RetriableEventWriteException
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
 import org.elder.sourcerer2.utils.ElderPreconditions
-import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
-import reactor.core.publisher.FluxEmitter
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -77,11 +79,6 @@ class EventStoreEsjcEventRepository<T : Any>(
 ) : EventRepository<T> {
     // TODO: Customize these settings
     private val timeoutMillis = DEFAULT_TIMEOUT_MILLIS
-    private val defaultSubscriptionSettings =
-            CatchUpSubscriptionSettings
-                    .newBuilder()
-                    .resolveLinkTos(true)
-                    .build()
     private val categoryStreamName = "\$ce-$streamPrefix"
 
     override fun getShards(): Int? {
@@ -190,27 +187,42 @@ class EventStoreEsjcEventRepository<T : Any>(
         return StreamVersion.ofInt(nextExpectedVersion)
     }
 
-    override fun getRepositoryPublisher(
+    override fun subscribe(
             fromVersion: RepositoryVersion?,
-            shard: Int?
-    ): Publisher<EventSubscriptionUpdate<T>> {
+            shard: Int?,
+            batchSize: Int
+    ): ReceiveChannel<EventSubscriptionUpdate<T>> {
         if (shard != null) {
             throw UnsupportedOperationException("The ESJC repository does not support sharding")
         }
 
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion)
-        return Flux.create { emitter ->
+
+        val subscriptionSettings =
+                CatchUpSubscriptionSettings
+                        .newBuilder()
+                        .resolveLinkTos(true)
+                        .readBatchSize(batchSize)
+                        .maxLiveQueueSize(4 * batchSize)
+                        .build()
+
+        val channel = Channel<EventSubscriptionUpdate<T>>(batchSize)
+
+        // TODO: Specific scope / dispatcher?
+        GlobalScope.launch {
             val subscription = eventStore.subscribeToStreamFrom(
                     categoryStreamName,
                     fromVersion?.toEsVersion(),
-                    defaultSubscriptionSettings,
-                    EmitterListener(emitter, "$streamPrefix-all"))
-            emitter.setCancellation {
-                logger.info("Closing ESJC subscription (asynchronously)")
+                    subscriptionSettings,
+                    ChannelListener(channel, "$streamPrefix-all"))
+            channel.invokeOnClose {
+                logger.info("Channel is closed, ensuring that eventstore side is")
                 subscription.stop()
             }
         }
+
+        return channel
     }
 
     private fun toEsStreamId(streamId: StreamId): String {
@@ -416,19 +428,21 @@ class EventStoreEsjcEventRepository<T : Any>(
 
     }
 
-    private inner class EmitterListener(
-            private val emitter: FluxEmitter<EventSubscriptionUpdate<T>>,
-            private val name: String) : CatchUpSubscriptionListener {
+    private inner class ChannelListener(
+            private val channel: Channel<EventSubscriptionUpdate<T>>,
+            private val name: String
+    ) : CatchUpSubscriptionListener {
 
         override fun onEvent(subscription: CatchUpSubscription, event: ResolvedEvent) {
             logger.debug("Incoming message in {}: {}", name, event)
-            emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)))
+            channel.sendBlocking(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)))
         }
 
         override fun onClose(
                 subscription: CatchUpSubscription?,
                 reason: SubscriptionDropReason?,
-                exception: Exception?) {
+                exception: Exception?
+        ) {
             if (exception != null) {
                 logger.error(
                         "Subscription $name failed with reason $reason",
@@ -440,12 +454,12 @@ class EventStoreEsjcEventRepository<T : Any>(
                         reason)
             }
 
-            emitter.fail(EventStoreSubscriptionStoppedException(reason, exception))
+            channel.close(EventStoreSubscriptionStoppedException(reason, exception))
         }
 
         override fun onLiveProcessingStarted(subscription: CatchUpSubscription?) {
             logger.info("Live processing started for {}!", name)
-            emitter.next(EventSubscriptionUpdate.caughtUp<T>())
+            channel.sendBlocking(EventSubscriptionUpdate.caughtUp<T>())
         }
     }
 

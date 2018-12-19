@@ -30,7 +30,8 @@ internal class SubscriptionWorker<T>(
                 // We're still here meaning the subscription marked completion, clean exit
             } catch (ex: Exception) {
                 logger.warn("Exception in subscription, retry logic will apply", ex)
-                if (ex is CancellationException || !handler.handleError(unwrapException(ex), retryCount)) {
+                if (ex is CancellationException || !handler.handleError(ex, retryCount)) {
+                    // We're cancelled or have givem up, parent will deal with it
                     throw ex
                 }
 
@@ -134,13 +135,5 @@ internal class SubscriptionWorker<T>(
 
     companion object {
         private val logger = LoggerFactory.getLogger(SubscriptionWorker::class.java)
-
-        private fun unwrapException(ex: Exception): Throwable {
-            return if (ex is DownstreamSubscriptionException) {
-                ex.cause!!
-            } else {
-                ex
-            }
-        }
     }
 }

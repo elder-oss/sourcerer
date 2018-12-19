@@ -2,8 +2,7 @@ package org.elder.sourcerer2;
 
 public interface EventSubscription {
     /**
-     * Sets the position source to use for this subscription. A subscription without a position
-     * source will always consume all events, including historical from beginning of time.
+     * Sets the position source to use for this subscription.
      *
      * @param positionSource The position source used to query for the current position of the
      *                       logical subscription.

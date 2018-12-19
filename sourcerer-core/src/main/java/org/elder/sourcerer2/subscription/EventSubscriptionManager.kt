@@ -1,6 +1,7 @@
 package org.elder.sourcerer2.subscription
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -11,6 +12,7 @@ import org.elder.sourcerer2.EventSubscriptionPositionSource
 import org.elder.sourcerer2.SubscriptionToken
 import org.elder.sourcerer2.SubscriptionWorkerConfig
 import org.slf4j.LoggerFactory
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Custom subscriber to work around the fact that buffer does not appear to respect back pressure,
@@ -26,27 +28,27 @@ import org.slf4j.LoggerFactory
  * @param <T> The type of events the subscription handles.
  */
 class EventSubscriptionManager<T>(
-        private val scope: CoroutineScope,
+        private val dispatcher: CoroutineDispatcher,
         repository: EventRepository<T>,
         shard: Int?,
         positionSource: EventSubscriptionPositionSource,
         private val subscriptionHandler: EventSubscriptionHandler<T>,
         config: SubscriptionWorkerConfig
-) {
-    private val subscriptionWorker: SubscriptionWorker<*>
+) : CoroutineScope {
+    override val coroutineContext: CoroutineContext
+        get() = dispatcher
 
-    init {
-        this.subscriptionWorker = SubscriptionWorker(
-                repository,
-                shard,
-                positionSource,
-                subscriptionHandler,
-                config)
-    }
+    private val subscriptionWorker = SubscriptionWorker(
+            repository,
+            shard,
+            positionSource,
+            subscriptionHandler,
+            config
+    )
 
     fun start(): SubscriptionToken {
         lateinit var token: JobSubscriptionToken
-        val job = this.scope.launch(start = CoroutineStart.LAZY) {
+        val job = launch(start = CoroutineStart.LAZY) {
             try {
                 subscriptionHandler.subscriptionStarted(token)
                 subscriptionWorker.run()
@@ -66,9 +68,8 @@ class EventSubscriptionManager<T>(
         return token
     }
 
-
     class JobSubscriptionToken(private val job: Job) : SubscriptionToken {
-        override fun close() {
+        override fun stop() {
             logger.info("Cancelling subscription after explicit request to do so")
             job.cancel()
         }

@@ -9,7 +9,10 @@ public interface SubscriptionToken extends AutoCloseable {
      * times. Note that, while calling this method will result in a subscription stopping, a
      * subscription handler may still receive events for some time after it has completed.
      */
-    default void stop() throws Exception {
-        close();
+    void stop();
+
+    @Override
+    default void close() {
+        stop();
     }
 }
