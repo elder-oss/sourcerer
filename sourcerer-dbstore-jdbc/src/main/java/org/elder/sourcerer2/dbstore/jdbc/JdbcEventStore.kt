@@ -40,6 +40,12 @@ class JdbcEventStore(
             shardRange: DbstoreShardHashRange,
             maxEvents: Int
     ): List<DbstoreEventRow> {
+        // TODO: We use a sentinel marker for "end of stream" for each individual event stream. When reading streams,
+        // this is fine, as we'll get at most one extra marker row. However, if we're reading the repository as a
+        // whole, and are polling for new events, we'll currently return up to maxEvents sentinel rows if there are
+        // no new events available. As an optimization, we could instead detect "end of stream" from us having read
+        // less than maxEvents rows - and filter out the sentinels from the query.
+
         val effectiveMaxEvents = getMaxReadBatchSize(maxEvents)
         return withConnection(true) { connection ->
             val readStatement = connection.createReadRepositoryStatement(
@@ -79,10 +85,13 @@ class JdbcEventStore(
             expectVersion: DbstoreStreamVersion?,
             events: List<DbstoreEventData>
     ): DbstoreStreamVersion {
-        // If we have an expected version, go look for the event after that point (or the sentinel if not found),
-        // if we don't, then just look for the sentinel directly.
         return withConnection(false) { connection ->
-            val fromVersion = expectVersion ?: SENTINEL_VERSION
+            // If we have an expected version, read from that point (inclusive). If not, read from the sentinel
+            // version (inclusive), e.g. just before the sentinel. This will be faster than reading from the start in
+            // some DB engines as the last item is much likely to be "warm" than the first one, and due to the way
+            // Spanner is implemented, fewer splits will need to be scanned.
+
+            val fromVersion = expectVersion ?: PRE_SENTINEL_VERSION
             val rowsFromExpectedEnd = connection.readStreamEvents(
                     repositoryInfo = repositoryInfo,
                     streamId = streamId,
@@ -172,7 +181,6 @@ class JdbcEventStore(
             statement.setString(i++, fromVersion.streamId.identifier)
             statement.setString(i++, fromVersion.streamId.identifier)
             statement.setInt(i++, fromVersion.transactionSequenceNr)
-
         }
         statement.setInt(i, effectiveMaxEvents)
         return statement
@@ -249,7 +257,21 @@ class JdbcEventStore(
     }
 
     private fun ResultSet.readEventRowResults(): List<DbstoreEventRow> {
-        return this.readRowsWith(::readEventRow)
+        use {
+            val results = mutableListOf<DbstoreEventRow>()
+
+            while (next()) {
+                val processedRow = readEventRow(this)
+                results.add(processedRow)
+
+                if (processedRow is DbstoreEventRow.EndOfStream) {
+                    // We don't need anything more after this, don't bother reading more data
+                    break
+                }
+            }
+
+            return results
+        }
     }
 
     private fun readEventRow(row: ResultSet): DbstoreEventRow {
@@ -262,17 +284,13 @@ class JdbcEventStore(
         return when (timestamp) {
             SENTINEL_TIMESTAMP ->
                 // This is the end of stream marker, only extract the bits relevant to it
-                DbstoreEventRow.EndOfStream(
-                        streamId = streamId,
-                        streamHash = streamHash,
-                        repository = repository
-                )
+                DbstoreEventRow.EndOfStream
             else -> {
                 val transactionSeqNr = row.getInt(i++)
                 val eventId = EventId.ofUuid(UUID.fromString(row.getString(i++)))
                 val eventType = row.getString(i++)
                 val data = row.getString(i++)
-                val metadata = row.getString(i++)
+                val metadata = row.getString(i)
                 val event = DbstoreEventRecord(
                         streamId = streamId,
                         streamHash = streamHash,
@@ -358,7 +376,7 @@ class JdbcEventStore(
           GREATEST(CURRENT_TIMESTAMP(6), TIMESTAMPADD(MICROSECOND, 1, MAX(timestamp))),
           CURRENT_TIMESTAMP(6)) AS commit_timestamp
         FROM $eventsTableName
-        WHERE timestamp < '2038-01-19 03:14:07'
+        WHERE timestamp < '$SENTINEL_TIMESTAMP_ISO_STR'
         AND namespace = ?
         AND repository = ?
         """.trimIndent()
@@ -411,19 +429,10 @@ class JdbcEventStore(
         // Some DB engines like MySql still use a signed int internally to represent timestamps, use this as the
         // highest safe value to use for a placeholder timestamp. The sentinel value is always created when the stream
         // is and marks the end of the stream.
-        const val SENTINEL_TIMESTAMP_UNIX = Int.MAX_VALUE.toLong()
+        private const val SENTINEL_TIMESTAMP_UNIX = Int.MAX_VALUE.toLong()
         val SENTINEL_TIMESTAMP: Instant = Instant.ofEpochSecond(SENTINEL_TIMESTAMP_UNIX)
         val SENTINEL_VERSION = DbstoreStreamVersion(SENTINEL_TIMESTAMP, 0)
-
-        private fun <T> ResultSet.readRowsWith(readEventRow: (ResultSet) -> T): List<T> {
-            val results = mutableListOf<T>()
-
-            while (next()) {
-                val processedRow = readEventRow(this)
-                results.add(processedRow)
-            }
-
-            return results
-        }
+        val PRE_SENTINEL_VERSION = DbstoreStreamVersion(SENTINEL_TIMESTAMP.minusMillis(1), 0)
+        val SENTINEL_TIMESTAMP_ISO_STR = SENTINEL_TIMESTAMP.toString()
     }
 }
