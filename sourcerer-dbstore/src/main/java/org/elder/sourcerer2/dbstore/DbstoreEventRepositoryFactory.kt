@@ -1,6 +1,9 @@
 package org.elder.sourcerer2.dbstore
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.plus
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventRepositoryFactory
 import org.elder.sourcerer2.EventTypeUtils
@@ -44,7 +47,12 @@ class DbstoreEventRepositoryFactory(
         logger.info(
                 "Creating DbStore repository for {} with category {}",
                 eventType.simpleName, repositoryInfo)
-        return DbstoreEventRepository(repositoryInfo, eventStore, objectMapper)
+        return DbstoreEventRepository(
+                repositoryInfo,
+                eventStore,
+                objectMapper,
+                GlobalScope + Dispatchers.IO
+        )
     }
 
     private fun validateShards(shards: Int?): Int {

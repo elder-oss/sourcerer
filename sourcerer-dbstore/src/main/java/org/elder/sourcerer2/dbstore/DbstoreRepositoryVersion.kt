@@ -47,6 +47,6 @@ fun DbstoreRepositoryVersion.toRepositoryVersion(): RepositoryVersion {
     val utcLocalDateTime = LocalDateTime.ofInstant(timestamp, ZoneOffset.UTC)
     return RepositoryVersion.ofString(
             "${DbstoreStreamVersion.dateFormat.format(utcLocalDateTime)}:" +
-                    "$streamId:" +
+                    "${streamId.identifier}:" +
                     transactionSequenceNr.toString().padStart(4, '0'))
 }

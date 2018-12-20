@@ -1,4 +1,4 @@
-package org.elder.sourcerer2.kotlin
+package org.elder.sourcerer2.esjc
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -9,9 +9,9 @@ import org.elder.sourcerer2.ExpectedVersion
 import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
 import org.elder.sourcerer2.extras.EventStreams
-import org.elder.sourcerer2.kotlin.utils.ConcurrencyProgress
-import org.elder.sourcerer2.kotlin.utils.ConcurrencyRule
-import org.elder.sourcerer2.kotlin.utils.TestEventStore
+import org.elder.sourcerer2.esjc.utils.ConcurrencyProgress
+import org.elder.sourcerer2.esjc.utils.ConcurrencyRule
+import org.elder.sourcerer2.esjc.utils.TestEventStore
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.instanceOf
 import org.junit.Assert.assertThat
@@ -37,7 +37,8 @@ class EventStreamsIntegrationTest {
     @Before
     fun setup() {
         aggregateRepository = eventStore
-                .createAggregateRepository("test_eventstreams", Projection())
+                .createAggregateRepository("test_eventstreams",
+                        Projection())
         streams = EventStreams(aggregateRepository)
     }
 

@@ -4,6 +4,14 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.elder.sourcerer2.EventData
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
@@ -15,14 +23,14 @@ import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.StreamReadResult
 import org.elder.sourcerer2.StreamVersion
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
-import org.reactivestreams.Publisher
 import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
 
 internal class DbstoreEventRepository<T>(
         private val repositoryInfo: DbstoreRepositoryInfo<T>,
         private val eventStore: DbstoreEventStore,
-        private val objectMapper: ObjectMapper
+        private val objectMapper: ObjectMapper,
+        private val coroutineScope: CoroutineScope,
+        private val watchdogTimeoutMillis: Long = 10_000
 ) : EventRepository<T> {
     override fun getShards(): Int? {
         return repositoryInfo.shards
@@ -247,16 +255,19 @@ internal class DbstoreEventRepository<T>(
         }
     }
 
-    override fun getStreamPublisher(streamId: StreamId, fromVersion: StreamVersion?): Publisher<EventSubscriptionUpdate<T>> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun getRepositoryPublisher(
+    override fun subscribe(
             fromVersion: RepositoryVersion?,
-            shard: Int?
-    ): Publisher<EventSubscriptionUpdate<T>> {
-        Flux.create()
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            shard: Int?,
+            batchSize: Int
+    ): ReceiveChannel<EventSubscriptionUpdate<T>> {
+        val shardRange = validateShard(shard)
+        val subscription = DbstoreRepositorySubscription(fromVersion, shardRange, batchSize)
+        val subscriberJob = coroutineScope.launch { subscription.run() }
+        subscription.eventsChannel.invokeOnClose {
+            logger.debug("Cleaning up subscriber job after channel closed")
+            subscriberJob.cancel()
+        }
+        return subscription.eventsChannel
     }
 
     private fun normalizeEvent(rawEvent: T): T {
@@ -264,6 +275,63 @@ internal class DbstoreEventRepository<T>(
             repositoryInfo.normalizer.normalizeEvent(rawEvent)
         } else {
             rawEvent
+        }
+    }
+
+    private inner class DbstoreRepositorySubscription(
+            fromVersion: RepositoryVersion?,
+            private val shardRange: DbstoreShardHashRange,
+            private val batchSize: Int
+    ) {
+        val eventsChannel = Channel<EventSubscriptionUpdate<T>>(batchSize)
+        private val triggerCheckChannel = Channel<Unit>(1)
+        private var position: DbstoreRepositoryVersion? = fromVersion?.toDbstoreRepositoryVersion()
+        private var hasAdvertisedCaughtUp = false
+
+        suspend fun run() {
+            while (true) {
+                logger.debug("Polling for new events")
+                while (readMoreEvents()) {
+                    logger.debug("Still catching up, reading mode")
+                    yield()
+                }
+
+                val watchdog = coroutineScope.async {
+                    delay(watchdogTimeoutMillis)
+                    triggerCheckChannel.offer(Unit)
+                }
+
+                triggerCheckChannel.receive()
+                watchdog.cancelAndJoin()
+            }
+        }
+
+        private suspend fun readMoreEvents(): Boolean {
+            val readResult = eventStore.readRepositoryEvents(
+                    repositoryInfo,
+                    position,
+                    shardRange,
+                    batchSize
+            )
+
+            for (row in readResult) {
+                when (row) {
+                    is DbstoreEventRow.Event -> {
+                        val eventRecord = fromDbstoreEventRecord(row.eventData)
+                        eventsChannel.send(EventSubscriptionUpdate.ofEvent(eventRecord))
+                        position = eventRecord.repositoryVersion!!.toDbstoreRepositoryVersion()
+                    }
+                    DbstoreEventRow.EndOfStream -> {
+                        if (!hasAdvertisedCaughtUp) {
+                            eventsChannel.send(EventSubscriptionUpdate.caughtUp())
+                            hasAdvertisedCaughtUp = true
+                        }
+                        return false
+                    }
+                }
+            }
+
+            return true
         }
     }
 

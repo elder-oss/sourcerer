@@ -196,8 +196,10 @@ class EventStoreEsjcEventRepository<T : Any>(
             throw UnsupportedOperationException("The ESJC repository does not support sharding")
         }
 
-        logger.info("Creating publisher for all events in {} (starting with version {})",
-                streamPrefix, fromVersion)
+        logger.info(
+                "Creating publisher for all events in {} (starting with version {})",
+                streamPrefix, fromVersion
+        )
 
         val subscriptionSettings =
                 CatchUpSubscriptionSettings
@@ -215,7 +217,8 @@ class EventStoreEsjcEventRepository<T : Any>(
                     categoryStreamName,
                     fromVersion?.toEsVersion(),
                     subscriptionSettings,
-                    ChannelListener(channel, "$streamPrefix-all"))
+                    ChannelListener(channel, "$streamPrefix-all")
+            )
             channel.invokeOnClose {
                 logger.info("Channel is closed, ensuring that eventstore side is")
                 subscription.stop()
@@ -319,7 +322,7 @@ class EventStoreEsjcEventRepository<T : Any>(
     }
 
     private fun fromEsMetadata(metadata: ByteArray?): ImmutableMap<String, String> {
-        if (metadata == null || metadata.size == 0) {
+        if (metadata == null || metadata.isEmpty()) {
             return ImmutableMap.of()
         }
 
@@ -374,7 +377,6 @@ class EventStoreEsjcEventRepository<T : Any>(
         } catch (ex: TimeoutException) {
             throw RetriableEventReadException("Timeout reading events", ex.cause)
         }
-
     }
 
     private fun <U> completeWriteFuture(
@@ -432,7 +434,6 @@ class EventStoreEsjcEventRepository<T : Any>(
             private val channel: Channel<EventSubscriptionUpdate<T>>,
             private val name: String
     ) : CatchUpSubscriptionListener {
-
         override fun onEvent(subscription: CatchUpSubscription, event: ResolvedEvent) {
             logger.debug("Incoming message in {}: {}", name, event)
             channel.sendBlocking(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)))

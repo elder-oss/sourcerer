@@ -1,6 +1,6 @@
 include 'sourcerer-core',
-        'sourcerer-esjc',
-        'sourcerer-esjc-spring',
+        // 'sourcerer-esjc',
+        // 'sourcerer-esjc-spring',
         'sourcerer-extras',
         'sourcerer-dbstore',
         'sourcerer-dbstore-jdbc',

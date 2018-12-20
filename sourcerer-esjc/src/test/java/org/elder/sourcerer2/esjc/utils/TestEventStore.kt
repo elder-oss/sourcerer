@@ -1,4 +1,4 @@
-package org.elder.sourcerer2.kotlin.utils
+package org.elder.sourcerer2.esjc.utils
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature

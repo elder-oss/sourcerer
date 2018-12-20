@@ -1,4 +1,4 @@
-package org.elder.sourcerer2.kotlin.utils
+package org.elder.sourcerer2.esjc.utils
 
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch

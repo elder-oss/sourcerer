@@ -5,6 +5,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consume
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import org.elder.sourcerer2.EventRecord
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionHandler
@@ -61,8 +62,8 @@ internal class SubscriptionWorker<T>(
         // event records, but need to handle control messages individually
         var events: MutableList<EventRecord<T>>? = null
         for (update in updateBatch) {
-            when (update.updateType) {
-                EventSubscriptionUpdate.UpdateType.CAUGHT_UP -> {
+            when (update) {
+                is EventSubscriptionUpdate.CaughtUp -> {
                     logger.debug("Subscription caught up, processing pending events")
                     processEventsIfAny(events)
                     events = null
@@ -70,13 +71,12 @@ internal class SubscriptionWorker<T>(
                     logger.debug("Subscription caught up, signalling")
                     handler.subscriptionCaughtUp()
                 }
-                EventSubscriptionUpdate.UpdateType.EVENT -> {
+                is EventSubscriptionUpdate.Event -> {
                     if (events == null) {
                         events = mutableListOf()
                     }
                     events.add(update.event)
                 }
-                else -> throw IllegalArgumentException("Unknown update type")
             }
         }
 
@@ -101,6 +101,7 @@ internal class SubscriptionWorker<T>(
 
             // Now that we have one, grab as many more as we can eagerly
             while (true) {
+                yield() // See if we've been cancelled
                 val nextUpdate = updatesChannel.poll()
                 if (nextUpdate != null) {
                     results.add(nextUpdate)

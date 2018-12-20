@@ -1,4 +1,4 @@
-package org.elder.sourcerer2.kotlin.utils
+package org.elder.sourcerer2.esjc.utils
 
 import org.junit.rules.ExternalResource
 import org.slf4j.LoggerFactory
