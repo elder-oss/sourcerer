@@ -10,7 +10,7 @@ class DefaultEventSubscriptionFactory<T> @JvmOverloads constructor(
     override fun fromSubscriptionHandler(
             handler: EventSubscriptionHandler<T>,
             config: SubscriptionWorkerConfig,
-            shard: Int?
+            shard: RepositoryShard?
     ): EventSubscription {
         return DefaultEventSubscription(dispatcher, repository, shard, handler, config)
     }

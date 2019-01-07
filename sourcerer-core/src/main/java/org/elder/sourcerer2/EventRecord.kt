@@ -22,6 +22,12 @@ data class EventRecord<T>(
         val streamId: StreamId,
 
         /**
+         * A numerical value deterministically derived from the stream id, allowing for breaking event streams
+         * into arbitrary logical shards for concurrent processing.
+         */
+        val streamHash: StreamHash,
+
+        /**
          * Gets the position of this event in the individual event stream that it was originally
          * written to (regardless of whether this came from reading that stream directly or from
          * subscribing to a repository as a whole.

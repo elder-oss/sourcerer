@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionHandler
 import org.elder.sourcerer2.EventSubscriptionPositionSource
+import org.elder.sourcerer2.RepositoryShard
 import org.elder.sourcerer2.SubscriptionToken
 import org.elder.sourcerer2.SubscriptionWorkerConfig
 import org.slf4j.LoggerFactory
@@ -30,7 +31,7 @@ import kotlin.coroutines.CoroutineContext
 class EventSubscriptionManager<T>(
         private val dispatcher: CoroutineDispatcher,
         repository: EventRepository<T>,
-        shard: Int?,
+        shard: RepositoryShard?,
         positionSource: EventSubscriptionPositionSource,
         private val subscriptionHandler: EventSubscriptionHandler<T>,
         config: SubscriptionWorkerConfig

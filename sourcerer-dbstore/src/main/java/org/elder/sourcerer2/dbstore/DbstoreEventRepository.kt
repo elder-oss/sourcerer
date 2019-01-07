@@ -18,6 +18,8 @@ import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionUpdate
 import org.elder.sourcerer2.ExpectedVersion
 import org.elder.sourcerer2.RepositoryReadResult
+import org.elder.sourcerer2.RepositoryShard
+import org.elder.sourcerer2.StreamHash
 import org.elder.sourcerer2.RepositoryVersion
 import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.StreamReadResult
@@ -32,17 +34,13 @@ internal class DbstoreEventRepository<T>(
         private val coroutineScope: CoroutineScope,
         private val watchdogTimeoutMillis: Long = 10_000
 ) : EventRepository<T> {
-    override fun getShards(): Int? {
-        return repositoryInfo.shards
-    }
-
     override fun getEventType(): Class<T> {
         return repositoryInfo.eventType
     }
 
     override fun readAll(
             version: RepositoryVersion?,
-            shard: Int?,
+            shard: RepositoryShard?,
             maxEvents: Int
     ): RepositoryReadResult<T>? {
         val shardRange = validateShard(shard)
@@ -128,19 +126,8 @@ internal class DbstoreEventRepository<T>(
         }
     }
 
-    private fun validateShard(shard: Int?): DbstoreShardHashRange {
-        return if (shard != null) {
-            if (shard < 0) {
-                throw IllegalArgumentException("Shard nunmber must be 0 or greater")
-            }
-            if (shard >= repositoryInfo.shards) {
-                throw IllegalArgumentException(
-                        "Shard number must be less than the configured number of shards: ${repositoryInfo.shards}")
-            }
-            DbstoreSharder.getShardRange(shard, repositoryInfo.shards)
-        } else {
-            DbstoreShardHashRange.COMPLETE_RANGE
-        }
+    private fun validateShard(shard: RepositoryShard?): DbstoreShardHashRange {
+        return shard?.let { DbstoreSharder.getShardRange(it) } ?: DbstoreShardHashRange.COMPLETE_RANGE
     }
 
     private fun EventData<T>.toDbstoreEventData(): DbstoreEventData {
@@ -166,6 +153,7 @@ internal class DbstoreEventRepository<T>(
         return EventRecord(
                 eventId = record.eventId,
                 streamId = record.streamId,
+                streamHash = StreamHash(record.streamHash),
                 streamVersion = record.getStreamVersion().toStreamVersion(),
                 repositoryVersion = record.getRepositoryVersion().toRepositoryVersion(),
                 eventType = record.eventType,
@@ -257,7 +245,7 @@ internal class DbstoreEventRepository<T>(
 
     override fun subscribe(
             fromVersion: RepositoryVersion?,
-            shard: Int?,
+            shard: RepositoryShard?,
             batchSize: Int
     ): ReceiveChannel<EventSubscriptionUpdate<T>> {
         val shardRange = validateShard(shard)

@@ -18,7 +18,7 @@ public interface EventSubscriptionFactory<T> {
     EventSubscription fromSubscriptionHandler(
             EventSubscriptionHandler<T> handler,
             SubscriptionWorkerConfig config,
-            Integer shard);
+            RepositoryShard shard);
 
     default EventSubscription fromSubscriptionHandler(EventSubscriptionHandler<T> handler) {
         return fromSubscriptionHandler(handler, new SubscriptionWorkerConfig(), null);

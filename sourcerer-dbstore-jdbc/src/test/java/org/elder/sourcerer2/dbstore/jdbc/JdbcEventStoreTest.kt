@@ -25,7 +25,6 @@ class JdbcEventStoreTest {
             DummyEvent::class.java,
             "default",
             "testItems",
-            8,
             null
     )
 

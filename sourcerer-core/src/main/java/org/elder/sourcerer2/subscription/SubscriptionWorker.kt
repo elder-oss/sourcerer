@@ -11,12 +11,13 @@ import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventSubscriptionHandler
 import org.elder.sourcerer2.EventSubscriptionPositionSource
 import org.elder.sourcerer2.EventSubscriptionUpdate
+import org.elder.sourcerer2.RepositoryShard
 import org.elder.sourcerer2.SubscriptionWorkerConfig
 import org.slf4j.LoggerFactory
 
 internal class SubscriptionWorker<T>(
         private val repository: EventRepository<T>,
-        private val shard: Int?,
+        private val shard: RepositoryShard?,
         private val positionSource: EventSubscriptionPositionSource,
         private val handler: EventSubscriptionHandler<T>,
         private val config: SubscriptionWorkerConfig

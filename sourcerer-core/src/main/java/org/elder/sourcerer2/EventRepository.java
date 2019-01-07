@@ -2,20 +2,10 @@ package org.elder.sourcerer2;
 
 import kotlinx.coroutines.channels.ReceiveChannel;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 public interface EventRepository<T> {
-    /**
-     * Gets the number of distinct shards supported by this event repository. Shard allow for all
-     * events for a category to be read or subscribed to in parallel streams, where each individual
-     * event stream is always mapped to the same shard. If this returns null, then shards are not
-     * supported.
-     */
-    @Nullable
-    Integer getShards();
-
     /**
      * Gets the java Class representing the runtime type that this event repository manages events
      * for.
@@ -32,8 +22,10 @@ public interface EventRepository<T> {
      *                  an event stream in batches, this would be the version returned from the last
      *                  read event, not the version expected to be read next. Use null to read the
      *                  stream from the very beginning.
-     * @param shard     The shard to read from. If specified, this must be in the range from 0
-     *                  (inclusive) to the value returned by getShards() (exclusive)
+     * @param shard     The shard to read from. If specified, events are limited to the specified
+     *                  logical shard. It is up to the subscriber to specify how the repository
+     *                  is to be divided up through the shard count parameter in the shard
+     *                  argument.
      * @param maxEvents The maximum number of events to read in one go. Note that this may be
      *                  truncated to a lower number by the implementation, it is not safe to assume
      *                  that a successful read will have this many events, even if they are present
@@ -43,7 +35,7 @@ public interface EventRepository<T> {
      */
     RepositoryReadResult<T> readAll(
             RepositoryVersion version,
-            Integer shard,
+            RepositoryShard shard,
             int maxEvents);
 
     /**
@@ -53,12 +45,17 @@ public interface EventRepository<T> {
      *                an event stream in batches, this would be the version returned from the last
      *                read event, not the version expected to be read next. Use null to read the
      *                stream from the very beginning.
-     * @param shard   The shard to read from. If specified, this must be in the range from 0
-     *                (inclusive) to the value returned by getShards() (exclusive)
+     * @param shard   The shard to read from. If specified, events are limited to the specified
+     *                logical shard. It is up to the subscriber to specify how the repository
+     *                is to be divided up through the shard count parameter in the shard
+     *                argument.
      * @return A result record describing the outcome of the read and the events themselves, or null
      * if no events exist in this repository.
      */
-    default RepositoryReadResult<T> readAll(final RepositoryVersion version, Integer shard) {
+    default RepositoryReadResult<T> readAll(
+            final RepositoryVersion version,
+            RepositoryShard shard
+    ) {
         return readAll(version, shard, Integer.MAX_VALUE);
     }
 
@@ -159,8 +156,10 @@ public interface EventRepository<T> {
      *                    the beginning of the stream. If less than the current version, the
      *                    publisher will start replaying historical events, and then
      *                    transparently switch to live events.
-     * @param shard       The shard to read from. If specified, this must be in the range from 0
-     *                    (inclusive) to the value returned by getShards() (exclusive)
+     * @param shard       The shard to read from. If specified, events are limited to the specified
+     *                    logical shard. It is up to the subscriber to specify how the repository
+     *                    is to be divided up through the shard count parameter in the shard
+     *                    argument.
      * @param batchSize   A hint as to the number of events to read in one go. This may be used to
      *                    control the amount of events read for the catch up phase of a subscription
      *                    and/or the real time one.
@@ -170,7 +169,7 @@ public interface EventRepository<T> {
     @NotNull
     ReceiveChannel<EventSubscriptionUpdate<T>> subscribe(
             RepositoryVersion fromVersion,
-            Integer shard,
+            RepositoryShard shard,
             int batchSize
     );
 }

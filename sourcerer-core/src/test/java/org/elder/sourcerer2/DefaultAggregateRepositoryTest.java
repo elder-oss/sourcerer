@@ -199,6 +199,7 @@ public class DefaultAggregateRepositoryTest {
         return new EventRecord<>(
                 EventId.newUniqueId(),
                 aggregateId,
+                StreamHash.fromStreamId(aggregateId),
                 StreamVersion.ofInt(streamVersion),
                 RepositoryVersion.ofInt(repositoryVersion),
                 eventType,

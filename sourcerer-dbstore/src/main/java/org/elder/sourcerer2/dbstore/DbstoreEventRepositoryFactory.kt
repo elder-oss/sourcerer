@@ -1,47 +1,35 @@
 package org.elder.sourcerer2.dbstore
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.plus
+import kotlinx.coroutines.newCoroutineContext
 import org.elder.sourcerer2.EventRepository
 import org.elder.sourcerer2.EventRepositoryFactory
 import org.elder.sourcerer2.EventTypeUtils
 import org.slf4j.LoggerFactory
 import java.util.regex.Pattern
+import kotlin.coroutines.CoroutineContext
 
-class DbstoreEventRepositoryFactory(
+class DbstoreEventRepositoryFactory @JvmOverloads constructor(
         private val eventStore: DbstoreEventStore,
         private val objectMapper: ObjectMapper,
         private val defaultNamespace: String,
-        private val defaultShards: Int
-) : EventRepositoryFactory {
-    init {
-        validateNamespace(defaultNamespace)
-    }
-
+        override val coroutineContext: CoroutineContext = GlobalScope.newCoroutineContext(Dispatchers.IO)
+) : EventRepositoryFactory, CoroutineScope {
     override fun <T> getEventRepository(eventType: Class<T>): EventRepository<T> {
-        return getEventRepository(eventType, defaultNamespace, defaultShards)
+        return getEventRepository(eventType, defaultNamespace)
     }
 
     override fun <T> getEventRepository(eventType: Class<T>, namespace: String): EventRepository<T> {
-        return getEventRepository(eventType, namespace, defaultShards)
-    }
-
-    override fun <T> getEventRepository(
-            eventType: Class<T>,
-            namespace: String,
-            shards: Int?
-    ): EventRepository<T> {
         validateNamespace(namespace)
-        val actualShards = validateShards(shards)
         val repositoryName = EventTypeUtils.getRepositoryName(eventType)
         val normalizer = EventTypeUtils.getNormalizer(eventType)
         val repositoryInfo = DbstoreRepositoryInfo(
                 eventType = eventType,
                 namespace = namespace,
                 repository = repositoryName,
-                shards = actualShards,
                 normalizer = normalizer
         )
         logger.info(
@@ -51,13 +39,7 @@ class DbstoreEventRepositoryFactory(
                 repositoryInfo,
                 eventStore,
                 objectMapper,
-                GlobalScope + Dispatchers.IO
-        )
-    }
-
-    private fun validateShards(shards: Int?): Int {
-        return shards ?: throw IllegalArgumentException(
-                "The DbStore Sourcerer repository requires a shard number to be specified"
+                this
         )
     }
 

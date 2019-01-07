@@ -5,5 +5,6 @@ include 'sourcerer-core',
         'sourcerer-dbstore',
         'sourcerer-dbstore-jdbc',
         // 'sourcerer-dbstore-spanner',
+        'sourcerer-subscriptions',
         'sourcerer-spring',
         'sourcerer-test-utils'

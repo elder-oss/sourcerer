@@ -24,15 +24,6 @@ data class DbstoreRepositoryInfo<T>(
         val repository: String,
 
         /**
-         * The total number of shards for this category. This value will be used to facilitate concurrent subscriptions
-         * or readers on a repository stream. Each consumer may use a different number of shards, but care must be
-         * taken if multiple concurrent processes representing the same logical consumer (subscriber) are used with
-         * different settings for this value, as individual streams are only required to be mapped to a shard
-         * consistently if the same number of shards is being used.
-         */
-        val shards: Int,
-
-        /**
          * An optional normalizer for the repository. The normalizer is used for just-in-time transformations of
          * events as they are read from the event store, for compatibility and data fix-up.
          */

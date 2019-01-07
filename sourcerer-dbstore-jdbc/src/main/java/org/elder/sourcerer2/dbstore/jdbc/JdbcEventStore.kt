@@ -1,6 +1,7 @@
 package org.elder.sourcerer2.dbstore.jdbc
 
 import org.elder.sourcerer2.EventId
+import org.elder.sourcerer2.StreamHash
 import org.elder.sourcerer2.StreamId
 import org.elder.sourcerer2.dbstore.DbstoreEventData
 import org.elder.sourcerer2.dbstore.DbstoreEventRecord
@@ -14,6 +15,7 @@ import org.elder.sourcerer2.dbstore.DbstoreStreamVersion
 import org.elder.sourcerer2.dbstore.FoundWhenNotExpectedException
 import org.elder.sourcerer2.dbstore.FoundWithDifferentVersionException
 import org.elder.sourcerer2.dbstore.NotFoundWhenExpectedException
+import org.elder.sourcerer2.toStreamHash
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -102,7 +104,7 @@ class JdbcEventStore(
             expectVersion?.let { assertExpectedVersion(rowsFromExpectedEnd, events[0].eventId) }
 
             val commitTimestamp = connection.claimCommitTimestamp(repositoryInfo)
-            val streamHash = DbstoreSharder.getStreamHash(repositoryInfo, streamId)
+            val streamHash = streamId.toStreamHash()
             if (rowsFromExpectedEnd.isEmpty()) {
                 // We have no existing string but have made it this far, which means that's OK.
                 // Create a new one and burn in the shard.
@@ -213,8 +215,8 @@ class JdbcEventStore(
         var i = 1
         val query = makeReadStreamEventsQuery(fromVersion != null)
         val statement = prepareStatement(query)
-        val streamHash = DbstoreSharder.getStreamHash(repositoryInfo, streamId)
-        statement.setInt(i++, streamHash)
+        val streamHash = streamId.toStreamHash()
+        statement.setInt(i++, streamHash.value)
         statement.setString(i++, repositoryInfo.namespace)
         statement.setString(i++, repositoryInfo.repository)
         statement.setString(i++, streamId.identifier)
@@ -325,7 +327,7 @@ class JdbcEventStore(
     private fun Connection.persistEvents(
             repositoryInfo: DbstoreRepositoryInfo<*>,
             streamId: StreamId,
-            streamHash: Int,
+            streamHash: StreamHash,
             commitTimestamp: Timestamp,
             events: List<DbstoreEventData>
     ): DbstoreStreamVersion {
@@ -334,7 +336,7 @@ class JdbcEventStore(
         events.forEachIndexed { idx, eventData ->
             var i = 1
             val statement = prepareStatement(writeEventDataStatement)
-            statement.setInt(i++, streamHash)
+            statement.setInt(i++, streamHash.value)
             statement.setString(i++, repositoryInfo.namespace)
             statement.setString(i++, repositoryInfo.repository)
             statement.setString(i++, streamId.identifier)
@@ -354,11 +356,11 @@ class JdbcEventStore(
     private fun Connection.insertSentinel(
             repositoryInfo: DbstoreRepositoryInfo<*>,
             streamId: StreamId,
-            streamHash: Int
+            streamHash: StreamHash
     ) {
         var i = 1
         val statement = prepareStatement(writeEventDataStatement)
-        statement.setInt(i++, streamHash)
+        statement.setInt(i++, streamHash.value)
         statement.setString(i++, repositoryInfo.namespace)
         statement.setString(i++, repositoryInfo.repository)
         statement.setString(i++, streamId.identifier)

@@ -7,7 +7,7 @@ import java.lang.IllegalStateException
 class DefaultEventSubscription<T>(
         private val dispatcher: CoroutineDispatcher,
         private val repository: EventRepository<T>,
-        private val shard: Int?,
+        private val shard: RepositoryShard?,
         private val subscriptionHandler: EventSubscriptionHandler<T>,
         private val config: SubscriptionWorkerConfig
 ) : EventSubscription {
