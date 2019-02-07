@@ -56,6 +56,15 @@ class EventStreamsIntegrationTest {
     }
 
     @Test
+    fun `does nothing when creating another stream using existing name if explicitly allowed`() {
+        createWith(failOnExisting = CreateConflictStrategy.NOOP) { Event.ValueSet("the-value") }
+
+        createWith(failOnExisting = CreateConflictStrategy.NOOP) { Event.ValueSet("the-value-2") }
+
+        then assertState { value equals "the-value" }
+    }
+
+    @Test
     fun `can update existing stream`() {
         createWith { Event.ValueSet("the-value") }
 
@@ -168,8 +177,14 @@ class EventStreamsIntegrationTest {
         }
     }
 
-    private fun createWith(event: () -> Event) =
-            streams.create(randomId) { state -> state.apply(event) }
+    private fun createWith(
+            event: () -> Event
+    ) = streams.create(randomId) { state -> state.apply(event) }
+
+    private fun createWith(
+            failOnExisting: CreateConflictStrategy,
+            event: () -> Event
+    ) = streams.create(randomId, failOnExisting) { state -> state.apply(event) }
 
     private fun updateWith(event: () -> Event) =
             streams.update(randomId) { state -> state.apply(event) }
@@ -209,7 +224,8 @@ class EventStreamsIntegrationTest {
             use = JsonTypeInfo.Id.NAME,
             include = JsonTypeInfo.As.PROPERTY,
             property = "type",
-            visible = true)
+            visible = true
+    )
     @JsonSubTypes(JsonSubTypes.Type(Event.ValueSet::class))
     sealed class Event {
         data class ValueSet(val value: String) : Event()
