@@ -30,10 +30,14 @@ class EventStreams<STATE, EVENT>(
     /**
      * Create a new stream.
      *
-     * Will fail if stream already exists.
+     * @param id the aggregate id
+     * @param failOnExisting If true, UnexpectedVersionException will be thrown if aggregate
+     * already exists. Operation is otherwise a noop
+     * @param create operations to perform on the aggregate
      */
     fun create(
             id: String,
+            failOnExisting: Boolean = true,
             create: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
         return CommandResponse.of(
@@ -44,13 +48,17 @@ class EventStreams<STATE, EVENT>(
                         .setAggregateId(id)
                         .setAtomic(true)
                         .setExpectedVersion(ExpectedVersion.notCreated())
+                        .setIdempotentCreate(!failOnExisting)
                         .run())
     }
 
     /**
      * Update existing stream.
      *
-     * Will by default fail if stream does not exist.
+     * @param id the aggregate id
+     * @param expectedVersion expected aggregate version. By default will fail if stream does not
+     * exist
+     * @param update operations to perform on the aggregate
      */
     fun update(
             id: String,
@@ -70,6 +78,9 @@ class EventStreams<STATE, EVENT>(
      * Append events to stream.
      *
      * Stream may be new or existing. No validation is performed, and nothing is read.
+     *
+     * @param id the aggregate id
+     * @param operation operations to perform to create events
      */
     fun append(id: String, operation: () -> List<EVENT>): CommandResponse {
         return CommandResponse.of(
