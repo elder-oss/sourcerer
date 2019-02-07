@@ -57,7 +57,7 @@ class EventStreamsIntegrationTest {
 
     @Test
     fun `does nothing when creating another stream using existing name if explicitly allowed`() {
-        createWith { Event.ValueSet("the-value") }
+        createWith(failOnExisting = false) { Event.ValueSet("the-value") }
 
         createWith(failOnExisting = false) { Event.ValueSet("the-value-2") }
 
