@@ -57,9 +57,9 @@ class EventStreamsIntegrationTest {
 
     @Test
     fun `does nothing when creating another stream using existing name if explicitly allowed`() {
-        createWith(failOnExisting = false) { Event.ValueSet("the-value") }
+        createWith(failOnExisting = CreateConflictStrategy.NOOP) { Event.ValueSet("the-value") }
 
-        createWith(failOnExisting = false) { Event.ValueSet("the-value-2") }
+        createWith(failOnExisting = CreateConflictStrategy.NOOP) { Event.ValueSet("the-value-2") }
 
         then assertState { value equals "the-value" }
     }
@@ -182,7 +182,7 @@ class EventStreamsIntegrationTest {
     ) = streams.create(randomId) { state -> state.apply(event) }
 
     private fun createWith(
-            failOnExisting: Boolean,
+            failOnExisting: CreateConflictStrategy,
             event: () -> Event
     ) = streams.create(randomId, failOnExisting) { state -> state.apply(event) }
 

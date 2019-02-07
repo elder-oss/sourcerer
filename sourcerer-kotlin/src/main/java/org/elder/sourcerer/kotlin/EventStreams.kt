@@ -31,13 +31,12 @@ class EventStreams<STATE, EVENT>(
      * Create a new stream.
      *
      * @param id the aggregate id
-     * @param failOnExisting If true, UnexpectedVersionException will be thrown if aggregate
-     * already exists. Operation is otherwise a noop
+     * @param conflictStrategy what to do if aggregate already exists. Default is to fail
      * @param create operations to perform on the aggregate
      */
     fun create(
             id: String,
-            failOnExisting: Boolean = true,
+            conflictStrategy: CreateConflictStrategy = CreateConflictStrategy.FAIL,
             create: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
         return CommandResponse.of(
@@ -48,7 +47,7 @@ class EventStreams<STATE, EVENT>(
                         .setAggregateId(id)
                         .setAtomic(true)
                         .setExpectedVersion(ExpectedVersion.notCreated())
-                        .setIdempotentCreate(!failOnExisting)
+                        .setIdempotentCreate(conflictStrategy.idempotentCreate)
                         .run())
     }
 
@@ -112,4 +111,18 @@ class EventStreams<STATE, EVENT>(
                 ExpectedVersion.notCreated(),
                 true)
     }
+}
+
+/**
+ * Strategy for when trying to create an aggregate that already exists.
+ */
+enum class CreateConflictStrategy(internal val idempotentCreate: Boolean) {
+    /**
+     * Throw UnexpectedVersionException.
+     */
+    FAIL(idempotentCreate = false),
+    /**
+     * Do nothing.
+     */
+    NOOP(idempotentCreate = true);
 }
