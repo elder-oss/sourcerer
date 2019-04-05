@@ -1,24 +1,41 @@
 package org.elder.sourcerer;
 
 import com.google.common.collect.ImmutableList;
+import org.elder.sourcerer.utils.RetryHandlerFactory;
 
 import java.util.List;
 
 public class DefaultCommandFactory<TState, TEvent> implements CommandFactory<TState, TEvent> {
     private final AggregateRepository<TState, TEvent> repository;
     private final List<CommandPostProcessor> postProcessors;
+    private final RetryHandlerFactory retryHandlerFactory;
 
     public DefaultCommandFactory(final AggregateRepository<TState, TEvent> repository) {
-        this(repository, null);
+        this(repository, (List<CommandPostProcessor>) null);
     }
 
     public DefaultCommandFactory(
             final AggregateRepository<TState, TEvent> repository,
             final List<CommandPostProcessor> postProcessors) {
+        this(repository, postProcessors, RetryHandlerFactory.noRetries());
+    }
+
+    public DefaultCommandFactory(
+            final AggregateRepository<TState, TEvent> repository,
+            final RetryHandlerFactory retryHandlerFactory
+    ) {
+        this(repository, null, retryHandlerFactory);
+    }
+
+    public DefaultCommandFactory(
+            final AggregateRepository<TState, TEvent> repository,
+            final List<CommandPostProcessor> postProcessors,
+            final RetryHandlerFactory retryHandlerFactory) {
         this.repository = repository;
         this.postProcessors = postProcessors == null
                 ? ImmutableList.of()
                 : ImmutableList.copyOf(postProcessors);
+        this.retryHandlerFactory = retryHandlerFactory;
     }
 
     @Override
@@ -32,7 +49,7 @@ public class DefaultCommandFactory<TState, TEvent> implements CommandFactory<TSt
         Operation<TState, TParams, TEvent> typeHackedOperation =
                 (Operation<TState, TParams, TEvent>) operation;
         Command<TState, TParams, TEvent> command =
-                new DefaultCommand<>(repository, typeHackedOperation);
+                new DefaultCommand<>(repository, typeHackedOperation, retryHandlerFactory);
         for (CommandPostProcessor postProcessor : postProcessors) {
             postProcessor.postProcessCommand(command);
         }

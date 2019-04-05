@@ -4,12 +4,15 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import org.elder.sourcerer.AggregateProjection
 import org.elder.sourcerer.AggregateRepository
+import org.elder.sourcerer.DefaultCommandFactory
 import org.elder.sourcerer.EventType
 import org.elder.sourcerer.ExpectedVersion
 import org.elder.sourcerer.exceptions.UnexpectedVersionException
 import org.elder.sourcerer.kotlin.utils.ConcurrencyProgress
 import org.elder.sourcerer.kotlin.utils.ConcurrencyRule
 import org.elder.sourcerer.kotlin.utils.TestEventStore
+import org.elder.sourcerer.utils.RetryHandlerFactory
+import org.elder.sourcerer.utils.RetryPolicy
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.instanceOf
 import org.junit.Assert.assertThat
@@ -36,7 +39,7 @@ class EventStreamsIntegrationTest {
     fun setup() {
         aggregateRepository = eventStore
                 .createAggregateRepository("test_eventstreams", Projection())
-        streams = EventStreams(aggregateRepository)
+        setupEventStreams(RetryHandlerFactory.noRetries())
     }
 
     @Test
@@ -154,6 +157,32 @@ class EventStreamsIntegrationTest {
     }
 
     @Test
+    fun `concurrent updates eventually succeed when retries configured`() {
+        setupEventStreams(RetryHandlerFactory(RetryPolicy(2, 50)))
+
+        createWith { Event.ValueSet("the-value") }
+
+        val slowUpdateStarted = ConcurrencyProgress("slow read")
+        val sneakyUpdateCompleted = ConcurrencyProgress("sneaky update")
+
+        concurrency.runInThread("slow update") {
+            updateWith {
+                slowUpdateStarted.happened()
+                sneakyUpdateCompleted.await()
+                Event.ValueSet("the-value-slow")
+            }
+        }
+
+        concurrency.runInThread("sneaky update") {
+            slowUpdateStarted.await()
+            updateWith {
+                Event.ValueSet("the-value-sneaky")
+            }
+            sneakyUpdateCompleted.happened()
+        }
+    }
+
+    @Test
     fun `concurrent creates fail`() {
         val slowCreateStarted = ConcurrencyProgress("slow read")
         val sneakyCreateCompleted = ConcurrencyProgress("sneaky update")
@@ -201,6 +230,10 @@ class EventStreamsIntegrationTest {
         } catch (exception: Exception) {
             assertThat(exception, instanceOf(expected.java))
         }
+    }
+
+    private fun setupEventStreams(retryHandlerFactory: RetryHandlerFactory) {
+        streams = EventStreams(DefaultCommandFactory(aggregateRepository, retryHandlerFactory))
     }
 
     class Projection : AggregateProjection<State, Event> {

@@ -26,6 +26,8 @@ import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionUpdate;
 import org.elder.sourcerer.ExpectedVersion;
+import org.elder.sourcerer.ExpectedVersionType;
+import org.elder.sourcerer.exceptions.AtomicWriteException;
 import org.elder.sourcerer.exceptions.RetriableEventReadException;
 import org.elder.sourcerer.exceptions.RetriableEventWriteException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
@@ -206,7 +208,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                 .collect(Collectors.toList());
 
         logger.debug("Writing {} events to stream {} (in {}) (expected version {})",
-                     esEvents.size(), streamId, streamPrefix, version);
+                esEvents.size(), streamId, streamPrefix, version);
         try {
             WriteResult result = completeWriteFuture(connection.writeEvents(
                     toEsStreamId(streamId),
@@ -256,7 +258,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
             final String streamId,
             final Integer fromVersion) {
         logger.info("Creating publisher for {} (in {}) (starting with version {})",
-                    streamId, streamPrefix, fromVersion);
+                streamId, streamPrefix, fromVersion);
         Publisher<Event> esPublisher = connection.streamPublisher(
                 toEsStreamId(streamId),
                 fromVersion == null ? null : new EventNumber.Exact(fromVersion),
@@ -272,7 +274,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
     @Override
     public Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
         logger.info("Creating publisher for all events in {} (starting with version {})",
-                    streamPrefix, fromVersion);
+                streamPrefix, fromVersion);
         Publisher<Event> esPublisher = connection.streamPublisher(
                 getCategoryStreamName(),
                 fromVersion == null ? null : new EventNumber.Exact(fromVersion),
