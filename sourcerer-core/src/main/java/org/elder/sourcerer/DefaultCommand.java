@@ -6,6 +6,7 @@ import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,19 +112,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         logger.debug("Expected version set as {}", effectiveExpectedVersion);
 
         // Read the aggregate if needed
-        ImmutableAggregate<TState, TEvent> aggregate;
-        if (operation.requiresState() || atomic) {
-            logger.debug("Reading aggregate record from stream");
-            aggregate = readAndValidateAggregate(effectiveExpectedVersion);
-            logger.debug(
-                    "Current state of aggregate is {}",
-                    aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED
-                            ? "<not created>"
-                            : "version " + aggregate.sourceVersion());
-        } else {
-            logger.debug("Aggregate state not loaded");
-            aggregate = null;
-        }
+        ImmutableAggregate<TState, TEvent> aggregate =
+                readExistingAggregate(effectiveExpectedVersion);
 
         // Bail out early if idempotent create, and already present
         if (idempotentCreate
@@ -152,6 +142,34 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         }
 
         // Create/update the event stream as needed
+        return updateStream(aggregate, events);
+    }
+
+    @Nullable
+    private ImmutableAggregate<TState, TEvent> readExistingAggregate(
+            ExpectedVersion effectiveExpectedVersion
+    ) {
+        ImmutableAggregate<TState, TEvent> aggregate;
+        if (operation.requiresState() || atomic) {
+            logger.debug("Reading aggregate record from stream");
+            aggregate = readAndValidateAggregate(effectiveExpectedVersion);
+            logger.debug(
+                    "Current state of aggregate is {}",
+                    aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED
+                            ? "<not created>"
+                            : "version " + aggregate.sourceVersion());
+            return aggregate;
+        } else {
+            logger.debug("Aggregate state not loaded");
+            return null;
+        }
+    }
+
+    @NotNull
+    private CommandResult<TEvent> updateStream(
+            ImmutableAggregate<TState, TEvent> aggregate,
+            ImmutableList<? extends TEvent> events
+    ) {
         ExpectedVersion updateExpectedVersion;
 
         if (atomic) {
