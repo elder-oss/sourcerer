@@ -24,15 +24,15 @@ import java.util.Map;
 public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, TParams, TEvent> {
     private static final Logger logger = LoggerFactory.getLogger(DefaultCommand.class);
     private final AggregateRepository<TState, TEvent> repository;
-    private final Map<String, String> metadata;
+    private final Map<String, String> metadata = new HashMap<>();
     private final Operation<TState, TParams, TEvent> operation;
     private final RetryHandlerFactory retryHandlerFactory;
-    private boolean atomic = true;
+    private boolean atomic;
     private boolean idempotentCreate = false;
     private String aggregateId = null;
     private TParams arguments = null;
     private ExpectedVersion expectedVersion = null;
-    private List<MetadataDecorator> metadataDecorators;
+    private List<MetadataDecorator> metadataDecorators = new ArrayList<>();
 
     public DefaultCommand(
             @NotNull final AggregateRepository<TState, TEvent> repository,
@@ -44,8 +44,6 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         this.repository = repository;
         this.operation = operation;
         this.atomic = operation.atomic();
-        this.metadata = new HashMap<>();
-        this.metadataDecorators = new ArrayList<>();
         this.retryHandlerFactory = retryHandlerFactory;
     }
 
@@ -202,7 +200,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
 
     @NotNull
     private CommandResult<TEvent> updateAggregate(
-            @NotNull final ImmutableAggregate<TState, TEvent> aggregate,
+            @Nullable final ImmutableAggregate<TState, TEvent> aggregate,
             @NotNull final ImmutableList<? extends TEvent> events
     ) {
         ExpectedVersion updateExpectedVersion;
@@ -236,9 +234,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             }
         }
 
-        if (this.metadata != null) {
-            effectiveMetadata.putAll(this.metadata);
-        }
+        effectiveMetadata.putAll(this.metadata);
 
         try {
             int newVersion = repository.append(
@@ -260,8 +256,8 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 logger.debug("Idempotent create enabled, ignoring existing stream");
                 return new CommandResult<>(
                         aggregateId,
-                        ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
-                        ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
+                        ex.getCurrentVersion(),
+                        ex.getCurrentVersion(),
                         ImmutableList.of());
             } else if (atomic) {
                 throw new AtomicWriteException(

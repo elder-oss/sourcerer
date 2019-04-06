@@ -4,8 +4,6 @@ import org.elder.sourcerer.ExpectedVersion;
 
 /**
  * Thrown when event stream was updated between reading the existing stream and writing new events.
- *
- * The update can be retried.
  */
 public class AtomicWriteException extends UnexpectedVersionException {
     public AtomicWriteException(
