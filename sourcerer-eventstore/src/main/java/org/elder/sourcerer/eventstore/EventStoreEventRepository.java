@@ -224,10 +224,7 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
             logger.debug("Write successful, next expected version is {}", nextExpectedVersion);
             return nextExpectedVersion;
         } catch (WrongExpectedVersionException ex) {
-            throw new UnexpectedVersionException(
-                    ex.getMessage(),
-                    null,
-                    version);
+            throw new UnexpectedVersionException(ex.getMessage(), version);
         }
     }
 

@@ -12,8 +12,11 @@ public class UnexpectedVersionException extends IllegalStateException {
     public UnexpectedVersionException(
             final Integer currentVersion,
             final ExpectedVersion expectedVersion) {
-        this(formatDefaultMessage(currentVersion, expectedVersion), currentVersion,
-             expectedVersion);
+        this(
+                formatDefaultMessage(currentVersion, expectedVersion, true),
+                currentVersion,
+                expectedVersion
+        );
     }
 
     public UnexpectedVersionException(
@@ -23,6 +26,12 @@ public class UnexpectedVersionException extends IllegalStateException {
         super(message);
         this.currentVersion = currentVersion;
         this.expectedVersion = expectedVersion;
+    }
+
+    public UnexpectedVersionException(
+            final String message,
+            final ExpectedVersion expectedVersion) {
+        this(message, null, expectedVersion);
     }
 
     public UnexpectedVersionException(
@@ -39,8 +48,23 @@ public class UnexpectedVersionException extends IllegalStateException {
             final Throwable cause,
             final Integer currentVersion,
             final ExpectedVersion expectedVersion) {
-        this(formatDefaultMessage(currentVersion, expectedVersion), cause, currentVersion,
-             expectedVersion);
+        this(
+                formatDefaultMessage(currentVersion, expectedVersion, true),
+                cause,
+                currentVersion,
+                expectedVersion
+        );
+    }
+
+    public UnexpectedVersionException(
+            final Throwable cause,
+            final ExpectedVersion expectedVersion) {
+        this(
+                formatDefaultMessage(null, expectedVersion, false),
+                cause,
+                null,
+                expectedVersion
+        );
     }
 
     /**
@@ -59,8 +83,11 @@ public class UnexpectedVersionException extends IllegalStateException {
 
     private static String formatDefaultMessage(
             final Integer currentVersion,
-            final ExpectedVersion expectedVersion) {
-        return String.format("Existing stream version %s does not match expected %s",
-                             currentVersion, expectedVersion);
+            final ExpectedVersion expectedVersion,
+            final boolean currentVersionKnown
+    ) {
+        return String.format(
+                "Existing stream version %s does not match expected %s",
+                currentVersionKnown ? currentVersion : "(?)", expectedVersion);
     }
 }

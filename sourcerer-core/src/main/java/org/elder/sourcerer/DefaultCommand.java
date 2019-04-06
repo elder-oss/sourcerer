@@ -260,11 +260,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                         ex.getCurrentVersion(),
                         ImmutableList.of());
             } else if (atomic) {
-                throw new AtomicWriteException(
-                        ex.getMessage(),
-                        ex.getCause(),
-                        ex.getCurrentVersion(),
-                        ex.getExpectedVersion());
+                throw new AtomicWriteException(ex);
             }
 
             throw ex;
