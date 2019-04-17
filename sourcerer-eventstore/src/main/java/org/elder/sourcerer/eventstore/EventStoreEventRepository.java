@@ -26,8 +26,6 @@ import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionUpdate;
 import org.elder.sourcerer.ExpectedVersion;
-import org.elder.sourcerer.ExpectedVersionType;
-import org.elder.sourcerer.exceptions.AtomicWriteException;
 import org.elder.sourcerer.exceptions.RetriableEventReadException;
 import org.elder.sourcerer.exceptions.RetriableEventWriteException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
