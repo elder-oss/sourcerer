@@ -11,7 +11,6 @@ import org.elder.sourcerer.exceptions.UnexpectedVersionException
 import org.elder.sourcerer.kotlin.utils.ConcurrencyProgress
 import org.elder.sourcerer.kotlin.utils.ConcurrencyRule
 import org.elder.sourcerer.kotlin.utils.TestEventStore
-import org.elder.sourcerer.utils.RetryHandlerFactory
 import org.elder.sourcerer.utils.RetryPolicy
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.instanceOf
@@ -39,7 +38,7 @@ class EventStreamsIntegrationTest {
     fun setup() {
         aggregateRepository = eventStore
                 .createAggregateRepository("test_eventstreams", Projection())
-        setupEventStreams(RetryHandlerFactory.noRetries())
+        setupEventStreams(RetryPolicy.noRetries())
     }
 
     @Test
@@ -158,7 +157,7 @@ class EventStreamsIntegrationTest {
 
     @Test
     fun `concurrent updates eventually succeed when retries configured`() {
-        setupEventStreams(RetryHandlerFactory(RetryPolicy(2, 50)))
+        setupEventStreams(RetryPolicy(2, 50))
 
         createWith { Event.ValueSet("the-value") }
 
@@ -232,8 +231,8 @@ class EventStreamsIntegrationTest {
         }
     }
 
-    private fun setupEventStreams(retryHandlerFactory: RetryHandlerFactory) {
-        streams = EventStreams(DefaultCommandFactory(aggregateRepository, retryHandlerFactory))
+    private fun setupEventStreams(retryPolicy: RetryPolicy) {
+        streams = EventStreams(DefaultCommandFactory(aggregateRepository, retryPolicy))
     }
 
     class Projection : AggregateProjection<State, Event> {

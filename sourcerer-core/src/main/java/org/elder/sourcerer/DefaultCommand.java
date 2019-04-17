@@ -7,7 +7,7 @@ import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
 import org.elder.sourcerer.utils.RetryHandler;
-import org.elder.sourcerer.utils.RetryHandlerFactory;
+import org.elder.sourcerer.utils.RetryPolicy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -26,7 +26,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     private final AggregateRepository<TState, TEvent> repository;
     private final Map<String, String> metadata = new HashMap<>();
     private final Operation<TState, TParams, TEvent> operation;
-    private final RetryHandlerFactory retryHandlerFactory;
+    private final RetryPolicy retryPolicy;
     private boolean atomic;
     private boolean idempotentCreate = false;
     private String aggregateId = null;
@@ -37,14 +37,14 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     public DefaultCommand(
             @NotNull final AggregateRepository<TState, TEvent> repository,
             @NotNull final Operation<TState, TParams, TEvent> operation,
-            @NotNull final RetryHandlerFactory retryHandlerFactory
+            @NotNull final RetryPolicy retryPolicy
     ) {
         Preconditions.checkNotNull(repository);
         Preconditions.checkNotNull(operation);
         this.repository = repository;
         this.operation = operation;
         this.atomic = operation.atomic();
-        this.retryHandlerFactory = retryHandlerFactory;
+        this.retryPolicy = retryPolicy;
     }
 
     @Override
@@ -116,7 +116,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 getEffectiveExpectedVersion(expectedVersion, operation.expectedVersion());
         logger.debug("Expected version set as {}", effectiveExpectedVersion);
 
-        RetryHandler retryHandler = retryHandlerFactory.newRetryHandler();
+        RetryHandler retryHandler = new RetryHandler(retryPolicy);
         while (true) {
             try {
                 return performCommand(effectiveExpectedVersion);

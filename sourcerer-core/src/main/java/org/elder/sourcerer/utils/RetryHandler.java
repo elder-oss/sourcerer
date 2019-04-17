@@ -14,13 +14,12 @@ import java.util.Random;
  */
 public class RetryHandler {
     private static final Logger logger = LoggerFactory.getLogger(RetryHandler.class);
+    private static final Random rnd = new Random();
     private final RetryPolicy policy;
-    private final Random rnd;
     private int nrFailures = 0;
 
-    RetryHandler(final RetryPolicy policy, final Random rnd) {
+    public RetryHandler(final RetryPolicy policy) {
         this.policy = policy;
-        this.rnd = rnd;
     }
 
     public void failed() {

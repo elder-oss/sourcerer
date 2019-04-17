@@ -9,6 +9,10 @@ public class RetryPolicy {
         this.backoffFactorMillis = backoffFactorMillis;
     }
 
+    public static RetryPolicy noRetries() {
+        return new RetryPolicy(0, 0);
+    }
+
     public int getMaxAttempts() {
         return maxAttempts;
     }

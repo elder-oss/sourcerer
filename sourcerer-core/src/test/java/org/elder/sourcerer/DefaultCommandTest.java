@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
-import org.elder.sourcerer.utils.RetryHandlerFactory;
+import org.elder.sourcerer.utils.RetryPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 @PrepareForTest(ExpectedVersion.class)
 public class DefaultCommandTest {
     private static final String AGGREGATE_ID = "42";
-    private final RetryHandlerFactory retryHandlerFactory = RetryHandlerFactory.noRetries();
+    private final RetryPolicy retryPolicy = RetryPolicy.noRetries();
     private AggregateRepository repository = mock(AggregateRepository.class);
 
     @Test(expected = InvalidCommandException.class)
@@ -43,7 +43,7 @@ public class DefaultCommandTest {
                 true,
                 false,
                 ExpectedVersion.exactly(42));
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.run();
     }
@@ -62,7 +62,7 @@ public class DefaultCommandTest {
                         AGGREGATE_ID,
                         42,
                         new TestState("test")));
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         CommandResult commandResult = command.run();
@@ -86,7 +86,7 @@ public class DefaultCommandTest {
                 DefaultImmutableAggregate.createNew(projection, AGGREGATE_ID);
         when(repository.load(any())).thenReturn(sourceAggregate);
         when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         CommandResult commandResult = command.run();
@@ -118,7 +118,7 @@ public class DefaultCommandTest {
                         AGGREGATE_ID,
                         42,
                         new TestState("test")));
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         command.setAtomic(false);
@@ -138,7 +138,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         when(repository.load(any()))
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
@@ -162,7 +162,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         when(repository.load(any()))
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
@@ -198,7 +198,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation, retryHandlerFactory);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.addMetadata(ImmutableMap.of("key2", "value2direct"));
         command.addMetadataDecorator(new MetadataDecorator() {
             @Override
