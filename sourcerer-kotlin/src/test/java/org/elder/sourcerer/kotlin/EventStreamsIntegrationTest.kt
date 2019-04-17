@@ -157,7 +157,7 @@ class EventStreamsIntegrationTest {
 
     @Test
     fun `concurrent updates eventually succeed when retries configured`() {
-        setupEventStreams(RetryPolicy(2, 50))
+        setupEventStreams(RetryPolicy(25, 50, 2))
 
         createWith { Event.ValueSet("the-value") }
 

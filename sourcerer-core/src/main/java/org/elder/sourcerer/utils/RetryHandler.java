@@ -3,18 +3,16 @@ package org.elder.sourcerer.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Random;
-
 /**
- * Atomic update retry handler. This class keeps track of the number of failed attempts have
- * been made, and for how long to back off before trying again.
- *
- * The backoff is configured, but there is a random variance of +-50% to avoid multiple
- * clients continuously colliding.
+ * Atomic update retry handler. This class keeps track of the number of failed attempts have been
+ * made, and for how long to back off before trying again.
+ * <p>
+ * The backoff is configured, but there is a random variance of +-50% to avoid multiple clients
+ * continuously colliding.
  */
 public class RetryHandler {
     private static final Logger logger = LoggerFactory.getLogger(RetryHandler.class);
-    private static final Random rnd = new Random();
+    private static final long MAX_BACK_OFF_MILLIS = 5_000;
     private final RetryPolicy policy;
     private int nrFailures = 0;
 
@@ -36,10 +34,9 @@ public class RetryHandler {
 
     public void backOff() {
         try {
-            int randomVarianceMillis =
-                    rnd.nextInt(policy.getBackoffFactorMillis()) +
-                    policy.getBackoffFactorMillis() / 2;
-            long sleepTime = randomVarianceMillis << (nrFailures - 1);
+            long backoffFactor = policy.getBackoffFactorMillis() << (nrFailures - 1);
+            long totalBackoff = policy.getInitialDelayMillis() + backoffFactor;
+            long sleepTime = Math.min(totalBackoff, MAX_BACK_OFF_MILLIS);
             logger.debug("Backing off for {}ms", sleepTime);
             Thread.sleep(sleepTime);
         } catch (InterruptedException exception) {
