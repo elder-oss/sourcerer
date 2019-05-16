@@ -1,7 +1,7 @@
 package org.elder.sourcerer.utils;
 
 public class RetryPolicy {
-    private static final int DEFAULT_MAX_BACKOFF_MILLIS1 = 5_000;
+    private static final int DEFAULT_MAX_BACKOFF_MILLIS = 5_000;
 
     private final long initialDelayMillis;
     private final long backoffFactorMillis;
@@ -16,7 +16,7 @@ public class RetryPolicy {
         this.initialDelayMillis = initialDelayMillis;
         this.backoffFactorMillis = backoffFactorMillis;
         this.maxAttempts = maxAttempts;
-        this.maxBackoffMillis = DEFAULT_MAX_BACKOFF_MILLIS1;
+        this.maxBackoffMillis = DEFAULT_MAX_BACKOFF_MILLIS;
     }
 
     public RetryPolicy(
