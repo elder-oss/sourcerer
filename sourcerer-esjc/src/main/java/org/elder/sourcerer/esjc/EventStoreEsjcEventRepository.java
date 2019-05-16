@@ -241,10 +241,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
             return nextExpectedVersion;
         } catch (WrongExpectedVersionException ex) {
             logger.warn("Unexpected version when attempting append", ex);
-            throw new UnexpectedVersionException(
-                    ex.getMessage(),
-                    null,
-                    version);
+            throw new UnexpectedVersionException(ex.getMessage(), version);
         }
     }
 
@@ -426,10 +423,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         } catch (ExecutionException ex) {
             if (ex.getCause() instanceof EventStoreException) {
                 if (ex.getCause() instanceof WrongExpectedVersionException) {
-                    throw new UnexpectedVersionException(
-                            ex.getCause(),
-                            null,
-                            expectedVersion);
+                    throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
                 } else if (ex.getCause() instanceof AccessDeniedException
                         || ex.getCause() instanceof CommandNotExpectedException
                         || ex.getCause() instanceof InvalidTransactionException
@@ -475,10 +469,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         } catch (ExecutionException ex) {
             if (ex.getCause() instanceof EventStoreException) {
                 if (ex.getCause() instanceof WrongExpectedVersionException) {
-                    throw new UnexpectedVersionException(
-                            ex.getCause(),
-                            null,
-                            expectedVersion);
+                    throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
                 } else if (ex.getCause() instanceof AccessDeniedException
                         || ex.getCause() instanceof CommandNotExpectedException
                         || ex.getCause() instanceof InvalidTransactionException

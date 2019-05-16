@@ -2,10 +2,14 @@ package org.elder.sourcerer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.elder.sourcerer.exceptions.AtomicWriteException;
 import org.elder.sourcerer.exceptions.ConflictingExpectedVersionsException;
 import org.elder.sourcerer.exceptions.InvalidCommandException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
+import org.elder.sourcerer.utils.RetryHandler;
+import org.elder.sourcerer.utils.RetryPolicy;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,25 +24,27 @@ import java.util.Map;
 public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, TParams, TEvent> {
     private static final Logger logger = LoggerFactory.getLogger(DefaultCommand.class);
     private final AggregateRepository<TState, TEvent> repository;
-    private final Map<String, String> metadata;
+    private final Map<String, String> metadata = new HashMap<>();
     private final Operation<TState, TParams, TEvent> operation;
-    private boolean atomic = true;
+    private final RetryPolicy retryPolicy;
+    private boolean atomic;
     private boolean idempotentCreate = false;
     private String aggregateId = null;
     private TParams arguments = null;
     private ExpectedVersion expectedVersion = null;
-    private List<MetadataDecorator> metadataDecorators;
+    private List<MetadataDecorator> metadataDecorators = new ArrayList<>();
 
     public DefaultCommand(
             @NotNull final AggregateRepository<TState, TEvent> repository,
-            @NotNull final Operation<TState, TParams, TEvent> operation) {
+            @NotNull final Operation<TState, TParams, TEvent> operation,
+            @NotNull final RetryPolicy retryPolicy
+    ) {
         Preconditions.checkNotNull(repository);
         Preconditions.checkNotNull(operation);
         this.repository = repository;
         this.operation = operation;
         this.atomic = operation.atomic();
-        this.metadata = new HashMap<>();
-        this.metadataDecorators = new ArrayList<>();
+        this.retryPolicy = retryPolicy;
     }
 
     @Override
@@ -110,20 +116,37 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 getEffectiveExpectedVersion(expectedVersion, operation.expectedVersion());
         logger.debug("Expected version set as {}", effectiveExpectedVersion);
 
-        // Read the aggregate if needed
-        ImmutableAggregate<TState, TEvent> aggregate;
-        if (operation.requiresState() || atomic) {
-            logger.debug("Reading aggregate record from stream");
-            aggregate = readAndValidateAggregate(effectiveExpectedVersion);
-            logger.debug(
-                    "Current state of aggregate is {}",
-                    aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED
-                            ? "<not created>"
-                            : "version " + aggregate.sourceVersion());
-        } else {
-            logger.debug("Aggregate state not loaded");
-            aggregate = null;
+        RetryHandler retryHandler = new RetryHandler(retryPolicy);
+        while (true) {
+            try {
+                return performCommand(effectiveExpectedVersion);
+            } catch (AtomicWriteException awe) {
+                if (effectiveExpectedVersion.getType() == ExpectedVersionType.NOT_CREATED) {
+                    // Expected aggregate to not exist, but now it does - retrying won't help.
+                    throw awe;
+                }
+                retryHandler.failed();
+                logger.info(
+                        "Failed attempt {}: Concurrent append to aggregate {}",
+                        retryHandler.getNrFailures(),
+                        aggregateId
+                );
+                if (retryHandler.isThresholdReached()) {
+                    logger.warn("Reached max retries");
+                    throw awe;
+                }
+                retryHandler.backOff();
+            }
         }
+    }
+
+    @NotNull
+    private CommandResult<TEvent> performCommand(
+            final ExpectedVersion effectiveExpectedVersion
+    ) {
+        // Read the aggregate if needed
+        ImmutableAggregate<TState, TEvent> aggregate =
+                readExistingAggregate(effectiveExpectedVersion);
 
         // Bail out early if idempotent create, and already present
         if (idempotentCreate
@@ -152,6 +175,34 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
         }
 
         // Create/update the event stream as needed
+        return updateAggregate(aggregate, events);
+    }
+
+    @Nullable
+    private ImmutableAggregate<TState, TEvent> readExistingAggregate(
+            final ExpectedVersion effectiveExpectedVersion
+    ) {
+        ImmutableAggregate<TState, TEvent> aggregate;
+        if (operation.requiresState() || atomic) {
+            logger.debug("Reading aggregate record from stream");
+            aggregate = readAndValidateAggregate(effectiveExpectedVersion);
+            logger.debug(
+                    "Current state of aggregate is {}",
+                    aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED
+                            ? "<not created>"
+                            : "version " + aggregate.sourceVersion());
+            return aggregate;
+        } else {
+            logger.debug("Aggregate state not loaded");
+            return null;
+        }
+    }
+
+    @NotNull
+    private CommandResult<TEvent> updateAggregate(
+            @Nullable final ImmutableAggregate<TState, TEvent> aggregate,
+            @NotNull final ImmutableList<? extends TEvent> events
+    ) {
         ExpectedVersion updateExpectedVersion;
 
         if (atomic) {
@@ -183,9 +234,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
             }
         }
 
-        if (this.metadata != null) {
-            effectiveMetadata.putAll(this.metadata);
-        }
+        effectiveMetadata.putAll(this.metadata);
 
         try {
             int newVersion = repository.append(
@@ -207,9 +256,11 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                 logger.debug("Idempotent create enabled, ignoring existing stream");
                 return new CommandResult<>(
                         aggregateId,
-                        ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
-                        ex.getCurrentVersion() != null ? ex.getCurrentVersion() : null,
+                        ex.getCurrentVersion(),
+                        ex.getCurrentVersion(),
                         ImmutableList.of());
+            } else if (atomic) {
+                throw new AtomicWriteException(ex);
             }
 
             throw ex;

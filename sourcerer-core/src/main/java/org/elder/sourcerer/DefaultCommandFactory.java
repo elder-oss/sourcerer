@@ -1,24 +1,41 @@
 package org.elder.sourcerer;
 
 import com.google.common.collect.ImmutableList;
+import org.elder.sourcerer.utils.RetryPolicy;
 
 import java.util.List;
 
 public class DefaultCommandFactory<TState, TEvent> implements CommandFactory<TState, TEvent> {
     private final AggregateRepository<TState, TEvent> repository;
     private final List<CommandPostProcessor> postProcessors;
+    private final RetryPolicy retryPolicy;
 
     public DefaultCommandFactory(final AggregateRepository<TState, TEvent> repository) {
-        this(repository, null);
+        this(repository, (List<CommandPostProcessor>) null);
     }
 
     public DefaultCommandFactory(
             final AggregateRepository<TState, TEvent> repository,
             final List<CommandPostProcessor> postProcessors) {
+        this(repository, postProcessors, RetryPolicy.noRetries());
+    }
+
+    public DefaultCommandFactory(
+            final AggregateRepository<TState, TEvent> repository,
+            final RetryPolicy retryPolicy
+    ) {
+        this(repository, null, retryPolicy);
+    }
+
+    public DefaultCommandFactory(
+            final AggregateRepository<TState, TEvent> repository,
+            final List<CommandPostProcessor> postProcessors,
+            final RetryPolicy retryPolicy) {
         this.repository = repository;
         this.postProcessors = postProcessors == null
                 ? ImmutableList.of()
                 : ImmutableList.copyOf(postProcessors);
+        this.retryPolicy = retryPolicy;
     }
 
     @Override
@@ -32,7 +49,7 @@ public class DefaultCommandFactory<TState, TEvent> implements CommandFactory<TSt
         Operation<TState, TParams, TEvent> typeHackedOperation =
                 (Operation<TState, TParams, TEvent>) operation;
         Command<TState, TParams, TEvent> command =
-                new DefaultCommand<>(repository, typeHackedOperation);
+                new DefaultCommand<>(repository, typeHackedOperation, retryPolicy);
         for (CommandPostProcessor postProcessor : postProcessors) {
             postProcessor.postProcessCommand(command);
         }
