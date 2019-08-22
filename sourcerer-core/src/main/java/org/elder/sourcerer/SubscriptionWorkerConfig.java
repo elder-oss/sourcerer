@@ -7,11 +7,10 @@ public class SubscriptionWorkerConfig {
     private final int batchSize;
     private final int initialRetryDelayMillis;
     private final int maxRetryDelayMillis;
+    private final SubscriptionWorkerRunPolicy runPolicy;
 
     public SubscriptionWorkerConfig() {
-        this.batchSize = 256;
-        this.initialRetryDelayMillis = 100;
-        this.maxRetryDelayMillis = 30_000;
+        this(256, 100, 30_000);
     }
 
     public SubscriptionWorkerConfig(
@@ -19,9 +18,23 @@ public class SubscriptionWorkerConfig {
             final int initialRetryDelayMillis,
             final int maxRetryDelayMillis
     ) {
+        this(
+                batchSize,
+                initialRetryDelayMillis,
+                maxRetryDelayMillis,
+                SubscriptionWorkerRunPolicy.ALWAYS);
+    }
+
+    public SubscriptionWorkerConfig(
+            final int batchSize,
+            final int initialRetryDelayMillis,
+            final int maxRetryDelayMillis,
+            final SubscriptionWorkerRunPolicy runPolicy
+    ) {
         this.batchSize = batchSize;
         this.initialRetryDelayMillis = initialRetryDelayMillis;
         this.maxRetryDelayMillis = maxRetryDelayMillis;
+        this.runPolicy = runPolicy;
     }
 
     /**
@@ -45,6 +58,10 @@ public class SubscriptionWorkerConfig {
         return maxRetryDelayMillis;
     }
 
+    public SubscriptionWorkerRunPolicy getRunPolicy() {
+        return runPolicy;
+    }
+
     public SubscriptionWorkerConfig withBatchSize(final int batchSize) {
         return new SubscriptionWorkerConfig(
                 batchSize,
@@ -58,5 +75,13 @@ public class SubscriptionWorkerConfig {
 
     public SubscriptionWorkerConfig withMaxRetryDelayMillis(final int millis) {
         return new SubscriptionWorkerConfig(this.batchSize, initialRetryDelayMillis, millis);
+    }
+
+    public SubscriptionWorkerConfig withRunPolicy(final SubscriptionWorkerRunPolicy policy) {
+        return new SubscriptionWorkerConfig(
+                this.batchSize,
+                initialRetryDelayMillis,
+                maxRetryDelayMillis,
+                policy);
     }
 }

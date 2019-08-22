@@ -1,6 +1,7 @@
 include 'sourcerer-core',
         'sourcerer-crud',
         'sourcerer-esjc',
+        'sourcerer-esjc-kotlin',
         'sourcerer-esjc-spring',
         'sourcerer-eventstore',
         'sourcerer-eventstore-spring',
