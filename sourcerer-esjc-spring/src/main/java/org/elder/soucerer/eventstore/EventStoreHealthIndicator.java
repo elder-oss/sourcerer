@@ -34,7 +34,6 @@ public class EventStoreHealthIndicator extends AbstractHealthIndicator {
     private final EventStore eventStore;
     private final int readTimeoutMillis;
 
-
     public EventStoreHealthIndicator(final EventStore eventStore) {
         this(eventStore, DEFAULT_READ_TIMEOUT_MILLIS);
     }
