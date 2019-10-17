@@ -3,75 +3,93 @@ package org.elder.soucerer.eventstore;
 import com.github.msemys.esjc.AllEventsSlice;
 import com.github.msemys.esjc.EventStore;
 import com.github.msemys.esjc.Position;
-import io.prometheus.client.Counter;
-import io.prometheus.client.Histogram;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.Status;
+import org.springframework.boot.actuate.health.HealthIndicator;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-public class EventStoreHealthIndicator extends AbstractHealthIndicator {
-    private static final int DEFAULT_READ_TIMEOUT_MILLIS = 1000;
+public class EventStoreHealthIndicator implements HealthIndicator {
+    private static final int DEFAULT_READ_TIMEOUT_MILLIS = 250;
     private static final Logger logger = LoggerFactory.getLogger(EventStoreHealthIndicator.class);
-    private static final String ELDER_NAMESPACE = "elder";
-    private static final Histogram latencyHistogram = Histogram.build()
-            .namespace(ELDER_NAMESPACE)
-            .name("eventstore_healthcheck_latency_seconds")
-            .help("Delay in probing EventStore as part of health check")
-            .register();
-
-    private static final Counter probesCounter = Counter.build()
-            .namespace(ELDER_NAMESPACE)
-            .name("eventstore_healthchecks_total")
-            .labelNames("status")
-            .help("Total number of EventStore health checks with status (success or failure)")
-            .register();
-
     private final EventStore eventStore;
     private final int readTimeoutMillis;
+    private final Function<Supplier<Health>, Health> adapter;
 
-    public EventStoreHealthIndicator(final EventStore eventStore) {
+    /**
+     * Creates a new EventStore health indicator with a default timeout.
+     *
+     * @param eventStore The EventStore client instance to use for health checks.
+     */
+    public EventStoreHealthIndicator(@NotNull final EventStore eventStore) {
         this(eventStore, DEFAULT_READ_TIMEOUT_MILLIS);
     }
 
-    public EventStoreHealthIndicator(final EventStore eventStore, final int readTimeoutMillis) {
+    /**
+     * Creates a new EventStore health indicator.
+     *
+     * @param eventStore        The EventStore client instance to use for health checks.
+     * @param readTimeoutMillis Timeout for health checks passing, if a simple call to EventStore
+     */
+    public EventStoreHealthIndicator(
+            @NotNull final EventStore eventStore,
+            final int readTimeoutMillis) {
+        this(eventStore, readTimeoutMillis, null);
+    }
+
+    /**
+     * Creates a new EventStore health indicator.
+     *
+     * @param eventStore        The EventStore client instance to use for health checks.
+     * @param readTimeoutMillis Timeout for health checks passing, if a simple call to EventStore
+     *                          takes longer than this number of milliseconds (or fails with an
+     *                          error), the health check will fail.
+     * @param adapter           Optional wrapper for health checks, to inject additional monitoring,
+     *                          logging, and/or checks.
+     */
+    public EventStoreHealthIndicator(
+            @NotNull final EventStore eventStore,
+            final int readTimeoutMillis,
+            final Function<Supplier<Health>, Health> adapter
+    ) {
         this.eventStore = eventStore;
         this.readTimeoutMillis = readTimeoutMillis;
+        if (adapter != null) {
+            this.adapter = adapter;
+        } else {
+            this.adapter = Supplier::get;
+        }
     }
 
     @Override
-    protected void doHealthCheck(final Health.Builder builder) throws Exception {
+    public Health health() {
+        return adapter.apply(this::runHealthProbe);
+    }
+
+    private Health runHealthProbe() {
         logger.debug("Reading Event Store for health check");
-        final Histogram.Timer latencyTimer = latencyHistogram.startTimer();
-        boolean successful = false;
         try {
-            AllEventsSlice res = completeReadFuture(
-                    eventStore.readAllEventsBackward(Position.END, 1, false));
+            final AllEventsSlice currentEventInfo = readLastEventBlocking();
 
             logger.debug("Event store successfully pinged");
-            builder
-                    .status(Status.UP)
-                    .withDetail("position", res.nextPosition.toString());
-            probesCounter.labels("up").inc();
-            successful = true;
-        } finally {
-            if (!successful) {
-                probesCounter.labels("down").inc();
-            }
-            latencyTimer.observeDuration();
+            return Health
+                    .up()
+                    .withDetail("position", currentEventInfo.nextPosition.toString())
+                    .build();
+        } catch (final Exception ex) {
+            logger.warn("Error in EventStore health check, marking as down", ex);
+            return Health.down(ex).build();
         }
     }
 
-    private <U> U completeReadFuture(final CompletableFuture<U> future) throws Exception {
-        try {
-            return future.get(readTimeoutMillis, TimeUnit.MILLISECONDS);
-        } catch (Exception ex) {
-            logger.warn("Error reading from eventstore, check will fail", ex);
-            throw ex;
-        }
+    private AllEventsSlice readLastEventBlocking() throws Exception {
+        final CompletableFuture<AllEventsSlice> futureResult =
+                eventStore.readAllEventsBackward(Position.END, 1, false);
+        return futureResult.get(readTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 }
