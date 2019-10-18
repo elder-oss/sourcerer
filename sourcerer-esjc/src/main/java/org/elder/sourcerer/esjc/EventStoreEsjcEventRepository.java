@@ -23,7 +23,7 @@ import com.github.msemys.esjc.operation.NotAuthenticatedException;
 import com.github.msemys.esjc.operation.ServerErrorException;
 import com.github.msemys.esjc.operation.StreamDeletedException;
 import com.github.msemys.esjc.operation.WrongExpectedVersionException;
-import com.github.msemys.esjc.operation.manager.OperationTimedOutException;
+import com.github.msemys.esjc.operation.manager.OperationTimeoutException;
 import com.github.msemys.esjc.operation.manager.RetriesLimitReachedException;
 import com.github.msemys.esjc.subscription.MaximumSubscribersReachedException;
 import com.github.msemys.esjc.subscription.PersistentSubscriptionDeletedException;
@@ -207,9 +207,9 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 .collect(new ImmutableListCollector<>());
         return new EventReadResult<>(
                 events,
-                eventsSlice.fromEventNumber,
-                eventsSlice.lastEventNumber,
-                eventsSlice.nextEventNumber,
+                convertTo32Bit(eventsSlice.fromEventNumber),
+                convertTo32Bit(eventsSlice.lastEventNumber),
+                convertTo32Bit(eventsSlice.nextEventNumber),
                 eventsSlice.isEndOfStream);
     }
 
@@ -227,7 +227,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 .collect(Collectors.toList());
 
         logger.debug("Writing {} events to stream {} (in {}) (expected version {})",
-                     esEvents.size(), streamId, streamPrefix, version);
+                esEvents.size(), streamId, streamPrefix, version);
         try {
             WriteResult result = completeWriteFuture(
                     eventStore.appendToStream(
@@ -236,7 +236,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                             esEvents),
                     version);
 
-            int nextExpectedVersion = result.nextExpectedVersion;
+            int nextExpectedVersion = convertTo32Bit(result.nextExpectedVersion);
             logger.debug("Write successful, next expected version is {}", nextExpectedVersion);
             return nextExpectedVersion;
         } catch (WrongExpectedVersionException ex) {
@@ -263,7 +263,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                         1,
                         false),
                 ExpectedVersion.any());
-        return streamEventsSlice.lastEventNumber;
+        return convertTo32Bit(streamEventsSlice.lastEventNumber);
     }
 
     @Override
@@ -271,12 +271,12 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
             final String streamId,
             final Integer fromVersion) {
         logger.info("Creating publisher for {} (in {}) (starting with version {})",
-                    streamId, streamPrefix, fromVersion);
+                streamId, streamPrefix, fromVersion);
 
         return Flux.create(emitter -> {
             final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
                     toEsStreamId(streamId),
-                    fromVersion,
+                    convertTo64Bit(fromVersion),
                     defaultSubscriptionSettings,
                     new EmitterListener(emitter, streamPrefix + "-" + streamId));
             emitter.setCancellation(() -> {
@@ -289,11 +289,11 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     @Override
     public Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
         logger.info("Creating publisher for all events in {} (starting with version {})",
-                    streamPrefix, fromVersion);
+                streamPrefix, fromVersion);
         return Flux.create(emitter -> {
             final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
                     getCategoryStreamName(),
-                    fromVersion,
+                    convertTo64Bit(fromVersion),
                     defaultSubscriptionSettings,
                     new EmitterListener(emitter, streamPrefix + "-all"));
             emitter.setCancellation(() -> {
@@ -332,7 +332,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         }
     }
 
-    private com.github.msemys.esjc.ExpectedVersion toEsVersion(final ExpectedVersion version) {
+    private long toEsVersion(final ExpectedVersion version) {
         if (version == null) {
             return com.github.msemys.esjc.ExpectedVersion.ANY;
         } else {
@@ -340,7 +340,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 case ANY:
                     return com.github.msemys.esjc.ExpectedVersion.ANY;
                 case EXACTLY:
-                    return com.github.msemys.esjc.ExpectedVersion.of(version.getExpectedVersion());
+                    return version.getExpectedVersion();
                 case NOT_CREATED:
                     return com.github.msemys.esjc.ExpectedVersion.NO_STREAM;
                 default:
@@ -356,8 +356,8 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     private EventRecord<T> fromEsEvent(final ResolvedEvent event) {
-        int streamVersion;
-        int aggregateVersion;
+        long streamVersion;
+        long aggregateVersion;
         if (event.isResolved()) {
             aggregateVersion = event.event.eventNumber;
             streamVersion = event.link.eventNumber;
@@ -368,8 +368,8 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
 
         return new EventRecord<>(
                 fromEsStreamId(event.event.eventStreamId),
-                streamVersion,
-                aggregateVersion,
+                convertTo32Bit(streamVersion),
+                convertTo32Bit(aggregateVersion),
                 event.event.eventType,
                 event.event.eventId,
                 event.event.created,
@@ -435,7 +435,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 } else if (ex.getCause() instanceof CannotEstablishConnectionException
                         || ex.getCause() instanceof ClusterException
                         || ex.getCause() instanceof ConnectionClosedException
-                        || ex.getCause() instanceof OperationTimedOutException
+                        || ex.getCause() instanceof OperationTimeoutException
                         || ex.getCause() instanceof MaximumSubscribersReachedException
                         || ex.getCause() instanceof RetriesLimitReachedException
                         || ex.getCause() instanceof ServerErrorException) {
@@ -481,7 +481,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 } else if (ex.getCause() instanceof CannotEstablishConnectionException
                         || ex.getCause() instanceof ClusterException
                         || ex.getCause() instanceof ConnectionClosedException
-                        || ex.getCause() instanceof OperationTimedOutException
+                        || ex.getCause() instanceof OperationTimeoutException
                         || ex.getCause() instanceof MaximumSubscribersReachedException
                         || ex.getCause() instanceof RetriesLimitReachedException
                         || ex.getCause() instanceof ServerErrorException) {
@@ -502,6 +502,22 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         } catch (TimeoutException ex) {
             throw new RetriableEventWriteException("Timeout writing events", ex.getCause());
         }
+    }
+
+    private static int convertTo32Bit(final long longPosition) {
+        if (longPosition > (long) Integer.MAX_VALUE) {
+            throw new IllegalStateException(
+                    "Server returned a 64 bit position greater than what could be converted to " +
+                            "a 64 bit number, this suggest that you have a stream (individual or " +
+                            "projection) with more than 2 billion events. If you really need " +
+                            "this, please fork Sourcerer and change ints to be longs.");
+        }
+
+        return (int) longPosition;
+    }
+
+    private Long convertTo64Bit(final Integer version) {
+        return version == null ? null : Long.valueOf(version);
     }
 
     private class EmitterListener implements CatchUpSubscriptionListener {
