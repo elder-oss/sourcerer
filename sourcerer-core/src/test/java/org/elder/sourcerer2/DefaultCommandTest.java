@@ -2,7 +2,7 @@ package org.elder.sourcerer2;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.elder.sourcerer2.exceptions.ConflictingExpectedVersionsException;
+import org.elder.sourcerer2.utils.RetryPolicy;
 import org.elder.sourcerer2.exceptions.InvalidCommandException;
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException;
 import org.junit.Assert;
@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -26,7 +25,8 @@ import static org.mockito.Mockito.when;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(ExpectedVersion.class)
 public class DefaultCommandTest {
-    private static final String AGGREGATE_ID = "42";
+    private static final StreamId AGGREGATE_ID = StreamId.ofString("42");
+    private final RetryPolicy retryPolicy = RetryPolicy.noRetries();
     private AggregateRepository repository;
 
     @Before
@@ -37,17 +37,14 @@ public class DefaultCommandTest {
     @Test(expected = InvalidCommandException.class)
     @SuppressWarnings("unchecked")
     public void conflictingVersionsGiveInvalidCommand() {
-        PowerMockito.mockStatic(ExpectedVersion.class);
-        PowerMockito.when(ExpectedVersion.merge(any(), any()))
-                .thenThrow(new ConflictingExpectedVersionsException(
-                        "error", null, null));
-
+        ExpectedVersion expectedVersion = ExpectedVersion.exactly(StreamVersion.ofInt(42));
         Operation operation = new OperationHandlerOperation(
                 (x, y) -> null,
                 true,
                 false,
-                ExpectedVersion.exactly(42));
+                expectedVersion);
         DefaultCommand command = new DefaultCommand(repository, operation);
+        command.setExpectedVersion(ExpectedVersion.notCreated());
         command.setAggregateId(AGGREGATE_ID);
         command.run();
     }
@@ -64,9 +61,9 @@ public class DefaultCommandTest {
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
-                        42,
+                        StreamVersion.ofInt(42),
                         new TestState("test")));
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         CommandResult commandResult = command.run();
@@ -77,7 +74,7 @@ public class DefaultCommandTest {
     @Test
     @SuppressWarnings("unchecked")
     public void idempotentCreateSuccessfulIfNotPresent() {
-        int newVersion = 45;
+        StreamVersion newVersion = StreamVersion.ofInt(45);
         List<TestEvent> newEvents = ImmutableList.of(new TestEvent("test"));
         Operation operation = new OperationHandlerOperation(
                 (x, y) -> newEvents,
@@ -90,7 +87,7 @@ public class DefaultCommandTest {
                 DefaultImmutableAggregate.createNew(projection, AGGREGATE_ID);
         when(repository.load(any())).thenReturn(sourceAggregate);
         when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         CommandResult commandResult = command.run();
@@ -102,7 +99,7 @@ public class DefaultCommandTest {
                 passedEvents.getValue(),
                 org.hamcrest.Matchers.contains(newEvents.toArray()));
 
-        Assert.assertEquals((long) newVersion, (long) commandResult.getNewVersion());
+        Assert.assertEquals(newVersion, commandResult.getNewVersion());
         Assert.assertThat(
                 (List<TestEvent>) commandResult.getEvents(),
                 org.hamcrest.Matchers.contains(newEvents.toArray()));
@@ -120,14 +117,16 @@ public class DefaultCommandTest {
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
-                        42,
+                        StreamVersion.ofInt(42),
                         new TestState("test")));
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         command.setAtomic(false);
         when(repository.append(any(), any(), any(), any()))
-                .thenThrow(new UnexpectedVersionException(42, ExpectedVersion.notCreated()));
+                .thenThrow(new UnexpectedVersionException(
+                        StreamVersion.ofInt(42),
+                        ExpectedVersion.notCreated()));
         CommandResult commandResult = command.run();
 
         Assert.assertTrue(commandResult.getEvents().isEmpty());
@@ -142,13 +141,15 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         when(repository.load(any()))
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
-                        42,
+                        StreamVersion.ofInt(42),
                         new TestState("test")));
+        when(repository.append(any(), any(), any(), any()))
+                .thenReturn(StreamVersion.ofInt(42));
         command.setAggregateId(AGGREGATE_ID);
         command.run();
 
@@ -158,7 +159,7 @@ public class DefaultCommandTest {
     @Test
     @SuppressWarnings("unchecked")
     public void newEventsWrittenAndReturned() {
-        int newVersion = 45;
+        StreamVersion newVersion = StreamVersion.ofInt(45);
         List<TestEvent> newEvents = ImmutableList.of(new TestEvent("test"));
         Operation operation = new OperationHandlerOperation(
                 (x, y) -> newEvents,
@@ -166,12 +167,12 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         when(repository.load(any()))
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
-                        42,
+                        StreamVersion.ofInt(42),
                         new TestState("test")));
         when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
 
@@ -185,7 +186,7 @@ public class DefaultCommandTest {
                 passedEvents.getValue(),
                 org.hamcrest.Matchers.contains(newEvents.toArray()));
 
-        Assert.assertEquals((long) newVersion, (long) commandResult.getNewVersion());
+        Assert.assertEquals(newVersion, commandResult.getNewVersion());
         Assert.assertThat(
                 (List<TestEvent>) commandResult.getEvents(),
                 org.hamcrest.Matchers.contains(newEvents.toArray()));
@@ -194,7 +195,7 @@ public class DefaultCommandTest {
     @Test
     @SuppressWarnings("unchecked")
     public void metadataTakesPriorityOverMetadataDecorators() {
-        int newVersion = 45;
+        StreamVersion newVersion = StreamVersion.ofInt(45);
         List<TestEvent> newEvents = ImmutableList.of(new TestEvent("test"));
         Operation operation = new OperationHandlerOperation(
                 (x, y) -> newEvents,
@@ -202,7 +203,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.addMetadata(ImmutableMap.of("key2", "value2direct"));
         command.addMetadataDecorator(new MetadataDecorator() {
             @Override
@@ -215,7 +216,7 @@ public class DefaultCommandTest {
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
                         AGGREGATE_ID,
-                        42,
+                        StreamVersion.ofInt(42),
                         new TestState("test")));
         when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
 

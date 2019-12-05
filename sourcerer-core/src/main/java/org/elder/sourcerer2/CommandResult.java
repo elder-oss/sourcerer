@@ -9,15 +9,15 @@ import java.util.List;
  * The result of a successfully application of a command against the current state of an aggregate.
  */
 public class CommandResult<TEvent> {
-    private final String aggregateId;
-    private final Integer previousVersion;
-    private final Integer newVersion;
+    private final StreamId aggregateId;
+    private final StreamVersion newVersion;
     private final ImmutableList<? extends TEvent> events;
+    private StreamVersion previousVersion;
 
     public CommandResult(
-            final String aggregateId,
-            final Integer previousVersion,
-            final Integer newVersion,
+            final StreamId aggregateId,
+            final StreamVersion previousVersion,
+            final StreamVersion newVersion,
             final ImmutableList<? extends TEvent> events) {
         Preconditions.checkNotNull(aggregateId);
         this.previousVersion = previousVersion;
@@ -27,9 +27,9 @@ public class CommandResult<TEvent> {
     }
 
     public CommandResult(
-            final String aggregateId,
-            final Integer previousVersion,
-            final Integer newVersion,
+            final StreamId aggregateId,
+            final StreamVersion previousVersion,
+            final StreamVersion newVersion,
             final List<? extends TEvent> events) {
         this(aggregateId, previousVersion, newVersion, ImmutableList.copyOf(events));
     }
@@ -37,7 +37,7 @@ public class CommandResult<TEvent> {
     /**
      * Gets the id of the aggregate that was operated on.
      */
-    public String getAggregateId() {
+    public StreamId getAggregateId() {
         return aggregateId;
     }
 
@@ -47,15 +47,16 @@ public class CommandResult<TEvent> {
      * For non atomic operations, this may be deduced from the new version and number of events
      * written, rather than by explicitly reading from the stream before appending changes.
      */
-    public Integer getPreviousVersion() {
+    public StreamVersion getPreviousVersion() {
         return previousVersion;
     }
 
     /**
-     * Gets the new version of the aggregate, after the events from the command were applied.
+     * Gets the new version of the aggregate, after the events from the command were applied, e.g.
+     * the position marking the point in the event stream where all of the events have been applied.
      * This may be null in the cases where the current version is unknown, e.g. a no-op operation.
      */
-    public Integer getNewVersion() {
+    public StreamVersion getNewVersion() {
         return newVersion;
     }
 

@@ -11,15 +11,15 @@ import java.util.List;
 public class DefaultMutableAggregate<TState, TEvent>
         implements MutableAggregate<TState, TEvent> {
     private final AggregateProjection<TState, TEvent> projection;
-    private final String id;
-    private int sourceVersion;
+    private final StreamId id;
+    private StreamVersion sourceVersion;
     private TState state;
     private final List<TEvent> appliedEvents;
 
     DefaultMutableAggregate(
             @NotNull final AggregateProjection<TState, TEvent> projection,
-            @NotNull final String id,
-            final int sourceVersion,
+            @NotNull final StreamId id,
+            final StreamVersion sourceVersion,
             @NotNull final TState state,
             @NotNull final List<TEvent> events) {
         Preconditions.checkNotNull(projection);
@@ -43,11 +43,11 @@ public class DefaultMutableAggregate<TState, TEvent>
      */
     public static <TState, TEvent> DefaultMutableAggregate<TState, TEvent> createNew(
             final AggregateProjection<TState, TEvent> projection,
-            final String id) {
+            final StreamId id) {
         return new DefaultMutableAggregate<>(
                 projection,
                 id,
-                Aggregate.VERSION_NOT_CREATED,
+                null,
                 projection.empty(),
                 ImmutableList.of());
     }
@@ -63,8 +63,8 @@ public class DefaultMutableAggregate<TState, TEvent>
      */
     public static <TState, TEvent> DefaultMutableAggregate<TState, TEvent> fromExisting(
             final AggregateProjection<TState, TEvent> projection,
-            final String id,
-            final int sourceVersion,
+            final StreamId id,
+            final StreamVersion sourceVersion,
             final TState state) {
         return new DefaultMutableAggregate<>(
                 projection,
@@ -77,12 +77,13 @@ public class DefaultMutableAggregate<TState, TEvent>
     @Override
     @NotNull
     @Contract(pure = true)
-    public String id() {
+    public StreamId id() {
         return id;
     }
 
     @Override
-    public int sourceVersion() {
+    @Contract(pure = true)
+    public StreamVersion sourceVersion() {
         return sourceVersion;
     }
 
@@ -133,7 +134,7 @@ public class DefaultMutableAggregate<TState, TEvent>
     }
 
     @Override
-    public void rebase(final int version) {
+    public void rebase(@NotNull final StreamVersion version) {
         this.sourceVersion = version;
         this.events().clear();
     }

@@ -2,7 +2,7 @@ package org.elder.sourcerer2.exceptions;
 
 /**
  * Indicates that an error occurred while reading events from the underlying storage mechanism. The
- * failure is not a result of intermittent issues but rather the persistence engine has actively
+ * failure is not a result of intermittent issues but rather the dbstore engine has actively
  * indicated that reading the requested events is not possible.
  */
 public class PermanentEventReadException extends RuntimeException {

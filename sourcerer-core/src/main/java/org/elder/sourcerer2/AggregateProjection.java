@@ -40,7 +40,7 @@ public interface AggregateProjection<TState, TEvent> {
      * @return A new aggregate instance of the same type as the provided, representing a
      * snapshot-in-time state of the given aggregate with the provided event applied.
      */
-    @NotNull TState apply(@NotNull String id, @NotNull TState state, @NotNull TEvent event);
+    @NotNull TState apply(@NotNull StreamId id, @NotNull TState state, @NotNull TEvent event);
 
     /**
      * Applies a sequence of events to an aggregate, creating a new aggregate representing a
@@ -68,7 +68,7 @@ public interface AggregateProjection<TState, TEvent> {
      * snapshot-in-time state of the given aggregate with the provided event applied.
      */
     @NotNull default TState apply(
-            @NotNull final String id,
+            @NotNull final StreamId id,
             @NotNull final TState state,
             @NotNull final Iterable<? extends TEvent> events) {
         TState updatedState = state;

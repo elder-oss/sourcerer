@@ -1,13 +1,13 @@
 package org.elder.sourcerer2;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -37,7 +37,8 @@ public class DefaultAggregateRepository<TState, TEvent>
      */
     public DefaultAggregateRepository(
             final EventRepository<TEvent> eventRepository,
-            final AggregateProjection<TState, TEvent> projection) {
+            final AggregateProjection<TState, TEvent> projection
+    ) {
         this(eventRepository, projection, DEFAULT_MAX_EVENTS_PER_READ);
     }
 
@@ -58,7 +59,8 @@ public class DefaultAggregateRepository<TState, TEvent>
     public DefaultAggregateRepository(
             final EventRepository<TEvent> eventRepository,
             final AggregateProjection<TState, TEvent> projection,
-            final int maxEventsPerRead) {
+            final int maxEventsPerRead
+    ) {
         this(
                 eventRepository,
                 projection,
@@ -80,7 +82,8 @@ public class DefaultAggregateRepository<TState, TEvent>
     public DefaultAggregateRepository(
             final EventRepository<TEvent> eventRepository,
             final AggregateProjection<TState, TEvent> projection,
-            final Function<? super TEvent, String> typeResolver) {
+            final Function<? super TEvent, String> typeResolver
+    ) {
         this(
                 eventRepository,
                 projection,
@@ -108,7 +111,8 @@ public class DefaultAggregateRepository<TState, TEvent>
             final EventRepository<TEvent> eventRepository,
             final AggregateProjection<TState, TEvent> projection,
             final Function<? super TEvent, String> typeResolver,
-            final int maxEventsPerRead) {
+            final int maxEventsPerRead
+    ) {
         this.eventRepository = eventRepository;
         this.projection = projection;
         this.typeResolver = typeResolver;
@@ -116,13 +120,15 @@ public class DefaultAggregateRepository<TState, TEvent>
     }
 
     @Override
-    public ImmutableAggregate<TState, TEvent> load(final String aggregateId) {
+    public ImmutableAggregate<TState, TEvent> load(@NotNull final StreamId aggregateId) {
         TState state = projection.empty();
-        int currentStreamPosition = 0;
+        StreamVersion currentStreamPosition = null;
+        int eventsRead = 0;
+
         try {
             while (true) { // Exit through return
                 logger.debug("Reading events for {} from {}", aggregateId, currentStreamPosition);
-                EventReadResult<TEvent> readResult = eventRepository.read(
+                StreamReadResult<TEvent> readResult = eventRepository.read(
                         aggregateId,
                         currentStreamPosition,
                         maxEventsPerRead);
@@ -134,59 +140,63 @@ public class DefaultAggregateRepository<TState, TEvent>
                             aggregateId);
                 }
 
-                Iterable<TEvent> events = readResult
+                List<TEvent> events = readResult
                         .getEvents()
                         .stream()
                         .map(EventRecord::getEvent)
                         .collect(Collectors.toList());
                 state = projection.apply(aggregateId, state, events);
+                eventsRead += events.size();
+                currentStreamPosition = readResult.getVersion();
 
                 if (readResult.isEndOfStream()) {
                     return DefaultImmutableAggregate.fromExisting(
                             projection,
                             aggregateId,
-                            readResult.getLastVersion(),
+                            currentStreamPosition,
                             state);
                 }
-
-                currentStreamPosition = readResult.getNextVersion();
             }
         } finally {
-            if (currentStreamPosition > LARGE_EVENT_STREAM_WARNING_CUTOFF) {
+            if (eventsRead > LARGE_EVENT_STREAM_WARNING_CUTOFF) {
                 logger.warn(
                         "Read large stream {} consisting of {} events - consider snapshotting?",
                         aggregateId,
-                        currentStreamPosition);
+                        eventsRead);
             }
         }
     }
 
     @Override
-    public int append(
-            final String aggregateId,
-            final Iterable<? extends TEvent> events,
-            final ExpectedVersion expectedVersion,
-            final Map<String, String> metadata) {
+    @NotNull
+    public StreamVersion append(
+            @NotNull final StreamId aggregateId,
+            @NotNull final Iterable<? extends TEvent> events,
+            @NotNull final ExpectedVersion expectedVersion,
+            final Map<String, String> metadata
+    ) {
         List<EventData<TEvent>> eventDatas = StreamSupport
                 .stream(events.spliterator(), false)
                 .map(e -> new EventData<TEvent>(
+                        EventId.newUniqueId(),
                         getEventType(e),
-                        UUID.randomUUID(),
-                        metadata,
+                        metadata != null ? ImmutableMap.copyOf(metadata) : ImmutableMap.of(),
                         e))
                 .collect(Collectors.toList());
         return eventRepository.append(aggregateId, eventDatas, expectedVersion);
     }
 
     @Override
+    @NotNull
     public ImmutableAggregate<TState, TEvent> save(
             @NotNull final Aggregate<TState, TEvent> aggregate,
             final boolean atomic,
-            final Map<String, String> metadata) {
+            final Map<String, String> metadata
+    ) {
         Preconditions.checkNotNull(aggregate);
         ExpectedVersion expectedVersion;
         if (atomic) {
-            if (aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED) {
+            if (aggregate.sourceVersion() == null) {
                 expectedVersion = ExpectedVersion.notCreated();
             } else {
                 expectedVersion = ExpectedVersion.exactly(aggregate.sourceVersion());
@@ -194,11 +204,8 @@ public class DefaultAggregateRepository<TState, TEvent>
         } else {
             expectedVersion = ExpectedVersion.any();
         }
-        int newVersion = append(
-                aggregate.id(),
-                aggregate.events(),
-                expectedVersion,
-                metadata);
+        StreamVersion newVersion =
+                append(aggregate.id(), aggregate.events(), expectedVersion, metadata);
         return DefaultImmutableAggregate.fromExisting(
                 projection,
                 aggregate.id(),

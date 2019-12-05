@@ -10,15 +10,13 @@ import org.mockito.ArgumentCaptor;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static org.elder.sourcerer2.ExpectedVersion.exactly;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -26,7 +24,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 public class DefaultAggregateRepositoryTest {
-    private static final String AGGREGATE_ID_1 = "very-much-id-1";
+    private static final StreamId AGGREGATE_ID_1 = StreamId.ofString("very-much-id-1");
     private EventRepository<TestEvent> eventRepository;
     private AggregateProjection<TestState, TestEvent> aggregateProjection;
     private DefaultAggregateRepository<TestState, TestEvent> repository;
@@ -48,21 +46,22 @@ public class DefaultAggregateRepositoryTest {
     @Test
     public void readReturnsEmptyOnEmptyStream() throws Exception {
         returnsAggregateWithEmptyStateOn(
-                new EventReadResult(
+                new StreamReadResult(
                         ImmutableList.of(),
-                        0, 10, 11, false));
+                        StreamVersion.ofString("11"),
+                        false));
     }
 
     private void returnsAggregateWithEmptyStateOn(
-            final EventReadResult readEventsResult) {
-        when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(readEventsResult);
+            final StreamReadResult readEventsResult) {
+        when(eventRepository.read(any(), any(), anyInt())).thenReturn(readEventsResult);
         ImmutableAggregate<TestState, TestEvent> aggregate = repository.load(AGGREGATE_ID_1);
 
-        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(0), anyInt());
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), isNull(StreamVersion.class), anyInt());
         verifyNoMoreInteractions(eventRepository);
         Assert.assertNotNull(aggregate);
         Assert.assertEquals(aggregate.state().getValue(), "empty");
-        Assert.assertEquals(-1, aggregate.sourceVersion());
+        Assert.assertEquals(Aggregate.VERSION_NOT_CREATED, aggregate.sourceVersion());
     }
 
     @Test
@@ -70,22 +69,31 @@ public class DefaultAggregateRepositoryTest {
         TestEvent testEvent1 = new TestEvent("test1");
         TestEvent testEvent2 = new TestEvent("test2");
         ImmutableList<EventRecord<TestEvent>> events = ImmutableList.of(
-                new EventRecord<>(
-                        AGGREGATE_ID_1, 3, 1, "test1", UUID.randomUUID(),
-                        Instant.now(), ImmutableMap.of(), testEvent1),
-                new EventRecord<>(
-                        AGGREGATE_ID_1, 4, 1, "test1", UUID.randomUUID(),
-                        Instant.now(), ImmutableMap.of(), testEvent2));
-        EventReadResult repositoryResult = new EventReadResult<>(events, 0, 1, 2, true);
+                simpleEventRecord(
+                        AGGREGATE_ID_1,
+                        "test1",
+                        0,
+                        100,
+                        testEvent1),
+                simpleEventRecord(
+                        AGGREGATE_ID_1,
+                        "test1",
+                        1,
+                        101,
+                        testEvent2));
+        StreamReadResult repositoryResult = new StreamReadResult<>(
+                events,
+                StreamVersion.ofInt(1),
+                true);
         List<TestEvent> expectedEvents = ImmutableList.of(testEvent1, testEvent2);
         TestState expectedState = new TestState("state1");
 
-        when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(repositoryResult);
+        when(eventRepository.read(any(), any(), anyInt())).thenReturn(repositoryResult);
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
 
         ImmutableAggregate<TestState, TestEvent> result = repository.load(AGGREGATE_ID_1);
 
-        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(0), anyInt());
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), isNull(StreamVersion.class), anyInt());
         ArgumentCaptor<Iterable<TestEvent>> passedEvents
                 = ArgumentCaptor.forClass((Class) Iterable.class);
         verify(aggregateProjection).empty();
@@ -103,11 +111,12 @@ public class DefaultAggregateRepositoryTest {
 
     @Test
     public void versionPassedOnAndReturned() {
-        ExpectedVersion expectedVersion = exactly(42);
-        int newVersion = 45;
+        StreamVersion beforeVersion = StreamVersion.ofInt(42);
+        ExpectedVersion expectedVersion = ExpectedVersion.exactly(beforeVersion);
+        StreamVersion newVersion = StreamVersion.ofInt(45);
         when(eventRepository.append(any(), anyList(), any())).thenReturn(newVersion);
 
-        int actualNewVersion
+        StreamVersion actualNewVersion
                 = repository.append(AGGREGATE_ID_1, new TestEvent("test"), expectedVersion);
 
         verify(eventRepository).append(eq(AGGREGATE_ID_1), anyList(), eq(expectedVersion));
@@ -118,7 +127,8 @@ public class DefaultAggregateRepositoryTest {
     public void updatePassesOnEventsToEventRepository() {
         List<TestEvent> events = Arrays.asList(new TestEvent("test1"), new TestEvent("test2"));
 
-        when(eventRepository.append(any(), anyList(), any())).thenReturn(42);
+        StreamVersion beforeVersion = StreamVersion.ofInt(42);
+        when(eventRepository.append(any(), anyList(), any())).thenReturn(beforeVersion);
 
         repository.append(AGGREGATE_ID_1, events, ExpectedVersion.any());
 
@@ -140,24 +150,33 @@ public class DefaultAggregateRepositoryTest {
         TestEvent testEvent2 = new TestEvent("test2");
         TestEvent testEvent3 = new TestEvent("test3");
         ImmutableList<EventRecord<TestEvent>> batch1Events = ImmutableList.of(
-                new EventRecord<>(
-                        AGGREGATE_ID_1, 3, 1, "test1", UUID.randomUUID(),
-                        Instant.now(), ImmutableMap.of(), testEvent1),
-                new EventRecord<>(
-                        AGGREGATE_ID_1, 4, 1, "test1", UUID.randomUUID(),
-                        Instant.now(), ImmutableMap.of(), testEvent2));
+                simpleEventRecord(
+                        AGGREGATE_ID_1,
+                        "test1",
+                        3,
+                        100,
+                        testEvent1),
+                simpleEventRecord(
+                        AGGREGATE_ID_1,
+                        "test1",
+                        4,
+                        101,
+                        testEvent2));
         ImmutableList<EventRecord<TestEvent>> batch2Events = ImmutableList.of(
-                new EventRecord<>(
-                        AGGREGATE_ID_1, 3, 1, "test1", UUID.randomUUID(),
-                        Instant.now(), ImmutableMap.of(), testEvent3));
+                simpleEventRecord(
+                        AGGREGATE_ID_1,
+                        "test1",
+                        5,
+                        102,
+                        testEvent3));
 
-        EventReadResult<TestEvent> repositoryResult1 =
-                new EventReadResult<>(batch1Events, 0, 1, 2, false);
-        EventReadResult<TestEvent> repositoryResult2 =
-                new EventReadResult<>(batch2Events, 2, 2, 3, true);
+        StreamReadResult<TestEvent> repositoryResult1 =
+                new StreamReadResult<>(batch1Events, StreamVersion.ofInt(4), false);
+        StreamReadResult<TestEvent> repositoryResult2 =
+                new StreamReadResult<>(batch2Events, StreamVersion.ofInt(5), true);
         TestState expectedState = new TestState("state1");
 
-        when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(
+        when(eventRepository.read(any(), any(), anyInt())).thenReturn(
                 repositoryResult1,
                 repositoryResult2);
         when(aggregateProjection.apply(any(), any(), (Iterable) any())).thenReturn(expectedState);
@@ -165,8 +184,27 @@ public class DefaultAggregateRepositoryTest {
         repository.load(AGGREGATE_ID_1);
         verify(aggregateProjection).empty();
         verify(aggregateProjection, times(2)).apply(any(), any(), (Iterable) any());
-        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(0), anyInt());
-        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(2), anyInt());
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), isNull(StreamVersion.class), anyInt());
+        verify(eventRepository).read(eq(AGGREGATE_ID_1), eq(StreamVersion.ofInt(4)), anyInt());
         verifyNoMoreInteractions(aggregateProjection, eventRepository);
+    }
+
+    private <T> EventRecord<T> simpleEventRecord(
+            final StreamId aggregateId,
+            final String eventType,
+            final int streamVersion,
+            final int repositoryVersion,
+            final T event
+    ) {
+        return new EventRecord<>(
+                EventId.newUniqueId(),
+                aggregateId,
+                StreamHash.fromStreamId(aggregateId),
+                StreamVersion.ofInt(streamVersion),
+                RepositoryVersion.ofInt(repositoryVersion),
+                eventType,
+                Instant.now(),
+                ImmutableMap.of(),
+                event);
     }
 }

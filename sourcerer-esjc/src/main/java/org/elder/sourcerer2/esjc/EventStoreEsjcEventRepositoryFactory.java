@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 
 public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFactory {
     private static final Pattern NAMESPACE_REGEX = Pattern.compile("[a-zA-Z][a-zA-Z_0-9]*");
-
     private static final Logger logger
             = LoggerFactory.getLogger(EventStoreEsjcEventRepositoryFactory.class);
 
@@ -45,7 +44,20 @@ public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFact
     public <T> EventRepository<T> getEventRepository(
             final Class<T> eventType,
             final String namespace) {
+        return getEventRepository(eventType, namespace, null);
+    }
+
+    @Override
+    public <T> EventRepository<T> getEventRepository(
+            final Class<T> eventType,
+            final String namespace,
+            final Integer shards
+    ) {
         validateNamespace(namespace);
+        if (shards != null) {
+            throw new IllegalArgumentException("The ESJC repository does not support sharding");
+        }
+
         String repositoryName = EventTypeUtils.getRepositoryName(eventType);
         EventNormalizer<T> normalizer = EventTypeUtils.getNormalizer(eventType);
         String eventStreamPrefix = String.format("%s:%s", namespace, repositoryName);

@@ -344,5 +344,5 @@ public interface ImmutableAggregate<TState, TEvent> extends Aggregate<TState, TE
      */
     @Contract(pure = true)
     @NotNull
-    ImmutableAggregate<TState, TEvent> rebase(int version);
+    ImmutableAggregate<TState, TEvent> rebase(@NotNull StreamVersion version);
 }

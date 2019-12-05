@@ -29,7 +29,6 @@ public class AbstractSubscriptionHandler<T> implements EventSubscriptionHandler<
     @Override
     public void subscriptionStopped() {
         logger.debug("Subscription stopped");
-
     }
 
     @Override

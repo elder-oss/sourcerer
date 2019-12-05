@@ -25,7 +25,7 @@ import java.util.List;
  * @param <TEvent> The type of events that can be applied to the aggregate.
  */
 public interface Aggregate<TState, TEvent> {
-    int VERSION_NOT_CREATED = -1;
+    StreamVersion VERSION_NOT_CREATED = null;
 
     /**
      * Gets the id of the aggregate being operated on. None of the methods on Aggregate will modify
@@ -35,7 +35,7 @@ public interface Aggregate<TState, TEvent> {
      */
     @NotNull
     @Contract(pure = true)
-    String id();
+    StreamId id();
 
     /**
      * Gets the version of the aggregate at the point at which it was constructed or loaded from an
@@ -43,10 +43,10 @@ public interface Aggregate<TState, TEvent> {
      * aggregate is explicitly marked as persisted (see rebase).
      *
      * @return The version of the aggregate as loaded from an external source, prior to events
-     * applied to it locally. Will be -1 if the aggregate is new.
+     * applied to it locally. Will be null if the aggregate is new.
      */
     @Contract(pure = true)
-    int sourceVersion();
+    StreamVersion sourceVersion();
 
     /**
      * Gets the current state of the aggregate, including the effects of events applied locally.
@@ -64,6 +64,7 @@ public interface Aggregate<TState, TEvent> {
      * @return The events applied to the aggregate.
      */
     @NotNull
+    @Contract(pure = true)
     List<TEvent> events();
 
     /**

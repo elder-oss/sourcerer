@@ -1,7 +1,8 @@
 dependencies {
-    compile project(':sourcerer-core')
-    compile 'com.github.msemys:esjc:1.7.0'
-    compile 'com.google.guava:guava:19.0'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
+    api project(':sourcerer-core')
+    api "com.github.msemys:esjc:$esjcVersion"
+    implementation "com.google.guava:guava:$guavaVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "io.projectreactor:reactor-core:$reactorVersion"
     testCompile project(':sourcerer-test-utils')
 }

@@ -3,10 +3,14 @@ package org.elder.sourcerer2.esjc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.msemys.esjc.EventStore;
 import com.github.msemys.esjc.EventStoreBuilder;
+import com.google.common.collect.ImmutableMap;
 import org.elder.sourcerer2.EventData;
-import org.elder.sourcerer2.EventRecord;
+import org.elder.sourcerer2.EventId;
 import org.elder.sourcerer2.EventRepository;
 import org.elder.sourcerer2.ExpectedVersion;
+import org.elder.sourcerer2.StreamId;
+import org.elder.sourcerer2.StreamReadResult;
+import org.elder.sourcerer2.StreamVersion;
 import org.elder.sourcerer2.eventstore.test.data.TestEventType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
@@ -14,13 +18,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
-
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 public class EventStoreEsjcEventRepositoryIntegrationTest {
     private static final String NAMESPACE = randomNamespace();
@@ -28,7 +27,7 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
     private static EventRepository<TestEventType> repository;
     private static EventStore eventStore;
 
-    private final String streamId = randomStreamId();
+    private final StreamId streamId = randomStreamId();
 
     @BeforeClass
     public static void setup() {
@@ -55,37 +54,17 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
     }
 
     @Test
-    public void readFirstEvent() {
+    public void readBeyondEvent() {
         append(new TestEventType("payload-1"));
         append(new TestEventType("payload-2"));
 
-        EventRecord<TestEventType> actual = repository.readFirst(streamId);
+        StreamReadResult<TestEventType> actual = repository.read(
+                streamId,
+                StreamVersion.ofInt(0),
+                1);
 
-        assertThat(actual.getEvent().getValue(), equalTo("payload-1"));
-    }
-
-    @Test
-    public void readLastEvent() {
-        append(new TestEventType("payload-1"));
-        append(new TestEventType("payload-2"));
-
-        EventRecord<TestEventType> actual = repository.readLast(streamId);
-
-        assertThat(actual.getEvent().getValue(), equalTo("payload-2"));
-    }
-
-    @Test
-    public void readLastReturnsNullForMissingStream() {
-        EventRecord<TestEventType> actual = repository.readLast(streamId);
-
-        assertThat(actual, nullValue());
-    }
-
-    @Test
-    public void readFirstReturnsNullForMissingStream() {
-        EventRecord<TestEventType> actual = repository.readFirst(streamId);
-
-        assertThat(actual, nullValue());
+        int foo = 234;
+        // assertThat(actual.getEvent().getValue(), equalTo("payload-2"));
     }
 
     private void append(final TestEventType type) {
@@ -94,8 +73,12 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
     }
 
     @NotNull
-    private EventData<TestEventType> eventData(final TestEventType type) {
-        return new EventData<>("type", UUID.randomUUID(), new HashMap<>(), type);
+    private EventData<TestEventType> eventData(final TestEventType event) {
+        return new EventData<>(
+                EventId.newUniqueId(),
+                "type",
+                ImmutableMap.of(),
+                event);
     }
 
     @NotNull
@@ -103,7 +86,7 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
         return "test_" + UUID.randomUUID().toString().replaceAll("-", "_");
     }
 
-    private static String randomStreamId() {
-        return String.format("%d", new Random().nextInt(100000));
+    private static StreamId randomStreamId() {
+        return StreamId.ofString(String.format("%d", new Random().nextInt(100000)));
     }
 }

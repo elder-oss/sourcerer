@@ -1,0 +1,7 @@
+dependencies {
+    api project(':sourcerer-core')
+    api project(':sourcerer-dbstore')
+
+    implementation "com.google.cloud:google-cloud-spanner:$googleSpannerVersion"
+    implementation "io.projectreactor:reactor-core:$reactorVersion"
+}
