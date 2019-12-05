@@ -1,13 +1,14 @@
 package org.elder.sourcerer2.dbstore
 
 import org.elder.sourcerer2.RepositoryShard
+import org.elder.sourcerer2.StreamHash
 
 data class DbstoreShardHashRange(
         val fromHashInclusive: Int,
         val toHashExclusive: Int
 ) {
     companion object {
-        val COMPLETE_RANGE = DbstoreShardHashRange(0, RepositoryShard.MAX_SHARD_COUNT)
+        val COMPLETE_RANGE = DbstoreShardHashRange(0, StreamHash.HASH_VALUES)
     }
 }
 
