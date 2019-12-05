@@ -12,12 +12,15 @@ public class CommandResult<TEvent> {
     private final StreamId aggregateId;
     private final StreamVersion newVersion;
     private final ImmutableList<? extends TEvent> events;
+    private StreamVersion previousVersion;
 
     public CommandResult(
             final StreamId aggregateId,
+            final StreamVersion previousVersion,
             final StreamVersion newVersion,
             final ImmutableList<? extends TEvent> events) {
         Preconditions.checkNotNull(aggregateId);
+        this.previousVersion = previousVersion;
         this.newVersion = newVersion;
         this.aggregateId = aggregateId;
         this.events = events;
@@ -25,9 +28,10 @@ public class CommandResult<TEvent> {
 
     public CommandResult(
             final StreamId aggregateId,
+            final StreamVersion previousVersion,
             final StreamVersion newVersion,
             final List<? extends TEvent> events) {
-        this(aggregateId, newVersion, ImmutableList.copyOf(events));
+        this(aggregateId, previousVersion, newVersion, ImmutableList.copyOf(events));
     }
 
     /**
@@ -35,6 +39,16 @@ public class CommandResult<TEvent> {
      */
     public StreamId getAggregateId() {
         return aggregateId;
+    }
+
+    /**
+     * Gets the previous version of the aggregate, after the events from the command were applied.
+     * This may be null in the cases where the current version is unknown, e.g. a no-op operation.
+     * For non atomic operations, this may be deduced from the new version and number of events
+     * written, rather than by explicitly reading from the stream before appending changes.
+     */
+    public StreamVersion getPreviousVersion() {
+        return previousVersion;
     }
 
     /**

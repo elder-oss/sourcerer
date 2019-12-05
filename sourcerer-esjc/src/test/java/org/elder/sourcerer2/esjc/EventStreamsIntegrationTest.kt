@@ -12,6 +12,7 @@ import org.elder.sourcerer2.extras.EventStreams
 import org.elder.sourcerer2.esjc.utils.ConcurrencyProgress
 import org.elder.sourcerer2.esjc.utils.ConcurrencyRule
 import org.elder.sourcerer2.esjc.utils.TestEventStore
+import org.elder.sourcerer2.utils.RetryPolicy
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.instanceOf
 import org.junit.Assert.assertThat
@@ -37,9 +38,7 @@ class EventStreamsIntegrationTest {
     @Before
     fun setup() {
         aggregateRepository = eventStore
-                .createAggregateRepository("test_eventstreams",
-                        Projection())
-        streams = EventStreams(aggregateRepository)
+        setupEventStreams(RetryPolicy.noRetries())
     }
 
     @Test
@@ -56,6 +55,15 @@ class EventStreamsIntegrationTest {
         expectError(UnexpectedVersionException::class) {
             createWith { Event.ValueSet("the-value-2") }
         }
+    }
+
+    @Test
+    fun `does nothing when creating another stream using existing name if explicitly allowed`() {
+        createWith(failOnExisting = CreateConflictStrategy.NOOP) { Event.ValueSet("the-value") }
+
+        createWith(failOnExisting = CreateConflictStrategy.NOOP) { Event.ValueSet("the-value-2") }
+
+        then assertState { value equals "the-value" }
     }
 
     @Test
@@ -148,6 +156,32 @@ class EventStreamsIntegrationTest {
     }
 
     @Test
+    fun `concurrent updates eventually succeed when retries configured`() {
+        setupEventStreams(RetryPolicy(25, 50, 2))
+
+        createWith { Event.ValueSet("the-value") }
+
+        val slowUpdateStarted = ConcurrencyProgress("slow read")
+        val sneakyUpdateCompleted = ConcurrencyProgress("sneaky update")
+
+        concurrency.runInThread("slow update") {
+            updateWith {
+                slowUpdateStarted.happened()
+                sneakyUpdateCompleted.await()
+                Event.ValueSet("the-value-slow")
+            }
+        }
+
+        concurrency.runInThread("sneaky update") {
+            slowUpdateStarted.await()
+            updateWith {
+                Event.ValueSet("the-value-sneaky")
+            }
+            sneakyUpdateCompleted.happened()
+        }
+    }
+
+    @Test
     fun `concurrent creates fail`() {
         val slowCreateStarted = ConcurrencyProgress("slow read")
         val sneakyCreateCompleted = ConcurrencyProgress("sneaky update")
@@ -171,8 +205,14 @@ class EventStreamsIntegrationTest {
         }
     }
 
-    private fun createWith(event: () -> Event) =
-            streams.create(randomId) { state -> state.apply(event) }
+    private fun createWith(
+            event: () -> Event
+    ) = streams.create(randomId) { state -> state.apply(event) }
+
+    private fun createWith(
+            failOnExisting: CreateConflictStrategy,
+            event: () -> Event
+    ) = streams.create(randomId, failOnExisting) { state -> state.apply(event) }
 
     private fun updateWith(event: () -> Event) =
             streams.update(randomId) { state -> state.apply(event) }
@@ -189,6 +229,10 @@ class EventStreamsIntegrationTest {
         } catch (exception: Exception) {
             assertThat(exception, instanceOf(expected.java))
         }
+    }
+
+    private fun setupEventStreams(retryPolicy: RetryPolicy) {
+        streams = EventStreams(DefaultCommandFactory(aggregateRepository, retryPolicy))
     }
 
     class Projection : AggregateProjection<State, Event> {
@@ -212,7 +256,8 @@ class EventStreamsIntegrationTest {
             use = JsonTypeInfo.Id.NAME,
             include = JsonTypeInfo.As.PROPERTY,
             property = "type",
-            visible = true)
+            visible = true
+    )
     @JsonSubTypes(JsonSubTypes.Type(Event.ValueSet::class))
     sealed class Event {
         data class ValueSet(val value: String) : Event()

@@ -2,7 +2,7 @@ package org.elder.sourcerer2;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.elder.sourcerer2.exceptions.ConflictingExpectedVersionsException;
+import org.elder.sourcerer2.utils.RetryPolicy;
 import org.elder.sourcerer2.exceptions.InvalidCommandException;
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException;
 import org.junit.Assert;
@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -27,6 +26,7 @@ import static org.mockito.Mockito.when;
 @PrepareForTest(ExpectedVersion.class)
 public class DefaultCommandTest {
     private static final StreamId AGGREGATE_ID = StreamId.ofString("42");
+    private final RetryPolicy retryPolicy = RetryPolicy.noRetries();
     private AggregateRepository repository;
 
     @Before
@@ -63,7 +63,7 @@ public class DefaultCommandTest {
                         AGGREGATE_ID,
                         StreamVersion.ofInt(42),
                         new TestState("test")));
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         CommandResult commandResult = command.run();
@@ -87,7 +87,7 @@ public class DefaultCommandTest {
                 DefaultImmutableAggregate.createNew(projection, AGGREGATE_ID);
         when(repository.load(any())).thenReturn(sourceAggregate);
         when(repository.append(any(), any(), any(), any())).thenReturn(newVersion);
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         CommandResult commandResult = command.run();
@@ -119,7 +119,7 @@ public class DefaultCommandTest {
                         AGGREGATE_ID,
                         StreamVersion.ofInt(42),
                         new TestState("test")));
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.setAggregateId(AGGREGATE_ID);
         command.setIdempotentCreate(true);
         command.setAtomic(false);
@@ -141,7 +141,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         when(repository.load(any()))
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
@@ -167,7 +167,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         when(repository.load(any()))
                 .thenReturn(DefaultImmutableAggregate.fromExisting(
                         mock(AggregateProjection.class),
@@ -203,7 +203,7 @@ public class DefaultCommandTest {
                 false,
                 ExpectedVersion.any());
 
-        DefaultCommand command = new DefaultCommand(repository, operation);
+        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
         command.addMetadata(ImmutableMap.of("key2", "value2direct"));
         command.addMetadataDecorator(new MetadataDecorator() {
             @Override

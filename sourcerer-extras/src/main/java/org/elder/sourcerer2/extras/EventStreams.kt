@@ -30,10 +30,13 @@ class EventStreams<STATE, EVENT>(
     /**
      * Create a new stream.
      *
-     * Will fail if stream already exists.
+     * @param id the aggregate id
+     * @param conflictStrategy what to do if aggregate already exists. Default is to fail
+     * @param create operations to perform on the aggregate
      */
     fun create(
             id: StreamId,
+            conflictStrategy: CreateConflictStrategy = CreateConflictStrategy.FAIL,
             create: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
         return CommandResponse.of(
@@ -44,13 +47,17 @@ class EventStreams<STATE, EVENT>(
                         .setAggregateId(id)
                         .setAtomic(true)
                         .setExpectedVersion(ExpectedVersion.notCreated())
+                        .setIdempotentCreate(conflictStrategy.idempotentCreate)
                         .run())
     }
 
     /**
      * Update existing stream.
      *
-     * Will by default fail if stream does not exist.
+     * @param id the aggregate id
+     * @param expectedVersion expected aggregate version. By default will fail if stream does not
+     * exist
+     * @param update operations to perform on the aggregate
      */
     fun update(
             id: StreamId,
@@ -70,6 +77,9 @@ class EventStreams<STATE, EVENT>(
      * Append events to stream.
      *
      * Stream may be new or existing. No validation is performed, and nothing is read.
+     *
+     * @param id the aggregate id
+     * @param operation operations to perform to create events
      */
     fun append(id: StreamId, operation: () -> List<EVENT>): CommandResponse {
         return CommandResponse.of(
@@ -101,4 +111,18 @@ class EventStreams<STATE, EVENT>(
                 ExpectedVersion.notCreated(),
                 true)
     }
+}
+
+/**
+ * Strategy for when trying to create an aggregate that already exists.
+ */
+enum class CreateConflictStrategy(internal val idempotentCreate: Boolean) {
+    /**
+     * Throw UnexpectedVersionException.
+     */
+    FAIL(idempotentCreate = false),
+    /**
+     * Do nothing.
+     */
+    NOOP(idempotentCreate = true);
 }

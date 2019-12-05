@@ -2,9 +2,12 @@ package org.elder.sourcerer2
 
 import com.google.common.base.Preconditions
 import com.google.common.collect.ImmutableList
+import org.elder.sourcerer2.exceptions.AtomicWriteException
 import org.elder.sourcerer2.exceptions.ConflictingExpectedVersionsException
 import org.elder.sourcerer2.exceptions.InvalidCommandException
 import org.elder.sourcerer2.exceptions.UnexpectedVersionException
+import org.elder.sourcerer2.utils.RetryHandler
+import org.elder.sourcerer2.utils.RetryPolicy
 import org.slf4j.LoggerFactory
 import java.util.ArrayList
 import java.util.HashMap
@@ -12,9 +15,11 @@ import java.util.HashMap
 /**
  * Default Command implementation, expressed in terms of an AggregateRepository.
  */
-class DefaultCommand<TState, TParams, TEvent>(
+
+class DefaultCommand<TState, TParams, TEvent> @JvmOverloads constructor(
         private val repository: AggregateRepository<TState, TEvent>,
-        private val operation: Operation<TState, TParams, TEvent>
+        private val operation: Operation<TState, TParams, TEvent>,
+        private val retryPolicy: RetryPolicy = RetryPolicy.noRetries()
 ) : Command<TState, TParams, TEvent> {
     private val metadata: MutableMap<String, String>
     private var atomic = true
@@ -86,37 +91,51 @@ class DefaultCommand<TState, TParams, TEvent>(
     }
 
     override fun run(): CommandResult<TEvent> {
-        logger.debug("Running command on {}", aggregateId)
-        validate()
+        logger.debug("Running command on {}", aggregateId);
+        validate();
 
-        val effectiveExpectedVersion = getEffectiveExpectedVersion(expectedVersion, operation.expectedVersion())
-        logger.debug("Expected version set as {}", effectiveExpectedVersion)
+        val effectiveExpectedVersion = getEffectiveExpectedVersion(expectedVersion, operation.expectedVersion());
+        logger.debug("Expected version set as {}", effectiveExpectedVersion);
 
-        // Read the aggregate if needed
-        val aggregate: ImmutableAggregate<TState, TEvent>?
-        if (operation.requiresState() || atomic) {
-            logger.debug("Reading aggregate record from stream")
-            aggregate = readAndValidateAggregate(effectiveExpectedVersion)
-            logger.debug(
-                    "Current state of aggregate is {}",
-                    if (aggregate.sourceVersion() == Aggregate.VERSION_NOT_CREATED)
-                        "<not created>"
-                    else
-                        "version " + aggregate.sourceVersion())
-        } else {
-            logger.debug("Aggregate state not loaded")
-            aggregate = null
+        val retryHandler = RetryHandler(retryPolicy);
+        while (true) {
+            try {
+                return performCommand(effectiveExpectedVersion);
+            } catch (awe: AtomicWriteException) {
+                if (effectiveExpectedVersion == ExpectedVersion.notCreated()) {
+                    // Expected aggregate to not exist, but now it does - retrying won't help.
+                    throw awe;
+                }
+                retryHandler.failed();
+                logger.info(
+                        "Failed attempt {}: Concurrent append to aggregate {}",
+                        retryHandler.nrFailures,
+                        aggregateId
+                );
+                if (retryHandler.isThresholdReached) {
+                    logger.warn("Reached max retries");
+                    throw awe;
+                }
+                retryHandler.backOff();
+            }
         }
+    }
+
+    private fun performCommand(
+            effectiveExpectedVersion: ExpectedVersion
+    ): CommandResult<TEvent> {
+        // Read the aggregate if needed
+        val aggregate = readExistingAggregate(effectiveExpectedVersion)
 
         // Bail out early if idempotent create, and already present
         if (idempotentCreate
                 && aggregate != null
-                && aggregate.sourceVersion() != Aggregate.VERSION_NOT_CREATED
-        ) {
+                && aggregate!!.sourceVersion() !== Aggregate.VERSION_NOT_CREATED) {
             logger.debug("Bailing out early as already created (and idempotent create set)")
             return CommandResult(
-                    aggregateId,
-                    aggregate.sourceVersion(),
+                    aggregateId!!,
+                    aggregate!!.sourceVersion(),
+                    aggregate!!.sourceVersion(),
                     ImmutableList.of())
         }
 
@@ -128,12 +147,42 @@ class DefaultCommand<TState, TParams, TEvent>(
             logger.debug("Operation is no-op, bailing early")
             return CommandResult(
                     aggregateId,
-                    aggregate?.sourceVersion(),
+                    if (aggregate != null) aggregate!!.sourceVersion() else null,
+                    if (aggregate != null) aggregate!!.sourceVersion() else null,
                     events)
         }
 
         // Create/update the event stream as needed
-        val updateExpectedVersion = if (atomic) {
+        return updateAggregate(aggregate, events)
+    }
+
+    private fun readExistingAggregate(
+            effectiveExpectedVersion: ExpectedVersion
+    ): ImmutableAggregate<TState, TEvent>? {
+        val aggregate: ImmutableAggregate<TState, TEvent>
+        return if (operation.requiresState() || atomic) {
+            logger.debug("Reading aggregate record from stream")
+            aggregate = readAndValidateAggregate(effectiveExpectedVersion)
+            logger.debug(
+                    "Current state of aggregate is {}",
+                    if (aggregate.sourceVersion() === Aggregate.VERSION_NOT_CREATED)
+                        "<not created>"
+                    else
+                        "version " + aggregate.sourceVersion())
+            aggregate
+        } else {
+            logger.debug("Aggregate state not loaded")
+            null
+        }
+    }
+
+    private fun updateAggregate(
+            aggregate: ImmutableAggregate<TState, TEvent>?,
+            events: ImmutableList<out TEvent>
+    ): CommandResult<TEvent> {
+        var updateExpectedVersion: ExpectedVersion
+
+        updateExpectedVersion = if (atomic) {
             // Actually null safe since atomic above ...
             if (aggregate!!.sourceVersion() !== Aggregate.VERSION_NOT_CREATED) {
                 ExpectedVersion.exactly(aggregate!!.sourceVersion())
@@ -146,7 +195,14 @@ class DefaultCommand<TState, TParams, TEvent>(
             ExpectedVersion.any()
         }
 
+        // TODO: Handle any existing condition in event store - for now we know it's existing if
+        // it was existing
+        if (updateExpectedVersion == ExpectedVersion.anyExisting()) {
+            updateExpectedVersion = ExpectedVersion.any()
+        }
+
         logger.debug("About to persist, expected version at save: {}", updateExpectedVersion)
+
         val effectiveMetadata = HashMap(this.metadata)
         for (metadataDecorator in metadataDecorators) {
             val decoratorMetadata = metadataDecorator.metadata
@@ -162,11 +218,19 @@ class DefaultCommand<TState, TParams, TEvent>(
                     aggregateId!!,
                     events,
                     updateExpectedVersion,
-                    effectiveMetadata
-            )
+                    effectiveMetadata)
 
+            // It may be nice to sanity check here by using the expected version explicitly, but
+            // this works regardless of whether we have a specific expected version ...
+            // Will return -1 if we just created the stream, which is fine
+            val oldVersion = expectedVersion.let {
+                when (it) {
+                    is ExpectedVersion.Exactly -> it.streamVersion
+                    else -> null
+                }
+            }
             logger.debug("Save successful, new version is {}", newVersion)
-            return CommandResult(aggregateId, newVersion, events)
+            return CommandResult(aggregateId, oldVersion, newVersion, events)
         } catch (ex: UnexpectedVersionException) {
             // There's one case when this is OK - idempotent creates. We want to be able to create
             // a stream and not fail if the same stream is attempted to be created on replays.
@@ -174,8 +238,11 @@ class DefaultCommand<TState, TParams, TEvent>(
                 logger.debug("Idempotent create enabled, ignoring existing stream")
                 return CommandResult(
                         aggregateId,
-                        if (ex.currentVersion != null) ex.currentVersion else null,
-                        ImmutableList.of<TEvent>())
+                        ex.currentVersion,
+                        ex.currentVersion,
+                        ImmutableList.of())
+            } else if (atomic) {
+                throw AtomicWriteException(ex)
             }
 
             throw ex
@@ -222,7 +289,8 @@ class DefaultCommand<TState, TParams, TEvent>(
 
         private fun getEffectiveExpectedVersion(
                 commandExpectedVersion: ExpectedVersion?,
-                operationExpectedVersion: ExpectedVersion): ExpectedVersion {
+                operationExpectedVersion: ExpectedVersion
+        ): ExpectedVersion {
             try {
                 return ExpectedVersion.merge(commandExpectedVersion, operationExpectedVersion)
             } catch (ex: ConflictingExpectedVersionsException) {
