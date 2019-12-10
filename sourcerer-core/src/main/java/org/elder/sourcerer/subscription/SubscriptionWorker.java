@@ -7,6 +7,7 @@ import org.elder.sourcerer.EventSubscriptionPositionSource;
 import org.elder.sourcerer.EventSubscriptionUpdate;
 import org.elder.sourcerer.SubscriptionToken;
 import org.elder.sourcerer.SubscriptionWorkerConfig;
+import org.elder.sourcerer.SubscriptionWorkerRunPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.subscriber.LambdaSubscriber;
@@ -30,6 +31,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
     private final AtomicBoolean cancelled;
     private final Semaphore sleeper;
     private final SubscriptionWorkerConfig config;
+    private final SubscriptionWorkerRunPolicy runPolicy;
     private int subscriberCount;
 
     public SubscriptionWorker(
@@ -44,6 +46,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
         this.cancelled = new AtomicBoolean(false);
         this.retryCount = new AtomicInteger(0);
         this.sleeper = new Semaphore(0);
+        this.runPolicy = config.getRunPolicy();
     }
 
     @Override
@@ -52,13 +55,22 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
 
         try {
             while (true) {
+                if (!runPolicy.shouldRun()) {
+                    // Policy says not to subscribe. Sleep for some time and check again.
+                    Thread.sleep(200);
+                    continue;
+                }
+
                 try {
                     runOneSession();
                     // Clean return, can only mean we've reached the end ....
                     logger.info("Subscription stop acknowledge, thread terminating");
                     handler.subscriptionStopped();
                     return;
+                } catch (RunPolicyPreventionException ex) {
+                    // Kicked out due to run policy.
                 } catch (Exception ex) {
+                    runPolicy.lastRunFailed(ex);
                     logger.warn("Exception in subscription, retry logic will apply", ex);
                     boolean retry = handler.handleError(unwrapException(ex), retryCount.get());
                     if (retry) {
@@ -115,8 +127,13 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
             logger.info("Subscribing to event store ...");
             repository.getPublisher(subscriptionPosition).subscribe(boundedSubscriber);
             while (processUpdates(currentUpdates)) {
+                runPolicy.lastRunSuccessful();
                 logger.debug("Processed updates, will do more");
                 retryCount.set(0);
+                if (!runPolicy.shouldRun()) {
+                    logger.info("Run policy prevented us from continuing");
+                    throw new RunPolicyPreventionException();
+                }
             }
             // Clean exit, can only mean we're at the end of the subscription, or been explicitly
             // cancelled
