@@ -133,7 +133,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                any(Long.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class),
                 any(UserCredentials.class)))
@@ -186,7 +186,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                any(Long.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class)))
                 .thenReturn(catchUpSubscription);
@@ -238,7 +238,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                any(Long.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class),
                 any(UserCredentials.class)))
@@ -298,7 +298,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                any(Long.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class),
                 any(UserCredentials.class)))
@@ -347,7 +347,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                any(Long.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class)))
                 .thenReturn(catchUpSubscription);
@@ -395,7 +395,7 @@ public class EventStoreEsjcEventRepositoryTest {
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
         when(eventStore.subscribeToStreamFrom(
                 anyString(),
-                any(Integer.class),
+                any(Long.class),
                 any(CatchUpSubscriptionSettings.class),
                 any(CatchUpSubscriptionListener.class),
                 any(UserCredentials.class)))
