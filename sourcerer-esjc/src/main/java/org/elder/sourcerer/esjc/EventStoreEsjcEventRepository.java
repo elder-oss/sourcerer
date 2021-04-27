@@ -97,7 +97,9 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         this.normalizer = normalizer;
         this.timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
         // TODO: Customize these settings
+        logger.warn("Setting batch size to 1");
         defaultSubscriptionSettings = CatchUpSubscriptionSettings.newBuilder()
+                .readBatchSize(1)
                 .resolveLinkTos(true)
                 .build();
     }
