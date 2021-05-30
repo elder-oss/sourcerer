@@ -1,0 +1,1 @@
+Uploading to Nexus will require credentials to be set in a new way from the command line / environment variable, see https://docs.gradle.org/current/samples/sample_publishing_credentials.html

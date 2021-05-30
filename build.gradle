@@ -56,7 +56,6 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'java-library'
     apply plugin: 'kotlin'
-    apply plugin: 'maven'
     apply plugin: 'maven-publish'
     apply plugin: 'checkstyle'
     apply plugin: 'jacoco'
@@ -139,45 +138,46 @@ subprojects {
 
     signing {
         required { "$enable_signing" == 'true' }
-        sign configurations.archives
+        sign publishing.publications.mavenJava
     }
 
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
-                }
-
-                pom.project {
-                    name 'Elder Sourcerer'
-                    packaging 'jar'
-                    description 'An opinionated framework for implementing an CQRS architecture using event sourcing'
-                    url 'https://github.com/elder-oss/sourcerer'
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                pom {
+                    name = 'Elder Sourcerer'
+                    description = 'An opinionated framework for implementing an CQRS architecture using event sourcing'
+                    url = 'https://github.com/elder-oss/sourcerer'
 
                     scm {
-                        connection 'scm:git:https://github.com/elder-oss/sourcerer.git'
-                        developerConnection 'scm:svn:https://github.com/elder-oss/sourcerer.git'
-                        url 'https://github.com/elder-oss/sourcerer'
+                        connection = 'scm:git:https://github.com/elder-oss/sourcerer.git'
+                        developerConnection = 'scm:svn:https://github.com/elder-oss/sourcerer.git'
+                        url = 'https://github.com/elder-oss/sourcerer'
                     }
 
                     licenses {
                         license {
-                            name 'The MIT License (MIT)'
-                            url 'https://opensource.org/licenses/MIT'
+                            name = 'The MIT License (MIT)'
+                            url = 'https://opensource.org/licenses/MIT'
                         }
                     }
 
                     developers {
                         developer {
-                            id 'elder-developers'
-                            name 'Developers At Elder'
-                            email 'tech@elder.org'
+                            id = 'elder-developers'
+                            name = 'Developers At Elder'
+                            email = 'tech@elder.org'
                         }
                     }
                 }
+            }
+        }
+
+        repositories {
+            maven {
+                name = 'sonatype-oss'
+                url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                credentials(PasswordCredentials)
             }
         }
     }
