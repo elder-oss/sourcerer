@@ -111,11 +111,6 @@ subprojects {
         archives javadocJar
     }
 
-    task downloadDependencies(type: Copy) {
-        from configurations.testRuntime
-        into 'build/tmp/dependencieshack/'
-    }
-
     publishing {
         publications {
             mavenJava(MavenPublication) {
