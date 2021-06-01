@@ -54,6 +54,7 @@ import reactor.core.publisher.FluxEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -205,6 +206,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 .events
                 .stream()
                 .map(this::fromEsEvent)
+                .filter(Objects::nonNull)
                 .collect(new ImmutableListCollector<>());
         return new EventReadResult<>(
                 events,
@@ -384,6 +386,13 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         long streamVersion;
         long aggregateVersion;
         if (event.isResolved()) {
+            if (event.event == null) {
+                logger.debug(
+                        "Ignoring resolved event {}:{} referencing deleted event",
+                        event.originalStreamId(), event.originalEventNumber());
+                return null;
+            }
+
             aggregateVersion = event.event.eventNumber;
             streamVersion = event.link.eventNumber;
         } else {
@@ -559,7 +568,10 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         @Override
         public void onEvent(final CatchUpSubscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
-            emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            EventRecord<T> eventRecord = fromEsEvent(event);
+            if (eventRecord != null) {
+                emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            }
         }
 
         @Override

@@ -1,6 +1,9 @@
+apply plugin: 'java-library'
+
 dependencies {
-    compile project(':sourcerer-esjc')
-    compile 'org.springframework:spring-beans:4.2.6.RELEASE'
-    compile 'org.springframework:spring-context:4.2.6.RELEASE'
-    compile 'org.springframework.boot:spring-boot-actuator:1.3.5.RELEASE'
+    api project(':sourcerer-esjc')
+    api "org.springframework:spring-beans:$springVersion"
+    api "org.springframework:spring-context:$springVersion"
+    implementation "com.github.msemys:esjc:$escjVersion"
+    implementation "org.springframework.boot:spring-boot-actuator:$springBootVersion"
 }

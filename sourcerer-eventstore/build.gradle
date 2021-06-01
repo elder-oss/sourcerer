@@ -1,9 +1,12 @@
+apply plugin: 'java-library'
+
 dependencies {
-    compile project(':sourcerer-core')
-    compile 'com.geteventstore:eventstore-client_2.11:2.2.2'
-    compile 'com.google.guava:guava:19.0'
-    compile 'org.scala-lang.modules:scala-java8-compat_2.11:0.8.0-RC1'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
-    compile 'io.netty:netty-buffer:4.1.2.Final'
+    api project(':sourcerer-core')
+    api "com.google.guava:guava:$guavaVersion"
+    implementation "com.geteventstore:eventstore-client_2.11:$eventStoreClientVersion"
+    implementation 'org.scala-lang.modules:scala-java8-compat_2.11:0.8.0-RC1'
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "io.netty:netty-buffer:$nettyVersion"
+    implementation 'io.projectreactor:reactor-core:2.5.0.M4'
     testCompile project(':sourcerer-test-utils')
 }

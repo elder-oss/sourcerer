@@ -1,3 +1,5 @@
+apply plugin: 'java-library'
+
 dependencies {
-    compile project(':sourcerer-core')
+    api project(':sourcerer-core')
 }

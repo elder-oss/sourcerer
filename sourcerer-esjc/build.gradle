@@ -1,7 +1,10 @@
+apply plugin: 'java-library'
+
 dependencies {
-    compile project(':sourcerer-core')
-    compile "com.github.msemys:esjc:$escjVersion"
-    compile 'com.google.guava:guava:19.0'
-    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.4'
+    api project(':sourcerer-core')
+    api "com.google.guava:guava:$guavaVersion"
+    implementation "com.github.msemys:esjc:$escjVersion"
+    implementation 'io.projectreactor:reactor-core:2.5.0.M4'
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     testCompile project(':sourcerer-test-utils')
 }
