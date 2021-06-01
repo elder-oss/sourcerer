@@ -40,6 +40,7 @@ import scala.Option;
 import scala.compat.java8.FutureConverters;
 import scala.concurrent.Future;
 
+import javax.naming.OperationNotSupportedException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.Instant;
@@ -280,6 +281,18 @@ public class EventStoreEventRepository<T> implements EventRepository<T> {
                 .map(this::fromEsEvent)
                 // This implementation does not support caught up status, each update is an event
                 .map(EventSubscriptionUpdate::ofEvent);
+    }
+
+    @Override
+    public void deleteStream(final String streamId, final ExpectedVersion expectedVersion) {
+        throw new UnsupportedOperationException(
+                "This implementation does not support delete/truncate");
+    }
+
+    @Override
+    public void truncateStream(final String streamId, final int truncateToVersionExclusive) {
+        throw new UnsupportedOperationException(
+                "This implementation does not support delete/truncate");
     }
 
     private String toEsStreamId(final String streamId) {

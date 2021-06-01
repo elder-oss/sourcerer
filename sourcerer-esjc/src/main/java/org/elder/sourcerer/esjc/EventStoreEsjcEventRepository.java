@@ -12,6 +12,7 @@ import com.github.msemys.esjc.EventStoreException;
 import com.github.msemys.esjc.ResolvedEvent;
 import com.github.msemys.esjc.SliceReadStatus;
 import com.github.msemys.esjc.StreamEventsSlice;
+import com.github.msemys.esjc.StreamMetadata;
 import com.github.msemys.esjc.SubscriptionDropReason;
 import com.github.msemys.esjc.WriteResult;
 import com.github.msemys.esjc.node.cluster.ClusterException;
@@ -301,6 +302,28 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 subscription.stop();
             });
         });
+    }
+
+    @Override
+    public void deleteStream(final String streamId, final ExpectedVersion expectedVersion) {
+        logger.info("Deleting entire stream {}", streamId);
+        completeWriteFuture(
+                eventStore.deleteStream(toEsStreamId(streamId), toEsVersion(expectedVersion)),
+                expectedVersion);
+    }
+
+    @Override
+    public void truncateStream(final String streamId, final int truncateToVersionExclusive) {
+        logger.info("Truncating stream {} to start at version {}", streamId, truncateToVersionExclusive);
+        completeWriteFuture(
+                eventStore.setStreamMetadata(
+                        toEsStreamId(streamId),
+                        toEsVersion(ExpectedVersion.any()),
+                        StreamMetadata
+                                .newBuilder()
+                                .truncateBefore(convertTo64Bit(truncateToVersionExclusive))
+                                .build()),
+                ExpectedVersion.any());
     }
 
     private String toEsStreamId(final String streamId) {
