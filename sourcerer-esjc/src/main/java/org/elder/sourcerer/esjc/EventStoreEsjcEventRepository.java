@@ -383,22 +383,15 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     private EventRecord<T> fromEsEvent(final ResolvedEvent event) {
-        long streamVersion;
-        long aggregateVersion;
-        if (event.isResolved()) {
-            if (event.event == null) {
-                logger.debug(
-                        "Ignoring resolved event {}:{} referencing deleted event",
-                        event.originalStreamId(), event.originalEventNumber());
-                return null;
-            }
-
-            aggregateVersion = event.event.eventNumber;
-            streamVersion = event.link.eventNumber;
-        } else {
-            aggregateVersion = event.event.eventNumber;
-            streamVersion = event.event.eventNumber;
+        if (event.event == null) {
+            logger.debug(
+                    "Ignoring resolved event {}:{} referencing deleted event",
+                    event.originalStreamId(), event.originalEventNumber());
+            return null;
         }
+
+        long streamVersion = event.link != null ? event.link.eventNumber : event.event.eventNumber;
+        long aggregateVersion = event.event.eventNumber;
 
         return new EventRecord<>(
                 fromEsStreamId(event.event.eventStreamId),
