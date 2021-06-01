@@ -314,7 +314,9 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
 
     @Override
     public void truncateStream(final String streamId, final int truncateToVersionExclusive) {
-        logger.info("Truncating stream {} to start at version {}", streamId, truncateToVersionExclusive);
+        logger.info(
+                "Truncating stream {} to start at version {}",
+                streamId, truncateToVersionExclusive);
         completeWriteFuture(
                 eventStore.setStreamMetadata(
                         toEsStreamId(streamId),
