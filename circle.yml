@@ -6,10 +6,10 @@ jobs:
       # Primary container where all steps run
       - image: elderhq/java-circle-image:20170502-1
       # Secondary container with a test eventstore instance
-      - image: eventstore/eventstore:release-4.0.1
+      - image: eventstore/eventstore:release-5.0.4
     steps:
       - checkout
-      - setup_docker_engine
+      - setup_remote_docker
       - run:
           name: Building and running unit tests
           command: . infra/run-tests.sh
