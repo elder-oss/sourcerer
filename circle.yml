@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 jobs:
   build:
     working_directory: /root/project
@@ -43,8 +43,14 @@ jobs:
             else
               echo "Not relevant, skipping step"
             fi
-deployment:
-  fake_deploy_for_circle_ci_2:
-    tag: /.*/
-    commands:
-      - echo "Placeholder NOOP for tags"
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build:
+          context: Elder-Sourcerer
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /.*/
