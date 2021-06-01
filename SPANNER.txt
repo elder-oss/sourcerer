@@ -1,8 +1,0 @@
-https://cloud.google.com/spanner/docs/emulator
-
-gcloud config configurations create emulator
-gcloud config set auth/disable_credentials true
-gcloud config set project spanner-local-dev
-gcloud config set api_endpoint_overrides/spanner http://localhost:9020/
-
-gcloud spanner instances create localdev-instance --config=emulator-config --description "Local development" --nodes=1
