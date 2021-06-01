@@ -1,6 +1,7 @@
+apply plugin: 'java-library'
+
 dependencies {
-    compile project(":sourcerer-core")
-    compile "com.github.msemys:esjc:$escjVersion"
-    compile 'junit:junit:4.11'
-    compile 'com.mashape.unirest:unirest-java:1.4.9'
+    api project(":sourcerer-core")
+    api 'junit:junit:4.11'
+    api 'com.mashape.unirest:unirest-java:1.4.9'
 }

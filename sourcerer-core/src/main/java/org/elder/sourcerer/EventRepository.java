@@ -96,7 +96,7 @@ public interface EventRepository<T> {
     /**
      * Reads first event for a given stream id.
      *
-     * @param streamId  The id of the stream to read event for.
+     * @param streamId The id of the stream to read event for.
      * @return The event, or null if no stream was found.
      */
     EventRecord<T> readFirst(String streamId);
@@ -104,7 +104,7 @@ public interface EventRepository<T> {
     /**
      * Reads last event for a given stream id.
      *
-     * @param streamId  The id of the stream to read event for.
+     * @param streamId The id of the stream to read event for.
      * @return The event, or null if no stream was found.
      */
     EventRecord<T> readLast(String streamId);
@@ -166,4 +166,28 @@ public interface EventRepository<T> {
      * written to any stream related to this repository.
      */
     Publisher<EventSubscriptionUpdate<T>> getPublisher(Integer fromVersion);
+
+    /**
+     * Deletes an entire stream. All events of the stream will be removed and will no longer be
+     * accessible either when reading the stream directly, or subscribing to changes across the
+     * repository. It may still be possible to append to the event stream, which will continue
+     * the version sequence rather than starting over again from 0.
+     *
+     * @param streamId        The id of the stream to delete
+     * @param expectedVersion The expected version of the stream. The operation will fail if the
+     *                        stream does not currently match this version.
+     */
+    void deleteStream(String streamId, ExpectedVersion expectedVersion);
+
+    /**
+     * Truncate a stream up to a given position. This operation effectively deletes events from the
+     * beginning of the stream up to (but not including) the given event version, e.g. truncating
+     * with version 3 will remove events of version 0, 1, and 2 but will keep events from 3 and
+     * onwards.
+     *
+     * @param streamId                   The id of the stream to truncate
+     * @param truncateToVersionExclusive The version to truncate up to. Events with a version less
+     *                                   than this version will be removed from the stream.
+     */
+    void truncateStream(String streamId, int truncateToVersionExclusive);
 }

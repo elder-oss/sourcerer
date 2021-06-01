@@ -12,6 +12,7 @@ import com.github.msemys.esjc.EventStoreException;
 import com.github.msemys.esjc.ResolvedEvent;
 import com.github.msemys.esjc.SliceReadStatus;
 import com.github.msemys.esjc.StreamEventsSlice;
+import com.github.msemys.esjc.StreamMetadata;
 import com.github.msemys.esjc.SubscriptionDropReason;
 import com.github.msemys.esjc.WriteResult;
 import com.github.msemys.esjc.node.cluster.ClusterException;
@@ -53,6 +54,7 @@ import reactor.core.publisher.FluxEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -204,6 +206,7 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
                 .events
                 .stream()
                 .map(this::fromEsEvent)
+                .filter(Objects::nonNull)
                 .collect(new ImmutableListCollector<>());
         return new EventReadResult<>(
                 events,
@@ -303,6 +306,30 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         });
     }
 
+    @Override
+    public void deleteStream(final String streamId, final ExpectedVersion expectedVersion) {
+        logger.info("Deleting entire stream {}", streamId);
+        completeWriteFuture(
+                eventStore.deleteStream(toEsStreamId(streamId), toEsVersion(expectedVersion)),
+                expectedVersion);
+    }
+
+    @Override
+    public void truncateStream(final String streamId, final int truncateToVersionExclusive) {
+        logger.info(
+                "Truncating stream {} to start at version {}",
+                streamId, truncateToVersionExclusive);
+        completeWriteFuture(
+                eventStore.setStreamMetadata(
+                        toEsStreamId(streamId),
+                        toEsVersion(ExpectedVersion.any()),
+                        StreamMetadata
+                                .newBuilder()
+                                .truncateBefore(convertTo64Bit(truncateToVersionExclusive))
+                                .build()),
+                ExpectedVersion.any());
+    }
+
     private String toEsStreamId(final String streamId) {
         return streamPrefix + "-" + streamId;
     }
@@ -356,15 +383,15 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     private EventRecord<T> fromEsEvent(final ResolvedEvent event) {
-        long streamVersion;
-        long aggregateVersion;
-        if (event.isResolved()) {
-            aggregateVersion = event.event.eventNumber;
-            streamVersion = event.link.eventNumber;
-        } else {
-            aggregateVersion = event.event.eventNumber;
-            streamVersion = event.event.eventNumber;
+        if (event.event == null) {
+            logger.debug(
+                    "Ignoring resolved event {}:{} referencing deleted event",
+                    event.originalStreamId(), event.originalEventNumber());
+            return null;
         }
+
+        long streamVersion = event.link != null ? event.link.eventNumber : event.event.eventNumber;
+        long aggregateVersion = event.event.eventNumber;
 
         return new EventRecord<>(
                 fromEsStreamId(event.event.eventStreamId),
@@ -534,7 +561,10 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         @Override
         public void onEvent(final CatchUpSubscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
-            emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            EventRecord<T> eventRecord = fromEsEvent(event);
+            if (eventRecord != null) {
+                emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            }
         }
 
         @Override

@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 jobs:
   build:
     working_directory: /root/project
@@ -6,10 +6,10 @@ jobs:
       # Primary container where all steps run
       - image: elderhq/java-circle-image:20170502-1
       # Secondary container with a test eventstore instance
-      - image: eventstore/eventstore:release-4.0.1
+      - image: eventstore/eventstore:release-5.0.4
     steps:
       - checkout
-      - setup_docker_engine
+      - setup_remote_docker
       - run:
           name: Building and running unit tests
           command: . infra/run-tests.sh
@@ -43,8 +43,13 @@ jobs:
             else
               echo "Not relevant, skipping step"
             fi
-deployment:
-  fake_deploy_for_circle_ci_2:
-    tag: /.*/
-    commands:
-      - echo "Placeholder NOOP for tags"
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /.*/
