@@ -48,7 +48,6 @@ workflows:
   build-and-deploy:
     jobs:
       - build:
-          context: Elder-Sourcerer
           filters:
             tags:
               only: /.*/
