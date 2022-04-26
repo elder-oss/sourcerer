@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.msemys.esjc.EventStoreBuilder
 import org.elder.sourcerer.AggregateProjection
 import org.elder.sourcerer.AggregateRepository
@@ -56,7 +57,7 @@ class TestEventStore(
         val mapper = ObjectMapper()
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        mapper.registerModule(KotlinModule())
+        mapper.registerKotlinModule()
         return mapper
     }
 

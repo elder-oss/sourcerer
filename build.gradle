@@ -50,7 +50,7 @@ sonarqube {
     }
 }
 
-subprojects {
+allprojects {
     group = 'org.elder.sourcerer'
     version = getVersionName()
 
@@ -67,8 +67,8 @@ subprojects {
         ignoreFailures = false
     }
 
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    sourceCompatibility = 11
+    targetCompatibility = 11
 
     jacoco {
         reportsDir = file("build/coverage/jacoco.exec")
@@ -84,7 +84,6 @@ subprojects {
         testImplementation 'junit:junit:4.12'
         testImplementation 'org.hamcrest:hamcrest-all:1.3'
         testImplementation 'org.mockito:mockito-core:1.10.19'
-        testImplementation 'org.powermock:powermock-mockito-release-full:1.6.4'
     }
 
     test {

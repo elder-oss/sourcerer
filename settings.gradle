@@ -1,6 +1,5 @@
 include 'sourcerer-core',
         'sourcerer-crud',
         'sourcerer-esjc',
-        'sourcerer-eventstore',
         'sourcerer-kotlin',
         'sourcerer-test-utils'

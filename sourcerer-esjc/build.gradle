@@ -1,7 +1,8 @@
 dependencies {
     api project(':sourcerer-core')
     implementation "com.github.msemys:esjc:$escjVersion"
-    implementation 'io.projectreactor:reactor-core:2.5.0.M4'
+    implementation platform('io.projectreactor:reactor-bom:2020.0.18')
+    implementation 'io.projectreactor:reactor-core'
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.2.2'
     testImplementation project(':sourcerer-test-utils')

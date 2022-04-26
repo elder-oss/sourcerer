@@ -1,8 +1,7 @@
 package org.elder.sourcerer;
 
-import org.reactivestreams.Publisher;
-
 import java.util.List;
+import java.util.concurrent.Flow;
 
 public interface EventRepository<T> {
     /**
@@ -152,7 +151,8 @@ public interface EventRepository<T> {
      * @return A Publisher that, when subscribed to, will start producing events for each new event
      * written to the given stream id.
      */
-    Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(String streamId, Integer fromVersion);
+    Flow.Publisher<EventSubscriptionUpdate<T>>
+            getStreamPublisher(String streamId, Integer fromVersion);
 
     /**
      * Gets a Publisher that can be used to subscribe to all events related to this repository.
@@ -165,5 +165,5 @@ public interface EventRepository<T> {
      * @return A Publisher that, when subscribed to, will start producing events for each new event
      * written to any stream related to this repository.
      */
-    Publisher<EventSubscriptionUpdate<T>> getPublisher(Integer fromVersion);
+    Flow.Publisher<EventSubscriptionUpdate<T>> getPublisher(Integer fromVersion);
 }
