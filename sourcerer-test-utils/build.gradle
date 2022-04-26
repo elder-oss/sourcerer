@@ -1,6 +1,0 @@
-dependencies {
-    api project(":sourcerer-core")
-    api "com.github.msemys:esjc:$escjVersion"
-    api 'junit:junit:4.13.2'
-    api 'com.mashape.unirest:unirest-java:1.4.9'
-}

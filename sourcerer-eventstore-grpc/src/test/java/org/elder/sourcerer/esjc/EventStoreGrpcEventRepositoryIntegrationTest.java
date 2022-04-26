@@ -1,12 +1,16 @@
 package org.elder.sourcerer.esjc;
 
+import com.eventstore.dbclient.Endpoint;
+import com.eventstore.dbclient.EventStoreDBClient;
+import com.eventstore.dbclient.EventStoreDBClientSettings;
+import com.eventstore.dbclient.EventStoreDBConnectionString;
+import com.eventstore.dbclient.NodePreference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.msemys.esjc.EventStore;
-import com.github.msemys.esjc.EventStoreBuilder;
 import org.elder.sourcerer.EventData;
 import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.ExpectedVersion;
+import org.elder.sourcerer.eventstoredb.EventStoreEsjcEventRepositoryFactory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -16,30 +20,29 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertThat;
 
-public class EventStoreEsjcEventRepositoryIntegrationTest {
+public class EventStoreGrpcEventRepositoryIntegrationTest {
     private static final String NAMESPACE = randomNamespace();
 
     private static EventRepository<TestEventType> repository;
-    private static EventStore eventStore;
+    private static EventStoreDBClient eventStore;
 
     private final String streamId = randomStreamId();
 
     @BeforeClass
     public static void setup() {
-        eventStore = EventStoreBuilder
-                .newBuilder()
-                .userCredentials("admin", "changeit")
-                .requireMaster(false)
-                .failOnNoServerResponse(true)
-                .singleNodeAddress("127.0.0.1", 1113)
-                .build();
+        var settings = EventStoreDBClientSettings.builder()
+                .defaultCredentials("admin", "changeit")
+                .throwOnAppendFailure(true)
+                .addHost(new Endpoint("127.0.0.1", 1113))
+                .buildConnectionSettings();
 
-        eventStore.connect();
+        eventStore = EventStoreDBClient.create(settings);
 
         EventStoreEsjcEventRepositoryFactory factory = new EventStoreEsjcEventRepositoryFactory(
                 eventStore,
@@ -50,7 +53,11 @@ public class EventStoreEsjcEventRepositoryIntegrationTest {
 
     @AfterClass
     public static void teardown() {
-        eventStore.disconnect();
+        try {
+            eventStore.shutdown();
+        } catch (ExecutionException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Test

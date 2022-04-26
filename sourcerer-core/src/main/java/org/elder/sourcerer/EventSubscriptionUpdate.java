@@ -22,10 +22,6 @@ public class EventSubscriptionUpdate<T> {
         return event;
     }
 
-    public static <T> EventSubscriptionUpdate<T> caughtUp() {
-        return new EventSubscriptionUpdate<>(UpdateType.CAUGHT_UP, null);
-    }
-
     public static <T> EventSubscriptionUpdate<T> ofEvent(final EventRecord<T> event) {
         return new EventSubscriptionUpdate<>(UpdateType.EVENT, event);
     }
