@@ -6,6 +6,7 @@ import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.ExpectedRevision;
 import com.eventstore.dbclient.ReadStreamOptions;
 import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.StreamNotFoundException;
 import com.eventstore.dbclient.StreamRevision;
 import com.eventstore.dbclient.SubscribeToStreamOptions;
 import com.eventstore.dbclient.Subscription;
@@ -186,20 +187,20 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 version,
                 maxEventsPerRead);
 
-        var readResult = completeReadFuture(
-                eventStore.readStream(
-                        internalStreamId,
-                        maxEventsPerRead,
-                        ReadStreamOptions.get()
-                                .fromRevision(version)
-                                .resolveLinkTos(resolveLinksTo)),
-                ExpectedVersion.exactly(version));
+            var readResult = completeReadFuture(
+                    eventStore.readStream(
+                            internalStreamId,
+                            maxEventsPerRead,
+                            ReadStreamOptions.get()
+                                    .fromRevision(version)
+                                    .resolveLinkTos(resolveLinksTo)),
+                    ExpectedVersion.exactly(version));
 
-        if (readResult.status != SliceReadStatus.Success) {
+        if (readResult == null) {
             // Not found or deleted, same thing to us!
             logger.debug(
-                    "Reading {} (in {}) returned status {}",
-                    internalStreamId, streamPrefix, readResult.status);
+                    "Reading {} (in {}) returned status not found",
+                    internalStreamId, streamPrefix);
             return null;
         }
 
@@ -433,7 +434,11 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
             Thread.currentThread().interrupt();
             throw new RetriableEventReadException("Internal error reading event", ex);
         } catch (ExecutionException ex) {
-            if (ex.getCause() instanceof EventStoreException) {
+            if (ex.getCause() instanceof StreamNotFoundException) {
+                // This is expected in some cases, flag with null rather than error
+                return null
+            }
+            if (ex.getCause() instanceof StreamNotFoundException) {
                 if (ex.getCause() instanceof WrongExpectedVersionException) {
                     throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
                 } else if (ex.getCause() instanceof AccessDeniedException
