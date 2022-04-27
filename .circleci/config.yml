@@ -6,10 +6,18 @@ jobs:
       # Primary container where all steps run
       - image: elderhq/java-circle-image:20170502-1
       # Secondary container with a test eventstore instance
-      - image: eventstore/eventstore:release-4.0.1
+      - image: eventstore/eventstore:21.10.2-buster-slim
+        environment:
+          EVENTSTORE_CLUSTER_SIZE: 1
+          EVENTSTORE_RUN_PROJECTIONS: All
+          EVENTSTORE_START_STANDARD_PROJECTIONS: true
+          EVENTSTORE_EXT_TCP_PORT: 1113
+          EVENTSTORE_HTTP_PORT: 2113
+          EVENTSTORE_INSECURE: true
+          EVENTSTORE_ENABLE_EXTERNAL_TCP: true
+          EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true
     steps:
       - checkout
-      - setup_docker_engine
       - run:
           name: Building and running unit tests
           command: . infra/run-tests.sh
