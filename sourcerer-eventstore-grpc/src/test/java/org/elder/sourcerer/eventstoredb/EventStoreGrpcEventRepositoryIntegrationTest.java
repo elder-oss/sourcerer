@@ -34,9 +34,11 @@ public class EventStoreGrpcEventRepositoryIntegrationTest {
     @BeforeClass
     public static void setup() {
         EventStoreDBClientSettings settings = EventStoreDBClientSettings.builder()
+                .addHost(new Endpoint("127.0.0.1", 2113))
                 .defaultCredentials("admin", "changeit")
                 .throwOnAppendFailure(true)
-                .addHost(new Endpoint("127.0.0.1", 1113))
+                .tls(false)
+                .keepAliveInterval(10000)
                 .buildConnectionSettings();
 
         eventStore = EventStoreDBClient.create(settings);
