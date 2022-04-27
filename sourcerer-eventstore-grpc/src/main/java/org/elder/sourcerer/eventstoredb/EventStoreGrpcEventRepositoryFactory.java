@@ -12,17 +12,17 @@ import org.slf4j.LoggerFactory;
 
 import java.util.regex.Pattern;
 
-public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFactory {
+public class EventStoreGrpcEventRepositoryFactory implements EventRepositoryFactory {
     private static final Pattern NAMESPACE_REGEX = Pattern.compile("[a-zA-Z][a-zA-Z_0-9]*");
 
     private static final Logger logger
-            = LoggerFactory.getLogger(EventStoreEsjcEventRepositoryFactory.class);
+            = LoggerFactory.getLogger(EventStoreGrpcEventRepositoryFactory.class);
 
     private final EventStoreDBClient eventStore;
     private final ObjectMapper objectMapper;
     private final String defaultNamespace;
 
-    public EventStoreEsjcEventRepositoryFactory(
+    public EventStoreGrpcEventRepositoryFactory(
             final EventStoreDBClient eventStore,
             final ObjectMapper objectMapper,
             final String defaultNamespace) {

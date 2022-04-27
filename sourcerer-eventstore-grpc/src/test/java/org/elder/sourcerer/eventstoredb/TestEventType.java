@@ -1,4 +1,4 @@
-package org.elder.sourcerer.esjc;
+package org.elder.sourcerer.eventstoredb;
 
 import org.elder.sourcerer.EventType;
 
