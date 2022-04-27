@@ -3,31 +3,6 @@ package org.elder.sourcerer.eventstoredb;
 import com.eventstore.dbclient.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.msemys.esjc.CannotEstablishConnectionException;
-import com.github.msemys.esjc.CatchUpSubscription;
-import com.github.msemys.esjc.CatchUpSubscriptionListener;
-import com.github.msemys.esjc.CatchUpSubscriptionSettings;
-import com.github.msemys.esjc.ConnectionClosedException;
-import com.github.msemys.esjc.EventStore;
-import com.github.msemys.esjc.EventStoreException;
-import com.github.msemys.esjc.ResolvedEvent;
-import com.github.msemys.esjc.SliceReadStatus;
-import com.github.msemys.esjc.StreamEventsSlice;
-import com.github.msemys.esjc.SubscriptionDropReason;
-import com.github.msemys.esjc.WriteResult;
-import com.github.msemys.esjc.node.cluster.ClusterException;
-import com.github.msemys.esjc.operation.AccessDeniedException;
-import com.github.msemys.esjc.operation.CommandNotExpectedException;
-import com.github.msemys.esjc.operation.InvalidTransactionException;
-import com.github.msemys.esjc.operation.NoResultException;
-import com.github.msemys.esjc.operation.NotAuthenticatedException;
-import com.github.msemys.esjc.operation.ServerErrorException;
-import com.github.msemys.esjc.operation.StreamDeletedException;
-import com.github.msemys.esjc.operation.WrongExpectedVersionException;
-import com.github.msemys.esjc.operation.manager.OperationTimeoutException;
-import com.github.msemys.esjc.operation.manager.RetriesLimitReachedException;
-import com.github.msemys.esjc.subscription.MaximumSubscribersReachedException;
-import com.github.msemys.esjc.subscription.PersistentSubscriptionDeletedException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -45,9 +20,9 @@ import org.elder.sourcerer.exceptions.RetriableEventWriteException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
 import org.elder.sourcerer.utils.ElderPreconditions;
 import org.elder.sourcerer.utils.ImmutableListCollector;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
@@ -56,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -139,7 +113,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 internalStreamId,
                 streamPrefix);
 
-        var readResult = completeReadFuture(
+        ReadResult readResult = completeReadFuture(
                 eventStore.readStream(
                         internalStreamId,
                         1,
@@ -178,7 +152,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 version,
                 maxEventsPerRead);
 
-        var readResult = completeReadFuture(
+        ReadResult readResult = completeReadFuture(
                 eventStore.readStream(
                         internalStreamId,
                         maxEventsPerRead,
@@ -209,15 +183,15 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         // TODO: These may be added natively in an updated version of the Java client, see
         //   https://discuss.eventstore.com/t/support-for-detecting-a-subscription-being-live-with-grpc/4098/3
         //   for discussion
-        var fromEventNumber = version;
+        int fromEventNumber = version;
         // NOTE: If we for some reason read with a version greater than the current last version of the stream,
         // we will incorrectly report a "last version" from the future. This will never be an issue however
         // if reading events with the normal paging pattern from the start, there should be no reason to use a
         // version "from the future" unless it is known to exist.
-        var lastEventNumber = events.isEmpty()
+        int lastEventNumber = events.isEmpty()
                 ? version - 1
                 : events.get(events.size() - 1).getStreamVersion();
-        var nextEventNumber = lastEventNumber + 1;
+        int nextEventNumber = lastEventNumber + 1;
 
         return new EventReadResult<>(
                 events,
@@ -235,7 +209,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         Preconditions.checkNotNull(events);
         ElderPreconditions.checkNotEmpty(events);
 
-        var esEvents = events
+        List<com.eventstore.dbclient.EventData> esEvents = events
                 .stream()
                 .map(this::toEsEventData)
                 .collect(Collectors.toList());
@@ -243,7 +217,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         logger.debug("Writing {} events to stream {} (in {}) (expected version {})",
                 esEvents.size(), streamId, streamPrefix, version);
         try {
-            var result = completeWriteFuture(
+            WriteResult result = completeWriteFuture(
                     eventStore.appendToStream(
                             toEsStreamId(streamId),
                             AppendToStreamOptions.get()
@@ -271,7 +245,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
     }
 
     private int getStreamVersionInternal(final String streamName) {
-        var readResult = completeReadFuture(
+        ReadResult readResult = completeReadFuture(
                 eventStore.readStream(
                         streamName,
                         1,
@@ -287,45 +261,43 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
-    public Flow.Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
+    public Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
             final String streamId,
             final Integer fromVersion) {
         logger.info("Creating publisher for {} (in {}) (starting with version {})",
                 streamId, streamPrefix, fromVersion);
 
-        return JdkFlowAdapter.publisherToFlowPublisher(
-                Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-                    final var subscription = eventStore.subscribeToStream(
-                            toEsStreamId(streamId),
-                            new EmitterListener(emitter, streamPrefix + "-" + streamId),
-                            SubscribeToStreamOptions.get()
-                                    .fromRevision(toStreamRevision(fromVersion))
-                                    .resolveLinkTos());
+        return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
+            final CompletableFuture<Subscription> subscription = eventStore.subscribeToStream(
+                    toEsStreamId(streamId),
+                    new EmitterListener(emitter, streamPrefix + "-" + streamId),
+                    SubscribeToStreamOptions.get()
+                            .fromRevision(toStreamRevision(fromVersion))
+                            .resolveLinkTos());
 
-                    emitter.onCancel(() -> {
-                        logger.info("Closing ESJC subscription (asynchronously)");
-                        subscription.cancel(true);
-                    });
-                }));
+            emitter.onCancel(() -> {
+                logger.info("Closing ESJC subscription (asynchronously)");
+                subscription.cancel(true);
+            });
+        });
     }
 
     @Override
-    public Flow.Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
+    public Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion);
-        return JdkFlowAdapter.publisherToFlowPublisher(
-                Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-                    final var subscription = eventStore.subscribeToStream(
-                            getCategoryStreamName(),
-                            new EmitterListener(emitter, streamPrefix + "-all"),
-                            SubscribeToStreamOptions.get()
-                                    .fromRevision(toStreamRevision(fromVersion))
-                                    .resolveLinkTos());
-                    emitter.onCancel(() -> {
-                        logger.info("Closing ESJC subscription (asynchronously)");
-                        subscription.cancel(true);
-                    });
-                }));
+        return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
+            final CompletableFuture<Subscription> subscription = eventStore.subscribeToStream(
+                    getCategoryStreamName(),
+                    new EmitterListener(emitter, streamPrefix + "-all"),
+                    SubscribeToStreamOptions.get()
+                            .fromRevision(toStreamRevision(fromVersion))
+                            .resolveLinkTos());
+            emitter.onCancel(() -> {
+                logger.info("Closing ESJC subscription (asynchronously)");
+                subscription.cancel(true);
+            });
+        });
     }
 
     private String toEsStreamId(final String streamId) {

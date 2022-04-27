@@ -44,9 +44,9 @@ import org.elder.sourcerer.exceptions.RetriableEventWriteException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
 import org.elder.sourcerer.utils.ElderPreconditions;
 import org.elder.sourcerer.utils.ImmutableListCollector;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -268,42 +267,40 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
     }
 
     @Override
-    public Flow.Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
+    public Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
             final String streamId,
             final Integer fromVersion) {
         logger.info("Creating publisher for {} (in {}) (starting with version {})",
                 streamId, streamPrefix, fromVersion);
 
-        return JdkFlowAdapter.publisherToFlowPublisher(
-                Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-                    final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
-                            toEsStreamId(streamId),
-                            convertTo64Bit(fromVersion),
-                            defaultSubscriptionSettings,
-                            new EmitterListener(emitter, streamPrefix + "-" + streamId));
-                    emitter.onCancel(() -> {
-                        logger.info("Closing ESJC subscription (asynchronously)");
-                        subscription.stop();
-                    });
-                }));
+        return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
+            final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
+                    toEsStreamId(streamId),
+                    convertTo64Bit(fromVersion),
+                    defaultSubscriptionSettings,
+                    new EmitterListener(emitter, streamPrefix + "-" + streamId));
+            emitter.onCancel(() -> {
+                logger.info("Closing ESJC subscription (asynchronously)");
+                subscription.stop();
+            });
+        });
     }
 
     @Override
-    public Flow.Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
+    public Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion);
-        return JdkFlowAdapter.publisherToFlowPublisher(
-                Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-                    final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
-                            getCategoryStreamName(),
-                            convertTo64Bit(fromVersion),
-                            defaultSubscriptionSettings,
-                            new EmitterListener(emitter, streamPrefix + "-all"));
-                    emitter.onCancel(() -> {
-                        logger.info("Closing ESJC subscription (asynchronously)");
-                        subscription.stop();
-                    });
-                }));
+        return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
+            final CatchUpSubscription subscription = eventStore.subscribeToStreamFrom(
+                    getCategoryStreamName(),
+                    convertTo64Bit(fromVersion),
+                    defaultSubscriptionSettings,
+                    new EmitterListener(emitter, streamPrefix + "-all"));
+            emitter.onCancel(() -> {
+                logger.info("Closing ESJC subscription (asynchronously)");
+                subscription.stop();
+            });
+        });
     }
 
     private String toEsStreamId(final String streamId) {

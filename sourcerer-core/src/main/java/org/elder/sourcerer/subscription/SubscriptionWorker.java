@@ -8,8 +8,8 @@ import org.elder.sourcerer.SubscriptionToken;
 import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,8 +108,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
 
         try {
             logger.info("Subscribing to event store ...");
-            boundedSubscriber = JdkFlowAdapter
-                    .flowPublisherToFlux(repository.getPublisher(subscriptionPosition))
+            boundedSubscriber = Flux.from(repository.getPublisher(subscriptionPosition))
                     .limitRate(config.getBatchSize())
                     .subscribe(
                             subscriber::onNext,

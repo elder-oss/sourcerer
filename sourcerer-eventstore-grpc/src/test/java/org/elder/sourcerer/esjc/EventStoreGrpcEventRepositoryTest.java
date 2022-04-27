@@ -1,19 +1,8 @@
 package org.elder.sourcerer.esjc;
 
+import com.eventstore.dbclient.EventStoreDBClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import com.github.msemys.esjc.CatchUpSubscription;
-import com.github.msemys.esjc.CatchUpSubscriptionListener;
-import com.github.msemys.esjc.CatchUpSubscriptionSettings;
-import com.github.msemys.esjc.EventStore;
-import com.github.msemys.esjc.ReadDirection;
-import com.github.msemys.esjc.ResolvedEvent;
-import com.github.msemys.esjc.SliceReadStatus;
-import com.github.msemys.esjc.StreamEventsSlice;
-import com.github.msemys.esjc.SubscriptionDropReason;
-import com.github.msemys.esjc.UserCredentials;
-import com.github.msemys.esjc.proto.EventStoreClientMessages;
-import com.github.msemys.esjc.util.UUIDConverter;
 import com.google.protobuf.ByteString;
 import org.elder.sourcerer.EventReadResult;
 import org.elder.sourcerer.EventSubscriptionUpdate;
@@ -23,13 +12,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -66,18 +53,14 @@ public class EventStoreGrpcEventRepositoryTest {
         }
     }
 
-    private EventStore eventStore;
+    private EventStoreDBClient eventStore;
     private ObjectMapper objectMapper;
     private ObjectReader reader;
     private EventStoreGrpcEventRepository<Event> repository;
 
-    public static <T> Flux<T> toFlux(final Flow.Publisher<T> publisher) {
-        return JdkFlowAdapter.flowPublisherToFlux(publisher);
-    }
-
     @Before
     public void setUp() {
-        eventStore = mock(EventStore.class);
+        eventStore = mock(EventStoreDBClient.class);
         objectMapper = mock(ObjectMapper.class);
         reader = mock(ObjectReader.class);
         when(objectMapper.readerFor(any(Class.class))).thenReturn(reader);
@@ -131,7 +114,7 @@ public class EventStoreGrpcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -183,7 +166,7 @@ public class EventStoreGrpcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -392,7 +375,7 @@ public class EventStoreGrpcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
