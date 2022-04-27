@@ -1,6 +1,15 @@
 package org.elder.sourcerer.eventstoredb;
 
-import com.eventstore.dbclient.*;
+import com.eventstore.dbclient.EventStoreDBClient;
+import com.eventstore.dbclient.Position;
+import com.eventstore.dbclient.ReadResult;
+import com.eventstore.dbclient.RecordedEvent;
+import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.StreamNotFoundException;
+import com.eventstore.dbclient.StreamRevision;
+import com.eventstore.dbclient.SubscribeToStreamOptions;
+import com.eventstore.dbclient.Subscription;
+import com.eventstore.dbclient.SubscriptionListener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableMap;
@@ -21,7 +30,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.mockito.Matchers.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -49,8 +61,8 @@ public class EventStoreGrpcEventRepositoryTest {
         }
     }
 
-    // NOTE: This has to be populated as EventStore client expects them to be present and in certain format,
-    // the keys are in constants internal to the client
+    // NOTE: This has to be populated as EventStore client expects them to be present and in
+    // certain format, the keys are in constants internal to the client
     private static final Map<String, String> SYSTEM_METADATA = ImmutableMap.of(
             "content-type", "application/json",
             "created", Long.toString(Instant.now().toEpochMilli()),

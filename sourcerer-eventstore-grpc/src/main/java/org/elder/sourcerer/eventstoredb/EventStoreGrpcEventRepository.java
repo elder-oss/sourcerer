@@ -1,6 +1,22 @@
 package org.elder.sourcerer.eventstoredb;
 
-import com.eventstore.dbclient.*;
+import com.eventstore.dbclient.AppendToStreamOptions;
+import com.eventstore.dbclient.ConnectionShutdownException;
+import com.eventstore.dbclient.EventDataBuilder;
+import com.eventstore.dbclient.EventStoreDBClient;
+import com.eventstore.dbclient.ExpectedRevision;
+import com.eventstore.dbclient.NotLeaderException;
+import com.eventstore.dbclient.ReadResult;
+import com.eventstore.dbclient.ReadStreamOptions;
+import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.ResourceNotFoundException;
+import com.eventstore.dbclient.StreamNotFoundException;
+import com.eventstore.dbclient.StreamRevision;
+import com.eventstore.dbclient.SubscribeToStreamOptions;
+import com.eventstore.dbclient.Subscription;
+import com.eventstore.dbclient.SubscriptionListener;
+import com.eventstore.dbclient.WriteResult;
+import com.eventstore.dbclient.WrongExpectedVersionException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -25,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
-import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,7 +53,8 @@ import java.util.stream.Collectors;
 
 /**
  * Sourcerer event repository implementation using EventStore (geteventstore.com) as the underlying
- * system, and the newer gRPC based Java client https://github.com/EventStore/EventStoreDB-Client-Java.
+ * system, and the newer gRPC based Java client
+ * https://github.com/EventStore/EventStoreDB-Client-Java.
  * The EventStore implementation uses Jackson to serialize and deserialize events that are
  * subclasses of the given event type base class. To instruct Jackson on how to correctly
  * deserialize events to the correct concrete sub type, please use either the Jaconson annotations,
@@ -124,7 +140,8 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                                 .resolveLinkTos(resolveLinksTo)),
                 ExpectedVersion.any());
 
-        if (readResult == null || readResult.getEvents() == null || readResult.getEvents().isEmpty()) {
+        if (readResult == null || readResult.getEvents() == null
+                || readResult.getEvents().isEmpty()) {
             logger.debug(
                     "Reading {} (in {}) returned no event",
                     internalStreamId,
@@ -185,10 +202,10 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         //   https://discuss.eventstore.com/t/support-for-detecting-a-subscription-being-live-with-grpc/4098/3
         //   for discussion
         int fromEventNumber = version;
-        // NOTE: If we for some reason read with a version greater than the current last version of the stream,
-        // we will incorrectly report a "last version" from the future. This will never be an issue however
-        // if reading events with the normal paging pattern from the start, there should be no reason to use a
-        // version "from the future" unless it is known to exist.
+        // NOTE: If we for some reason read with a version greater than the current last version of
+        // the stream, we will incorrectly report a "last version" from the future. This will never
+        // be an issue however if reading events with the normal paging pattern from the start,
+        // there should be no reason to use a version "from the future" unless it is known to exist.
         int lastEventNumber = events.isEmpty()
                 ? version - 1
                 : events.get(events.size() - 1).getStreamVersion();
@@ -256,9 +273,11 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                                 .notResolveLinkTos()
                 ),
                 ExpectedVersion.any());
-        return readResult.getEvents().isEmpty()
+        return readResult == null || readResult.getEvents() != null
+                || readResult.getEvents().isEmpty()
                 ? -1
-                : fromStreamRevision(readResult.getEvents().get(0).getOriginalEvent().getStreamRevision());
+                : fromStreamRevision(
+                readResult.getEvents().get(0).getOriginalEvent().getStreamRevision());
     }
 
     @Override
@@ -510,17 +529,18 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         }
 
         @Override
-        public void onEvent(Subscription subscription, ResolvedEvent event) {
+        public void onEvent(final Subscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
             emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
             // TODO: Support "caught up" tracking once new Java client is live
         }
 
         @Override
-        public void onError(Subscription subscription, Throwable exception) {
+        public void onError(final Subscription subscription, final Throwable exception) {
             if (exception != null) {
                 logger.error(
-                        "Subscription " + name + " failed with reason " + exception.getMessage() + "",
+                        "Subscription " + name + " failed with reason " +
+                                exception.getMessage() + "",
                         exception);
             } else {
                 logger.error(
@@ -533,7 +553,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         }
 
         @Override
-        public void onCancelled(Subscription subscription) {
+        public void onCancelled(final Subscription subscription) {
             logger.info("Subscription " + name + " was cancelled");
         }
     }
