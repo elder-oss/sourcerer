@@ -6,15 +6,15 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableMap;
 import org.elder.sourcerer.EventReadResult;
 import org.elder.sourcerer.EventSubscriptionUpdate;
-import org.elder.sourcerer.eventstoredb.EventStoreGrpcEventRepository;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,6 +49,15 @@ public class EventStoreGrpcEventRepositoryTest {
         }
     }
 
+    // NOTE: This has to be populated as EventStore client expects them to be present and in certain format,
+    // the keys are in constants internal to the client
+    private static final Map<String, String> SYSTEM_METADATA = ImmutableMap.of(
+            "content-type", "application/json",
+            "created", Long.toString(Instant.now().toEpochMilli()),
+            "is-json", "true",
+            "type", "type");
+    private static final Position RANDOM_POSITION = new Position(23423, 23420);
+
     private EventStoreDBClient eventStore;
     private ObjectMapper objectMapper;
     private ObjectReader reader;
@@ -71,7 +80,11 @@ public class EventStoreGrpcEventRepositoryTest {
     @Test
     public void readReturnsNullOnNotFound() {
         when(eventStore.readStream(anyString(), anyLong(), any()))
-                .thenThrow(new StreamNotFoundException());
+                .then((invocation) -> {
+                    CompletableFuture<ReadResult> future = new CompletableFuture<>();
+                    future.completeExceptionally(new StreamNotFoundException());
+                    return future;
+                });
         EventReadResult<Event> response = repository.read("stream");
         Assert.assertNull(response);
     }
@@ -168,8 +181,8 @@ public class EventStoreGrpcEventRepositoryTest {
                                 "$ce-pref",
                                 new StreamRevision(0),
                                 UUID.randomUUID(),
-                                new Position(23423, 23420),
-                                ImmutableMap.of(),
+                                RANDOM_POSITION,
+                                SYSTEM_METADATA,
                                 new byte[0],
                                 new byte[0]
                         ),
@@ -178,58 +191,12 @@ public class EventStoreGrpcEventRepositoryTest {
                                 "ref-123",
                                 new StreamRevision(0),
                                 UUID.randomUUID(),
-                                new Position(23423, 23420),
-                                ImmutableMap.of(),
+                                RANDOM_POSITION,
+                                SYSTEM_METADATA,
                                 "{}".getBytes(),
                                 "{}".getBytes()
                         )));
         Assert.assertEquals(1, seenEvents.get());
-    }
-
-    @Test(expected = RuntimeException.class)
-    public void errorNotPropagatedWhenCancelHandlerThrowsInCategoryPublisher() throws IOException {
-        // This is not a nice behavior, but test is to confirm root cause of issue seen live, where
-        // a subscription dies and does not recover as we time out trying to stop the subscription
-        // that we're currently handling an error for!
-
-        when(reader.readValue((byte[]) any())).thenReturn(new Object());
-        // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
-        // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
-
-        // Set up subscription - should trigger a call to underlying subscribe
-        Subscription subscription = mock(Subscription.class);
-        when(eventStore.subscribeToStream(
-                anyString(),
-                any(SubscriptionListener.class),
-                any(SubscribeToStreamOptions.class)))
-                .thenReturn(CompletableFuture.completedFuture(subscription));
-
-        // Hook up fake listener, checking that we're getting notified
-        AtomicInteger seenEvents = new AtomicInteger(0);
-        AtomicReference<Throwable> seenError = new AtomicReference<>(null);
-        AtomicBoolean seenStop = new AtomicBoolean(false);
-        publisher.limitRate(100).subscribe(
-                event -> seenEvents.incrementAndGet(),
-                seenError::set,
-                () -> seenStop.set(true));
-
-        ArgumentCaptor<SubscriptionListener> listenerCaptor =
-                ArgumentCaptor.forClass(SubscriptionListener.class);
-
-        verify(eventStore, times(1)).subscribeToStream(
-                eq("$ce-pref"),
-                listenerCaptor.capture(),
-                any(SubscribeToStreamOptions.class));
-
-        SubscriptionListener listener = listenerCaptor.getValue();
-        Mockito
-                .doThrow(new RuntimeException("bad stuff on close"))
-                .when(subscription).stop();
-        listener.onError(subscription, new RuntimeException("bad things happen"));
-
-        Assert.assertEquals(0, seenEvents.get());
-        Assert.assertNull(seenError.get());
     }
 
     @Test
@@ -315,8 +282,8 @@ public class EventStoreGrpcEventRepositoryTest {
                                 "$ce-pref",
                                 new StreamRevision(0),
                                 UUID.randomUUID(),
-                                new Position(23423, 23420),
-                                ImmutableMap.of(),
+                                RANDOM_POSITION,
+                                SYSTEM_METADATA,
                                 new byte[0],
                                 new byte[0]
                         ),
@@ -325,8 +292,8 @@ public class EventStoreGrpcEventRepositoryTest {
                                 "ref-123",
                                 new StreamRevision(0),
                                 UUID.randomUUID(),
-                                new Position(23423, 23420),
-                                ImmutableMap.of(),
+                                RANDOM_POSITION,
+                                SYSTEM_METADATA,
                                 "{}".getBytes(),
                                 "{}".getBytes()
                         )
