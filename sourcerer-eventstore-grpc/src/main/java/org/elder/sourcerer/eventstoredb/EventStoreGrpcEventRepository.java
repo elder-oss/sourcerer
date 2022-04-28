@@ -124,7 +124,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                                 .resolveLinkTos(resolveLinksTo)),
                 ExpectedVersion.any());
 
-        if (readResult.getEvents().isEmpty()) {
+        if (readResult == null || readResult.getEvents() == null || readResult.getEvents().isEmpty()) {
             logger.debug(
                     "Reading {} (in {}) returned no event",
                     internalStreamId,
@@ -513,6 +513,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         public void onEvent(Subscription subscription, ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
             emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            // TODO: Support "caught up" tracking once new Java client is live
         }
 
         @Override
