@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.List;
@@ -268,16 +269,18 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 streamId, streamPrefix, fromVersion);
 
         return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-            final CompletableFuture<Subscription> subscription = eventStore.subscribeToStream(
-                    toEsStreamId(streamId),
-                    new EmitterListener(emitter, streamPrefix + "-" + streamId),
-                    SubscribeToStreamOptions.get()
-                            .fromRevision(toStreamRevision(fromVersion))
-                            .resolveLinkTos());
+            final Subscription subscription = completeReadFuture(
+                    eventStore.subscribeToStream(
+                            toEsStreamId(streamId),
+                            new EmitterListener(emitter, streamPrefix + "-" + streamId),
+                            SubscribeToStreamOptions.get()
+                                    .fromRevision(toStreamRevision(fromVersion))
+                                    .resolveLinkTos()),
+                    ExpectedVersion.any());
 
             emitter.onCancel(() -> {
                 logger.info("Closing ESJC subscription (asynchronously)");
-                subscription.cancel(true);
+                subscription.stop();
             });
         });
     }
@@ -287,15 +290,16 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion);
         return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-            final CompletableFuture<Subscription> subscription = eventStore.subscribeToStream(
-                    getCategoryStreamName(),
-                    new EmitterListener(emitter, streamPrefix + "-all"),
-                    SubscribeToStreamOptions.get()
-                            .fromRevision(toStreamRevision(fromVersion))
-                            .resolveLinkTos());
+            final Subscription subscription = completeReadFuture(
+                    eventStore.subscribeToStream(
+                            getCategoryStreamName(),
+                            new EmitterListener(emitter, streamPrefix + "-all"),
+                            SubscribeToStreamOptions.get()
+                                    .fromRevision(toStreamRevision(fromVersion))
+                                    .resolveLinkTos()), ExpectedVersion.any());
             emitter.onCancel(() -> {
                 logger.info("Closing ESJC subscription (asynchronously)");
-                subscription.cancel(true);
+                subscription.stop();
             });
         });
     }
