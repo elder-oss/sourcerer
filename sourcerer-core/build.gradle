@@ -1,4 +1,5 @@
 dependencies {
+    api 'org.reactivestreams:reactive-streams:1.0.3'
     api 'org.jetbrains:annotations:23.0.0'
     implementation 'javax.inject:javax.inject:1'
     implementation 'com.google.guava:guava:31.1-jre'

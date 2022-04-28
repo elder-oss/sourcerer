@@ -22,14 +22,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.reactivestreams.Publisher;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -70,10 +67,6 @@ public class EventStoreEsjcEventRepositoryTest {
     private ObjectMapper objectMapper;
     private ObjectReader reader;
     private EventStoreEsjcEventRepository<Event> repository;
-
-    public static <T> Flux<T> toFlux(final Flow.Publisher<T> publisher) {
-        return JdkFlowAdapter.flowPublisherToFlux(publisher);
-    }
 
     @Before
     public void setUp() {
@@ -131,7 +124,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -183,7 +176,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -234,7 +227,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -297,7 +290,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
@@ -345,7 +338,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
@@ -392,7 +385,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
