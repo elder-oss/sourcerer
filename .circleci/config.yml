@@ -18,6 +18,7 @@ jobs:
           EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true
     steps:
       - checkout
+      - setup_remote_docker
       - run:
           name: Building and running unit tests
           command: . infra/run-tests.sh
