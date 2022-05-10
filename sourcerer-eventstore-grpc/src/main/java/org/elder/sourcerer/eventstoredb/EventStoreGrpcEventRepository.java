@@ -302,8 +302,10 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                     ExpectedVersion.any());
 
             emitter.onCancel(() -> {
-                logger.info("Closing ESJC subscription (asynchronously)");
-                subscription.stop();
+                logger.info("Closing gRPC subscription (asynchronously)");
+                if (subscription != null) {
+                    subscription.stop();
+                }
             });
         });
     }
@@ -321,8 +323,10 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                                     .fromRevision(toStreamRevision(fromVersion))
                                     .resolveLinkTos()), ExpectedVersion.any());
             emitter.onCancel(() -> {
-                logger.info("Closing ESJC subscription (asynchronously)");
-                subscription.stop();
+                logger.info("Closing gRPC subscription (asynchronously)");
+                if (subscription != null) {
+                    subscription.stop();
+                }
             });
         });
     }
@@ -464,8 +468,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                         "Internal error reading events",
                         ex.getCause());
             }
-        } catch (
-                TimeoutException ex) {
+        } catch (TimeoutException ex) {
             throw new RetriableEventReadException("Timeout reading events", ex.getCause());
         }
     }

@@ -153,13 +153,13 @@ public class EventStoreGrpcEventRepositoryTest {
         String streamId = "test-stream";
 
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
+
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
         Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
-        // Set up subscription - should trigger a call to underlying subscribe
         // Set up subscription - should trigger a call to underlying subscribe
         Subscription subscription = mock(Subscription.class);
         when(eventStore.subscribeToStream(
