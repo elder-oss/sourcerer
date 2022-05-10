@@ -22,14 +22,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.reactivestreams.Publisher;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -70,10 +67,6 @@ public class EventStoreEsjcEventRepositoryTest {
     private ObjectMapper objectMapper;
     private ObjectReader reader;
     private EventStoreEsjcEventRepository<Event> repository;
-
-    public static <T> Flux<T> toFlux(final Flow.Publisher<T> publisher) {
-        return JdkFlowAdapter.flowPublisherToFlux(publisher);
-    }
 
     @Before
     public void setUp() {
@@ -121,61 +114,6 @@ public class EventStoreEsjcEventRepositoryTest {
         Assert.assertNull(response);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void errorNotPropagatedWhenCancelHandlerThrows() throws IOException {
-        // This is not a nice behavior, but test is to confirm root cause of issue seen live, where
-        // a subscription dies and does not recover as we time out trying to stop the subscription
-        // that we're currently handling an error for!
-        String streamId = "test-stream";
-
-        when(reader.readValue((byte[]) any())).thenReturn(new Object());
-        // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
-        // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
-                streamId,
-                null));
-
-        // Set up subscription - should trigger a call to underlying subscribe
-        CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
-        when(eventStore.subscribeToStreamFrom(
-                anyString(),
-                any(Long.class),
-                any(CatchUpSubscriptionSettings.class),
-                any(CatchUpSubscriptionListener.class),
-                any(UserCredentials.class)))
-                .thenReturn(catchUpSubscription);
-
-        // Hook up fake listener, checking that we're getting notified
-        AtomicInteger seenEvents = new AtomicInteger(0);
-        AtomicReference<Throwable> seenError = new AtomicReference<>(null);
-        AtomicBoolean seenStop = new AtomicBoolean(false);
-        publisher.limitRate(100).subscribe(
-                event -> seenEvents.incrementAndGet(),
-                seenError::set,
-                () -> seenStop.set(true));
-
-        ArgumentCaptor<CatchUpSubscriptionListener> listenerCaptor =
-                ArgumentCaptor.forClass(CatchUpSubscriptionListener.class);
-
-        verify(eventStore, times(1)).subscribeToStreamFrom(
-                eq("pref-" + streamId),
-                eq(null),
-                any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture());
-
-        CatchUpSubscriptionListener listener = listenerCaptor.getValue();
-        Mockito
-                .doThrow(new RuntimeException("bad stuff on close"))
-                .when(catchUpSubscription).stop();
-        listener.onClose(
-                catchUpSubscription,
-                SubscriptionDropReason.CatchUpError,
-                new RuntimeException("bad things happen"));
-
-        Assert.assertEquals(0, seenEvents.get());
-        Assert.assertNull(seenError.get());
-    }
-
     @Test
     public void errorPropagatedFromEsjc() throws IOException {
         String streamId = "test-stream";
@@ -183,7 +121,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -234,7 +172,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getStreamPublisher(
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getStreamPublisher(
                 streamId,
                 null));
 
@@ -288,64 +226,12 @@ public class EventStoreEsjcEventRepositoryTest {
         Assert.assertEquals(1, seenEvents.get());
     }
 
-    @Test(expected = RuntimeException.class)
-    public void errorNotPropagatedWhenCancelHandlerThrowsInCategoryPublisher() throws IOException {
-        // This is not a nice behavior, but test is to confirm root cause of issue seen live, where
-        // a subscription dies and does not recover as we time out trying to stop the subscription
-        // that we're currently handling an error for!
-
-        when(reader.readValue((byte[]) any())).thenReturn(new Object());
-        // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
-        // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
-
-        // Set up subscription - should trigger a call to underlying subscribe
-        CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
-        when(eventStore.subscribeToStreamFrom(
-                anyString(),
-                any(Long.class),
-                any(CatchUpSubscriptionSettings.class),
-                any(CatchUpSubscriptionListener.class),
-                any(UserCredentials.class)))
-                .thenReturn(catchUpSubscription);
-
-        // Hook up fake listener, checking that we're getting notified
-        AtomicInteger seenEvents = new AtomicInteger(0);
-        AtomicReference<Throwable> seenError = new AtomicReference<>(null);
-        AtomicBoolean seenStop = new AtomicBoolean(false);
-        publisher.limitRate(100).subscribe(
-                event -> seenEvents.incrementAndGet(),
-                seenError::set,
-                () -> seenStop.set(true));
-
-        ArgumentCaptor<CatchUpSubscriptionListener> listenerCaptor =
-                ArgumentCaptor.forClass(CatchUpSubscriptionListener.class);
-
-        verify(eventStore, times(1)).subscribeToStreamFrom(
-                eq("$ce-pref"),
-                eq(null),
-                any(CatchUpSubscriptionSettings.class),
-                listenerCaptor.capture());
-
-        CatchUpSubscriptionListener listener = listenerCaptor.getValue();
-        Mockito
-                .doThrow(new RuntimeException("bad stuff on close"))
-                .when(catchUpSubscription).stop();
-        listener.onClose(
-                catchUpSubscription,
-                SubscriptionDropReason.CatchUpError,
-                new RuntimeException("bad things happen"));
-
-        Assert.assertEquals(0, seenEvents.get());
-        Assert.assertNull(seenError.get());
-    }
-
     @Test
     public void errorPropagatedFromEsjcInCategoryPublisher() throws IOException {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);
@@ -392,7 +278,7 @@ public class EventStoreEsjcEventRepositoryTest {
         when(reader.readValue((byte[]) any())).thenReturn(new Object());
         // Subscribe call not yet mocked, ensures we don't call subscribe until we subscribe
         // to the Flux
-        Flux<EventSubscriptionUpdate<Event>> publisher = toFlux(repository.getPublisher(null));
+        Flux<EventSubscriptionUpdate<Event>> publisher = Flux.from(repository.getPublisher(null));
 
         // Set up subscription - should trigger a call to underlying subscribe
         CatchUpSubscription catchUpSubscription = mock(CatchUpSubscription.class);

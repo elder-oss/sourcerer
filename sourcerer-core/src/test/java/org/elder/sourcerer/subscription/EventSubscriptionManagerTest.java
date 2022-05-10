@@ -9,16 +9,15 @@ import org.elder.sourcerer.SubscriptionToken;
 import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Flow;
 import java.util.stream.IntStream;
 
 import static org.mockito.Mockito.any;
@@ -95,8 +94,8 @@ public class EventSubscriptionManagerTest {
         EventSubscriptionPositionSource positionSource =
                 mock(EventSubscriptionPositionSource.class);
 
-        Flow.Publisher<EventSubscriptionUpdate<String>> eventSource =
-                JdkFlowAdapter.publisherToFlowPublisher(Flux
+        Publisher<EventSubscriptionUpdate<String>> eventSource =
+                Flux
                         .fromStream(IntStream
                                 .range(0, 1000000)
                                 .mapToObj(this::wrapIntAsEvent)
@@ -105,7 +104,7 @@ public class EventSubscriptionManagerTest {
                             lastProducedValue = e.getEvent().getEvent();
                         })
                         .publishOn(Schedulers.parallel())
-                        .subscribeOn(Schedulers.parallel()));
+                        .subscribeOn(Schedulers.parallel());
 
         when(repository.getPublisher(any())).thenReturn(eventSource);
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
@@ -144,9 +143,9 @@ public class EventSubscriptionManagerTest {
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent().getEvent();
                     });
-            return JdkFlowAdapter.publisherToFlowPublisher(eventSource
+            return eventSource
                     .publishOn(Schedulers.parallel())
-                    .subscribeOn(Schedulers.parallel()));
+                    .subscribeOn(Schedulers.parallel());
         });
 
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
@@ -177,16 +176,16 @@ public class EventSubscriptionManagerTest {
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent();
                     });
-            return JdkFlowAdapter.publisherToFlowPublisher(eventSource
+            return eventSource
                     .publishOn(Schedulers.parallel())
-                    .subscribeOn(Schedulers.parallel()));
+                    .subscribeOn(Schedulers.parallel());
         });
 
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
         ErroringSubscriptionHandler<String> subscriptionHandler =
                 new ErroringSubscriptionHandler<>(0);
 
-        EventSubscriptionManager subscriptionManager = new EventSubscriptionManager<>(
+        EventSubscriptionManager<String> subscriptionManager = new EventSubscriptionManager<>(
                 repository,
                 positionSource,
                 subscriptionHandler,
@@ -210,18 +209,18 @@ public class EventSubscriptionManagerTest {
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent();
                     });
-            return JdkFlowAdapter.publisherToFlowPublisher(eventSource
+            return eventSource
                     .publishOn(Schedulers.parallel())
                     .subscribeOn(Schedulers.parallel())
                     .take(100)
-                    .thenMany(Flux.error(new RuntimeException("fail!"))));
+                    .thenMany(Flux.error(new RuntimeException("fail!")));
         });
 
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
         SlowSubscriptionHandler<String> subscriptionHandler =
                 new SlowSubscriptionHandler<>();
 
-        EventSubscriptionManager subscriptionManager = new EventSubscriptionManager<>(
+        EventSubscriptionManager<String> subscriptionManager = new EventSubscriptionManager<>(
                 repository,
                 positionSource,
                 subscriptionHandler,

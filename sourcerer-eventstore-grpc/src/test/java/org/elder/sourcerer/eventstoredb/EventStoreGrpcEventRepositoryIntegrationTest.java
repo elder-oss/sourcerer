@@ -1,16 +1,13 @@
-package org.elder.sourcerer.esjc;
+package org.elder.sourcerer.eventstoredb;
 
 import com.eventstore.dbclient.Endpoint;
 import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.EventStoreDBClientSettings;
-import com.eventstore.dbclient.EventStoreDBConnectionString;
-import com.eventstore.dbclient.NodePreference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elder.sourcerer.EventData;
 import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.ExpectedVersion;
-import org.elder.sourcerer.eventstoredb.EventStoreEsjcEventRepositoryFactory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -36,15 +33,17 @@ public class EventStoreGrpcEventRepositoryIntegrationTest {
 
     @BeforeClass
     public static void setup() {
-        var settings = EventStoreDBClientSettings.builder()
+        EventStoreDBClientSettings settings = EventStoreDBClientSettings.builder()
+                .addHost(new Endpoint("127.0.0.1", 2113))
                 .defaultCredentials("admin", "changeit")
                 .throwOnAppendFailure(true)
-                .addHost(new Endpoint("127.0.0.1", 1113))
+                .tls(false)
+                .keepAliveInterval(10000)
                 .buildConnectionSettings();
 
         eventStore = EventStoreDBClient.create(settings);
 
-        EventStoreEsjcEventRepositoryFactory factory = new EventStoreEsjcEventRepositoryFactory(
+        EventStoreGrpcEventRepositoryFactory factory = new EventStoreGrpcEventRepositoryFactory(
                 eventStore,
                 new ObjectMapper(),
                 NAMESPACE);
@@ -55,7 +54,7 @@ public class EventStoreGrpcEventRepositoryIntegrationTest {
     public static void teardown() {
         try {
             eventStore.shutdown();
-        } catch (ExecutionException ex) {
+        } catch (ExecutionException | InterruptedException ex) {
             throw new RuntimeException(ex);
         }
     }

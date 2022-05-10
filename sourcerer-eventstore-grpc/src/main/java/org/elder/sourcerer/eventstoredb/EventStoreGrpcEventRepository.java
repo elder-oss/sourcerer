@@ -1,43 +1,24 @@
 package org.elder.sourcerer.eventstoredb;
 
 import com.eventstore.dbclient.AppendToStreamOptions;
+import com.eventstore.dbclient.ConnectionShutdownException;
 import com.eventstore.dbclient.EventDataBuilder;
 import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.ExpectedRevision;
+import com.eventstore.dbclient.NotLeaderException;
+import com.eventstore.dbclient.ReadResult;
 import com.eventstore.dbclient.ReadStreamOptions;
 import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.ResourceNotFoundException;
 import com.eventstore.dbclient.StreamNotFoundException;
 import com.eventstore.dbclient.StreamRevision;
 import com.eventstore.dbclient.SubscribeToStreamOptions;
 import com.eventstore.dbclient.Subscription;
 import com.eventstore.dbclient.SubscriptionListener;
+import com.eventstore.dbclient.WriteResult;
+import com.eventstore.dbclient.WrongExpectedVersionException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.msemys.esjc.CannotEstablishConnectionException;
-import com.github.msemys.esjc.CatchUpSubscription;
-import com.github.msemys.esjc.CatchUpSubscriptionListener;
-import com.github.msemys.esjc.CatchUpSubscriptionSettings;
-import com.github.msemys.esjc.ConnectionClosedException;
-import com.github.msemys.esjc.EventStore;
-import com.github.msemys.esjc.EventStoreException;
-import com.github.msemys.esjc.ResolvedEvent;
-import com.github.msemys.esjc.SliceReadStatus;
-import com.github.msemys.esjc.StreamEventsSlice;
-import com.github.msemys.esjc.SubscriptionDropReason;
-import com.github.msemys.esjc.WriteResult;
-import com.github.msemys.esjc.node.cluster.ClusterException;
-import com.github.msemys.esjc.operation.AccessDeniedException;
-import com.github.msemys.esjc.operation.CommandNotExpectedException;
-import com.github.msemys.esjc.operation.InvalidTransactionException;
-import com.github.msemys.esjc.operation.NoResultException;
-import com.github.msemys.esjc.operation.NotAuthenticatedException;
-import com.github.msemys.esjc.operation.ServerErrorException;
-import com.github.msemys.esjc.operation.StreamDeletedException;
-import com.github.msemys.esjc.operation.WrongExpectedVersionException;
-import com.github.msemys.esjc.operation.manager.OperationTimeoutException;
-import com.github.msemys.esjc.operation.manager.RetriesLimitReachedException;
-import com.github.msemys.esjc.subscription.MaximumSubscribersReachedException;
-import com.github.msemys.esjc.subscription.PersistentSubscriptionDeletedException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -55,9 +36,9 @@ import org.elder.sourcerer.exceptions.RetriableEventWriteException;
 import org.elder.sourcerer.exceptions.UnexpectedVersionException;
 import org.elder.sourcerer.utils.ElderPreconditions;
 import org.elder.sourcerer.utils.ImmutableListCollector;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.adapter.JdkFlowAdapter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
@@ -66,14 +47,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
  * Sourcerer event repository implementation using EventStore (geteventstore.com) as the underlying
- * system. The EventStore implementation uses Jackson to serialize and deserialize events that are
+ * system, and the newer gRPC based Java client
+ * https://github.com/EventStore/EventStoreDB-Client-Java.
+ * The EventStore implementation uses Jackson to serialize and deserialize events that are
  * subclasses of the given event type base class. To instruct Jackson on how to correctly
  * deserialize events to the correct concrete sub type, please use either the Jackson annotations,
  * or JAXB annotations as per
@@ -148,7 +130,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 internalStreamId,
                 streamPrefix);
 
-        var readResult = completeReadFuture(
+        ReadResult readResult = completeReadFuture(
                 eventStore.readStream(
                         internalStreamId,
                         1,
@@ -158,7 +140,8 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                                 .resolveLinkTos(resolveLinksTo)),
                 ExpectedVersion.any());
 
-        if (readResult.getEvents().isEmpty()) {
+        if (readResult == null || readResult.getEvents() == null
+                || readResult.getEvents().isEmpty()) {
             logger.debug(
                     "Reading {} (in {}) returned no event",
                     internalStreamId,
@@ -187,14 +170,14 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 version,
                 maxEventsPerRead);
 
-            var readResult = completeReadFuture(
-                    eventStore.readStream(
-                            internalStreamId,
-                            maxEventsPerRead,
-                            ReadStreamOptions.get()
-                                    .fromRevision(version)
-                                    .resolveLinkTos(resolveLinksTo)),
-                    ExpectedVersion.exactly(version));
+        ReadResult readResult = completeReadFuture(
+                eventStore.readStream(
+                        internalStreamId,
+                        maxEventsPerRead,
+                        ReadStreamOptions.get()
+                                .fromRevision(version)
+                                .resolveLinkTos(resolveLinksTo)),
+                ExpectedVersion.exactly(version));
 
         if (readResult == null) {
             // Not found or deleted, same thing to us!
@@ -214,12 +197,26 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                 .stream()
                 .map(this::fromEsEvent)
                 .collect(new ImmutableListCollector<>());
+
+        // TODO: These may be added natively in an updated version of the Java client, see
+        //   https://discuss.eventstore.com/t/support-for-detecting-a-subscription-being-live-with-grpc/4098/3
+        //   for discussion
+        int fromEventNumber = version;
+        // NOTE: If we for some reason read with a version greater than the current last version of
+        // the stream, we will incorrectly report a "last version" from the future. This will never
+        // be an issue however if reading events with the normal paging pattern from the start,
+        // there should be no reason to use a version "from the future" unless it is known to exist.
+        int lastEventNumber = events.isEmpty()
+                ? version - 1
+                : events.get(events.size() - 1).getStreamVersion();
+        int nextEventNumber = lastEventNumber + 1;
+
         return new EventReadResult<>(
                 events,
-                convertTo32Bit(readResult.fromEventNumber),
-                convertTo32Bit(readResult.lastEventNumber),
-                convertTo32Bit(readResult.nextEventNumber),
-                readResult.isEndOfStream);
+                fromEventNumber,
+                lastEventNumber,
+                nextEventNumber,
+                events.size() < maxEventsPerRead);
     }
 
     @Override
@@ -230,7 +227,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         Preconditions.checkNotNull(events);
         ElderPreconditions.checkNotEmpty(events);
 
-        List<EventData> esEvents = events
+        List<com.eventstore.dbclient.EventData> esEvents = events
                 .stream()
                 .map(this::toEsEventData)
                 .collect(Collectors.toList());
@@ -238,15 +235,15 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         logger.debug("Writing {} events to stream {} (in {}) (expected version {})",
                 esEvents.size(), streamId, streamPrefix, version);
         try {
-            var result = completeWriteFuture(
+            WriteResult result = completeWriteFuture(
                     eventStore.appendToStream(
                             toEsStreamId(streamId),
                             AppendToStreamOptions.get()
                                     .expectedRevision(toExpectedRevision(version)),
-                            esEvents),
+                            esEvents.iterator()),
                     version);
 
-            int nextExpectedVersion = convertTo32Bit(result.nextExpectedVersion);
+            int nextExpectedVersion = fromStreamRevision(result.getNextExpectedRevision());
             logger.debug("Write successful, next expected version is {}", nextExpectedVersion);
             return nextExpectedVersion;
         } catch (WrongExpectedVersionException ex) {
@@ -266,56 +263,64 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
     }
 
     private int getStreamVersionInternal(final String streamName) {
-        StreamEventsSlice streamEventsSlice = completeReadFuture(
-                eventStore.readStreamEventsBackward(
+        ReadResult readResult = completeReadFuture(
+                eventStore.readStream(
                         streamName,
-                        -1,
                         1,
-                        false),
+                        ReadStreamOptions.get()
+                                .backwards()
+                                .fromRevision(StreamRevision.END)
+                                .notResolveLinkTos()
+                ),
                 ExpectedVersion.any());
-        return convertTo32Bit(streamEventsSlice.lastEventNumber);
+        return readResult == null || readResult.getEvents() != null
+                || readResult.getEvents().isEmpty()
+                ? -1
+                : fromStreamRevision(
+                readResult.getEvents().get(0).getOriginalEvent().getStreamRevision());
     }
 
     @Override
-    public Flow.Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
+    public Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(
             final String streamId,
             final Integer fromVersion) {
         logger.info("Creating publisher for {} (in {}) (starting with version {})",
                 streamId, streamPrefix, fromVersion);
 
-        return JdkFlowAdapter.publisherToFlowPublisher(
-                Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-                    final var subscription = eventStore.subscribeToStream(
+        return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
+            final Subscription subscription = completeReadFuture(
+                    eventStore.subscribeToStream(
                             toEsStreamId(streamId),
                             new EmitterListener(emitter, streamPrefix + "-" + streamId),
                             SubscribeToStreamOptions.get()
                                     .fromRevision(toStreamRevision(fromVersion))
-                                    .resolveLinkTos());
+                                    .resolveLinkTos()),
+                    ExpectedVersion.any());
 
-                    emitter.onCancel(() -> {
-                        logger.info("Closing ESJC subscription (asynchronously)");
-                        subscription.cancel(true);
-                    });
-                }));
+            emitter.onCancel(() -> {
+                logger.info("Closing ESJC subscription (asynchronously)");
+                subscription.stop();
+            });
+        });
     }
 
     @Override
-    public Flow.Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
+    public Publisher<EventSubscriptionUpdate<T>> getPublisher(final Integer fromVersion) {
         logger.info("Creating publisher for all events in {} (starting with version {})",
                 streamPrefix, fromVersion);
-        return JdkFlowAdapter.publisherToFlowPublisher(
-                Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
-                    final var subscription = eventStore.subscribeToStream(
+        return Flux.create((FluxSink<EventSubscriptionUpdate<T>> emitter) -> {
+            final Subscription subscription = completeReadFuture(
+                    eventStore.subscribeToStream(
                             getCategoryStreamName(),
                             new EmitterListener(emitter, streamPrefix + "-all"),
                             SubscribeToStreamOptions.get()
                                     .fromRevision(toStreamRevision(fromVersion))
-                                    .resolveLinkTos());
-                    emitter.onCancel(() -> {
-                        logger.info("Closing ESJC subscription (asynchronously)");
-                        subscription.cancel(true);
-                    });
-                }));
+                                    .resolveLinkTos()), ExpectedVersion.any());
+            emitter.onCancel(() -> {
+                logger.info("Closing ESJC subscription (asynchronously)");
+                subscription.stop();
+            });
+        });
     }
 
     private String toEsStreamId(final String streamId) {
@@ -436,31 +441,16 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         } catch (ExecutionException ex) {
             if (ex.getCause() instanceof StreamNotFoundException) {
                 // This is expected in some cases, flag with null rather than error
-                return null
-            }
-            if (ex.getCause() instanceof StreamNotFoundException) {
-                if (ex.getCause() instanceof WrongExpectedVersionException) {
-                    throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
-                } else if (ex.getCause() instanceof AccessDeniedException
-                        || ex.getCause() instanceof CommandNotExpectedException
-                        || ex.getCause() instanceof InvalidTransactionException
-                        || ex.getCause() instanceof NoResultException
-                        || ex.getCause() instanceof NotAuthenticatedException
-                        || ex.getCause() instanceof PersistentSubscriptionDeletedException
-                        || ex.getCause() instanceof StreamDeletedException) {
-                    throw new PermanentEventReadException(ex.getCause());
-                } else if (ex.getCause() instanceof CannotEstablishConnectionException
-                        || ex.getCause() instanceof ClusterException
-                        || ex.getCause() instanceof ConnectionClosedException
-                        || ex.getCause() instanceof OperationTimeoutException
-                        || ex.getCause() instanceof MaximumSubscribersReachedException
-                        || ex.getCause() instanceof RetriesLimitReachedException
-                        || ex.getCause() instanceof ServerErrorException) {
-                    throw new RetriableEventReadException(ex.getCause());
-                } else {
-                    logger.warn("Unrecognized event store exception reading events", ex.getCause());
-                    throw new RetriableEventReadException(ex.getCause());
-                }
+                return null;
+            } else if (ex.getCause() instanceof WrongExpectedVersionException) {
+                throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
+            } else if (ex.getCause() instanceof ResourceNotFoundException
+            ) {
+                throw new PermanentEventReadException(ex.getCause());
+            } else if (ex.getCause() instanceof ConnectionShutdownException
+                    || ex.getCause() instanceof NotLeaderException
+            ) {
+                throw new RetriableEventReadException(ex.getCause());
             } else if (ex.getCause() instanceof RuntimeException) {
                 logger.warn("Unrecognized runtime exception reading events", ex.getCause());
                 throw new RetriableEventReadException(ex.getCause());
@@ -470,7 +460,8 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                         "Internal error reading events",
                         ex.getCause());
             }
-        } catch (TimeoutException ex) {
+        } catch (
+                TimeoutException ex) {
             throw new RetriableEventReadException("Timeout reading events", ex.getCause());
         }
     }
@@ -484,29 +475,14 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
             Thread.currentThread().interrupt();
             throw new RetriableEventWriteException("Internal error writing event", ex);
         } catch (ExecutionException ex) {
-            if (ex.getCause() instanceof EventStoreException) {
-                if (ex.getCause() instanceof WrongExpectedVersionException) {
-                    throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
-                } else if (ex.getCause() instanceof AccessDeniedException
-                        || ex.getCause() instanceof CommandNotExpectedException
-                        || ex.getCause() instanceof InvalidTransactionException
-                        || ex.getCause() instanceof NoResultException
-                        || ex.getCause() instanceof NotAuthenticatedException
-                        || ex.getCause() instanceof PersistentSubscriptionDeletedException
-                        || ex.getCause() instanceof StreamDeletedException) {
-                    throw new PermanentEventWriteException(ex.getCause());
-                } else if (ex.getCause() instanceof CannotEstablishConnectionException
-                        || ex.getCause() instanceof ClusterException
-                        || ex.getCause() instanceof ConnectionClosedException
-                        || ex.getCause() instanceof OperationTimeoutException
-                        || ex.getCause() instanceof MaximumSubscribersReachedException
-                        || ex.getCause() instanceof RetriesLimitReachedException
-                        || ex.getCause() instanceof ServerErrorException) {
-                    throw new RetriableEventWriteException(ex.getCause());
-                } else {
-                    logger.warn("Unrecognized event store exception writing events", ex.getCause());
-                    throw new RetriableEventWriteException(ex.getCause());
-                }
+            if (ex.getCause() instanceof WrongExpectedVersionException) {
+                throw new UnexpectedVersionException(ex.getCause(), expectedVersion);
+            } else if (ex.getCause() instanceof ResourceNotFoundException
+                    || ex.getCause() instanceof StreamNotFoundException) {
+                throw new PermanentEventWriteException(ex.getCause());
+            } else if (ex.getCause() instanceof ConnectionShutdownException
+                    || ex.getCause() instanceof NotLeaderException) {
+                throw new RetriableEventWriteException(ex.getCause());
             } else if (ex.getCause() instanceof RuntimeException) {
                 logger.warn("Unrecognized runtime exception writing events", ex.getCause());
                 throw new RetriableEventWriteException(ex.getCause());
@@ -533,6 +509,10 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         return (int) longPosition;
     }
 
+    private int fromStreamRevision(final StreamRevision revision) {
+        return convertTo32Bit(revision.getValueUnsigned());
+    }
+
     private StreamRevision toStreamRevision(final Integer version) {
         return version == null ? StreamRevision.START : new StreamRevision(version);
     }
@@ -549,16 +529,18 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         }
 
         @Override
-        public void onEvent(Subscription subscription, ResolvedEvent event) {
+        public void onEvent(final Subscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
             emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            // TODO: Support "caught up" tracking once new Java client is live
         }
 
         @Override
-        public void onError(Subscription subscription, Throwable exception) {
+        public void onError(final Subscription subscription, final Throwable exception) {
             if (exception != null) {
                 logger.error(
-                        "Subscription " + name + " failed with reason " + exception.getMessage() + "",
+                        "Subscription " + name + " failed with reason " +
+                                exception.getMessage() + "",
                         exception);
             } else {
                 logger.error(
@@ -571,7 +553,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         }
 
         @Override
-        public void onCancelled(Subscription subscription) {
+        public void onCancelled(final Subscription subscription) {
             logger.info("Subscription " + name + " was cancelled");
         }
     }

@@ -10,6 +10,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -30,7 +31,7 @@ public class DefaultCommandTest {
     @SuppressWarnings("unchecked")
     public void conflictingVersionsGiveInvalidCommand() {
 
-        try (var mocked = Mockito.mockStatic(ExpectedVersion.class)) {
+        try (MockedStatic<ExpectedVersion> mocked = Mockito.mockStatic(ExpectedVersion.class)) {
             mocked.when(() -> ExpectedVersion.merge(any(), any()))
                     .thenThrow(new ConflictingExpectedVersionsException(
                             "error", null, null));
