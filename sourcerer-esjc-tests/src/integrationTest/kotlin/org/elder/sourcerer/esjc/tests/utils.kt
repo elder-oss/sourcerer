@@ -1,5 +1,6 @@
 package org.elder.sourcerer.esjc.tests
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.msemys.esjc.EventStoreBuilder
@@ -17,6 +18,7 @@ fun createEsjcRepositoryFactory(sessionId: String): EventStoreEsjcEventRepositor
     eventStore.connect()
 
     val objectMapper = ObjectMapper()
+    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     objectMapper.registerKotlinModule()
 
     return EventStoreEsjcEventRepositoryFactory(

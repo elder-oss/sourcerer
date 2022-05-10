@@ -168,6 +168,8 @@ abstract class EventStreamsIntegrationTestBase {
             }
             sneakyUpdateCompleted.happened()
         }
+
+        Thread.sleep(1000)
     }
 
     @Test
@@ -194,6 +196,8 @@ abstract class EventStreamsIntegrationTestBase {
             }
             sneakyUpdateCompleted.happened()
         }
+
+        Thread.sleep(1000)
     }
 
     @Test
@@ -218,6 +222,8 @@ abstract class EventStreamsIntegrationTestBase {
             }
             sneakyCreateCompleted.happened()
         }
+
+        Thread.sleep(1000)
     }
 
     private fun createWith(

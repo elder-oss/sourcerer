@@ -3,6 +3,7 @@ package org.elder.sourcerer.eventstoredb
 import com.eventstore.dbclient.Endpoint
 import com.eventstore.dbclient.EventStoreDBClient
 import com.eventstore.dbclient.EventStoreDBClientSettings
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 
@@ -17,6 +18,7 @@ fun createGrpcRepositoryFactory(sessionId: String): EventStoreGrpcEventRepositor
 
     val eventstoreDbClient = EventStoreDBClient.create(settings)
     val objectMapper = ObjectMapper()
+    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     objectMapper.registerKotlinModule()
 
     return EventStoreGrpcEventRepositoryFactory(
