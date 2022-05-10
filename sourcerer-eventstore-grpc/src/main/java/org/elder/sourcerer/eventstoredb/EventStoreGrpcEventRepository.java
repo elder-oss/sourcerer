@@ -68,6 +68,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
     private static final Logger logger
             = LoggerFactory.getLogger(EventStoreGrpcEventRepository.class);
 
+    private static final int NON_EXISTING_STREAM_VERSION = -1;
     private static final int MAX_MAX_EVENTS_PER_READ = 4095;
     private static final long DEFAULT_TIMEOUT_MILLIS = 30 * (long) 1000;
     private final String streamPrefix;
@@ -108,12 +109,12 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
 
     @Override
     public EventRecord<T> readFirst(final String streamId) {
-        return readSingleInternal(toEsStreamId(streamId), 0, false);
+        return readSingleInternal(toEsStreamId(streamId), StreamRevision.START, false);
     }
 
     @Override
     public EventRecord<T> readLast(final String streamId) {
-        return readSingleInternal(toEsStreamId(streamId), -1, false);
+        return readSingleInternal(toEsStreamId(streamId), StreamRevision.END, false);
     }
 
     private String getCategoryStreamName() {
@@ -122,11 +123,11 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
 
     private EventRecord<T> readSingleInternal(
             final String internalStreamId,
-            final int eventNumber,
+            final StreamRevision streamRevision,
             final boolean resolveLinksTo) {
         logger.debug(
                 "Reading event {} from {} (in {})",
-                eventNumber,
+                streamRevision,
                 internalStreamId,
                 streamPrefix);
 
@@ -135,7 +136,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                         internalStreamId,
                         1,
                         ReadStreamOptions.get()
-                                .fromRevision(eventNumber)
+                                .fromRevision(streamRevision)
                                 .backwards()
                                 .resolveLinkTos(resolveLinksTo)),
                 ExpectedVersion.any());
@@ -281,7 +282,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         return hasResult
                 ? fromStreamRevision(
                 readResult.getEvents().get(0).getOriginalEvent().getStreamRevision())
-                : -1;
+                : NON_EXISTING_STREAM_VERSION;
     }
 
     @Override

@@ -145,6 +145,11 @@ public class EventStoreGrpcEventRepositoryTest {
         Assert.assertFalse(seenStop.get());
     }
 
+    /**
+     * According to comments below, this ensures that the driver works sensibly even when we block the
+     * event handler, though it's not clear from the code how this is being sensible checked.
+     * Tests is kept for now, but look to make sense of why this is and what it's for!
+     */
     @Test
     public void subscriptionCallbackAppliesBackpressure() throws IOException {
         // The ESJC client applies backpressure implicitly by blocking the callback, we need to
