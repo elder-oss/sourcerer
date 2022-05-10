@@ -4,21 +4,25 @@ import org.elder.sourcerer.EventData
 import org.elder.sourcerer.EventRepositoryFactory
 import org.elder.sourcerer.ExpectedVersion
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.notNullValue
 import org.junit.Assert
 import org.junit.Test
-import org.hamcrest.CoreMatchers.notNullValue
 import reactor.core.publisher.Flux
 import reactor.core.scheduler.Schedulers
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-abstract class EventStorEventRepositoryIntegrationTestBase {
+abstract class EventStorEventRepositoryIntegrationTestBase(
+        val enableLegacyTcpInterface: Boolean = false
+) {
     protected abstract fun createRepositoryFactory(port: Int): EventRepositoryFactory
+
+    private fun eventstoreInstance() = EventstoreInstance(enableLegacyTcpInterface = enableLegacyTcpInterface)
 
     @Test
     fun canReadWriteSingleEvent() {
-        EventstoreInstance().use { eventstoreDb ->
+        eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
             val repoFactory = createRepositoryFactory(eventstoreDb.port)
             val testRepo = repoFactory.getEventRepository(TestEventType::class.java)
@@ -35,7 +39,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase {
 
     @Test
     fun canReadBatched() {
-        EventstoreInstance().use { eventstoreDb ->
+        eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
             val repoFactory = createRepositoryFactory(eventstoreDb.port)
             val testRepo = repoFactory.getEventRepository(TestEventType::class.java)
@@ -61,7 +65,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase {
 
     @Test
     fun canReadBatchedWhenPageSizeMatchesEventsExactly() {
-        EventstoreInstance().use { eventstoreDb ->
+        eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
             val repoFactory = createRepositoryFactory(eventstoreDb.port)
             val testRepo = repoFactory.getEventRepository(TestEventType::class.java)
@@ -87,7 +91,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase {
 
     @Test
     fun canConsumeEventsFromCategorySubscriptionRealTime() {
-        EventstoreInstance().use { eventstoreDb ->
+        eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
             val produceRepoFactory = createRepositoryFactory(eventstoreDb.port)
             val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)
@@ -125,7 +129,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase {
 
     @Test
     fun canConsumeEventsFromCategorySubscriptionCatchUp() {
-        EventstoreInstance().use { eventstoreDb ->
+        eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
             val produceRepoFactory = createRepositoryFactory(eventstoreDb.port)
             val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)
@@ -163,7 +167,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase {
 
     @Test
     fun subscriptionFlagsErrorIfEventstoreDies() {
-        EventstoreInstance().use { eventstoreDb ->
+        eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
             val produceRepoFactory = createRepositoryFactory(eventstoreDb.port)
             val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)

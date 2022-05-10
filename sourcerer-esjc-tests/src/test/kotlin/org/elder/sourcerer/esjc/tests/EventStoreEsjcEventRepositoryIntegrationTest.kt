@@ -7,7 +7,8 @@ import org.elder.sourcerer.EventRepositoryFactory
 import org.elder.sourcerer.esjc.EventStoreEsjcEventRepositoryFactory
 import org.elder.sourcerer.eventstore.tests.EventStorEventRepositoryIntegrationTestBase
 
-class EventStoreGrpcEventRepositoryIntegrationTest : EventStorEventRepositoryIntegrationTestBase() {
+class EventStoreEsjcEventRepositoryIntegrationTest
+    : EventStorEventRepositoryIntegrationTestBase(enableLegacyTcpInterface = true) {
     override fun createRepositoryFactory(port: Int): EventRepositoryFactory {
         val eventStore = EventStoreBuilder
                 .newBuilder()
