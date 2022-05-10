@@ -7,12 +7,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.elder.sourcerer.EventRepositoryFactory
 import org.elder.sourcerer.eventstore.tests.EventStorEventRepositoryIntegrationTestBase
+import org.elder.sourcerer.eventstore.tests.EventstoreInstance
 import org.elder.sourcerer.eventstoredb.EventStoreGrpcEventRepositoryFactory
 
 class EventStoreGrpcEventRepositoryIntegrationTest : EventStorEventRepositoryIntegrationTestBase() {
-    override fun createRepositoryFactory(port: Int): EventRepositoryFactory {
+    override fun createRepositoryFactory(db: EventstoreInstance): EventRepositoryFactory {
         val settings = EventStoreDBClientSettings.builder()
-                .addHost(Endpoint("127.0.0.1", port))
+                .addHost(Endpoint("127.0.0.1", db.httpPort))
                 .defaultCredentials("admin", "changeit")
                 .throwOnAppendFailure(true)
                 .tls(false)

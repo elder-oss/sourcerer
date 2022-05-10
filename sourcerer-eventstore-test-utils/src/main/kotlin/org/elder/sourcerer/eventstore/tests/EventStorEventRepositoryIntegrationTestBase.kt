@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference
 abstract class EventStorEventRepositoryIntegrationTestBase(
         val enableLegacyTcpInterface: Boolean = false
 ) {
-    protected abstract fun createRepositoryFactory(port: Int): EventRepositoryFactory
+    protected abstract fun createRepositoryFactory(db: EventstoreInstance): EventRepositoryFactory
 
     private fun eventstoreInstance() = EventstoreInstance(enableLegacyTcpInterface = enableLegacyTcpInterface)
 
@@ -24,7 +24,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
     fun canReadWriteSingleEvent() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
-            val repoFactory = createRepositoryFactory(eventstoreDb.port)
+            val repoFactory = createRepositoryFactory(eventstoreDb)
             val testRepo = repoFactory.getEventRepository(TestEventType::class.java)
             val streamId = UUID.randomUUID().toString()
 
@@ -41,7 +41,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
     fun canReadBatched() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
-            val repoFactory = createRepositoryFactory(eventstoreDb.port)
+            val repoFactory = createRepositoryFactory(eventstoreDb)
             val testRepo = repoFactory.getEventRepository(TestEventType::class.java)
             val streamId = UUID.randomUUID().toString()
             val writtenEvents = (0 until 1000)
@@ -67,7 +67,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
     fun canReadBatchedWhenPageSizeMatchesEventsExactly() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
-            val repoFactory = createRepositoryFactory(eventstoreDb.port)
+            val repoFactory = createRepositoryFactory(eventstoreDb)
             val testRepo = repoFactory.getEventRepository(TestEventType::class.java)
             val streamId = UUID.randomUUID().toString()
             val writtenEvents = (0 until 100)
@@ -93,9 +93,9 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
     fun canConsumeEventsFromCategorySubscriptionRealTime() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
-            val produceRepoFactory = createRepositoryFactory(eventstoreDb.port)
+            val produceRepoFactory = createRepositoryFactory(eventstoreDb)
             val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)
-            val consumeRepoFactory = createRepositoryFactory(eventstoreDb.port)
+            val consumeRepoFactory = createRepositoryFactory(eventstoreDb)
             val consumeRepo = consumeRepoFactory.getEventRepository(TestEventType::class.java)
 
             // Set up subscriber to collect events
@@ -131,9 +131,9 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
     fun canConsumeEventsFromCategorySubscriptionCatchUp() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
-            val produceRepoFactory = createRepositoryFactory(eventstoreDb.port)
+            val produceRepoFactory = createRepositoryFactory(eventstoreDb)
             val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)
-            val consumeRepoFactory = createRepositoryFactory(eventstoreDb.port)
+            val consumeRepoFactory = createRepositoryFactory(eventstoreDb)
             val consumeRepo = consumeRepoFactory.getEventRepository(TestEventType::class.java)
 
             // Publish us some data
@@ -169,9 +169,9 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
     fun subscriptionFlagsErrorIfEventstoreDies() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
-            val produceRepoFactory = createRepositoryFactory(eventstoreDb.port)
+            val produceRepoFactory = createRepositoryFactory(eventstoreDb)
             val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)
-            val consumeRepoFactory = createRepositoryFactory(eventstoreDb.port)
+            val consumeRepoFactory = createRepositoryFactory(eventstoreDb)
             val consumeRepo = consumeRepoFactory.getEventRepository(TestEventType::class.java)
 
             // Publish us some data

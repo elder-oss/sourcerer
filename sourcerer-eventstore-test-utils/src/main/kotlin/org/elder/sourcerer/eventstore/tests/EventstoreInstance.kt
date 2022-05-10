@@ -29,7 +29,10 @@ class EventstoreInstance(val enableLegacyTcpInterface: Boolean = false) : Closea
         this.dockerClient = DockerClientImpl.getInstance(dockerConfig, dockerHttpClient)
     }
 
-    var port: Int = 0
+    var tcpPort: Int = 0
+        private set
+
+    var httpPort: Int = 0
         private set
 
     fun ensureStarted() {
@@ -51,17 +54,23 @@ class EventstoreInstance(val enableLegacyTcpInterface: Boolean = false) : Closea
                     .withEnv(*env.toTypedArray())
                     .withHostConfig(HostConfig
                             .newHostConfig()
-                            .withPortBindings(PortBinding(
-                                    Ports.Binding("localhost", null),
-                                    ExposedPort.tcp(2113)
-                            )))
+                            .withPortBindings(
+                                    PortBinding(
+                                            Ports.Binding("localhost", null),
+                                            ExposedPort.tcp(1113)
+                                    ),
+                                    PortBinding(
+                                            Ports.Binding("localhost", null),
+                                            ExposedPort.tcp(2113)
+                                    )))
                     .exec()
             dockerClient.startContainerCmd(createResponse.id).exec()
             val containerInfo = dockerClient.inspectContainerCmd(createResponse.id).exec()
 
             waitUntilHealth(createResponse.id)
             container = createResponse.id
-            port = Integer.parseInt(containerInfo.networkSettings.ports.bindings[(ExposedPort(2113))]!![0].hostPortSpec)
+            tcpPort = Integer.parseInt(containerInfo.networkSettings.ports.bindings[(ExposedPort(1113))]!![0].hostPortSpec)
+            httpPort = Integer.parseInt(containerInfo.networkSettings.ports.bindings[(ExposedPort(2113))]!![0].hostPortSpec)
         }
     }
 

@@ -6,16 +6,17 @@ import com.github.msemys.esjc.EventStoreBuilder
 import org.elder.sourcerer.EventRepositoryFactory
 import org.elder.sourcerer.esjc.EventStoreEsjcEventRepositoryFactory
 import org.elder.sourcerer.eventstore.tests.EventStorEventRepositoryIntegrationTestBase
+import org.elder.sourcerer.eventstore.tests.EventstoreInstance
 
 class EventStoreEsjcEventRepositoryIntegrationTest
     : EventStorEventRepositoryIntegrationTestBase(enableLegacyTcpInterface = true) {
-    override fun createRepositoryFactory(port: Int): EventRepositoryFactory {
+    override fun createRepositoryFactory(db: EventstoreInstance): EventRepositoryFactory {
         val eventStore = EventStoreBuilder
                 .newBuilder()
                 .userCredentials("admin", "changeit")
                 .requireMaster(false)
                 .failOnNoServerResponse(true)
-                .singleNodeAddress("127.0.0.1", 1113)
+                .singleNodeAddress("127.0.0.1", db.tcpPort)
                 .build()
 
         eventStore.connect()
