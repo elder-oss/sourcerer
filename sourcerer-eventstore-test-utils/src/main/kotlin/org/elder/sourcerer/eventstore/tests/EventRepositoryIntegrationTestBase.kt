@@ -166,52 +166,6 @@ abstract class EventRepositoryIntegrationTestBase {
         }
     }
 
-    @Test
-    fun subscriptionFlagsErrorIfEventstoreDies() {
-        val sessionId = randomSessionId()
-        createRepositoryFactory(sessionId).use { produceRepoFactory ->
-            createRepositoryFactory(sessionId).use { consumeRepoFactory ->
-                val produceRepo = produceRepoFactory.getEventRepository(TestEventType::class.java)
-                val consumeRepo = consumeRepoFactory.getEventRepository(TestEventType::class.java)
-
-                // Publish us some data
-                val sentEvents = mutableListOf<TestEventType>()
-                (0 until 1000).forEach {
-                    val event = TestEventType(value = UUID.randomUUID().toString())
-                    val stream = UUID.randomUUID().toString()
-                    produceRepo.append(stream, listOf(eventData(event)), ExpectedVersion.any())
-                    sentEvents.add(event)
-                }
-
-                // Set up subscriber to collect events
-                val receivedEventsCount = AtomicInteger(0)
-                val receivedError = AtomicReference<Throwable>()
-                val subscription = Flux.from(consumeRepo.getPublisher(null))
-                        .publishOn(Schedulers.parallel())
-                        .subscribe({
-                            receivedEventsCount.incrementAndGet()
-                        }, { error -> receivedError.set(error) })
-
-                // Wait until we've seen at least one event ...
-                while (true) {
-                    if (receivedEventsCount.get() > 0) break
-                    Thread.sleep(50)
-                }
-
-                // Kill the eventstore server dead!
-                consumeRepoFactory.close()
-
-                // Give the world a moment to catch up
-                Thread.sleep(5000)
-
-                // We should now have seen a meaningful error
-                Assert.assertThat(receivedError.get(), notNullValue())
-                subscription.dispose()
-            }
-        }
-    }
-
-
     private fun <T> eventData(event: T): EventData<T> {
         return EventData(
                 "eventType",
