@@ -20,7 +20,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
 
     private fun eventstoreInstance() = EventstoreInstance(enableLegacyTcpInterface = enableLegacyTcpInterface)
 
-    @Test
+    // @Test
     fun canReadWriteSingleEvent() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -37,7 +37,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    @Test
+    // @Test
     fun canReadBatched() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -63,7 +63,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    @Test
+    // @Test
     fun canReadBatchedWhenPageSizeMatchesEventsExactly() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -128,7 +128,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    @Test
+    // @Test
     fun canConsumeEventsFromCategorySubscriptionCatchUp() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -167,7 +167,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    @Test
+    // @Test
     fun subscriptionFlagsErrorIfEventstoreDies() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()

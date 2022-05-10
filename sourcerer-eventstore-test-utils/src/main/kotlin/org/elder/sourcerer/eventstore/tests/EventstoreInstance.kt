@@ -10,7 +10,6 @@ import com.github.dockerjava.api.model.Ports
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
-import org.elder.sourcerer.subscription.SessionSubscriber
 import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.time.Duration
