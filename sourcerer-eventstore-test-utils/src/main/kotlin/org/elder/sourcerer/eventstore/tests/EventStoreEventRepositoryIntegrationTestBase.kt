@@ -2,6 +2,7 @@ package org.elder.sourcerer.eventstore.tests
 
 import org.elder.sourcerer.EventData
 import org.elder.sourcerer.EventRepositoryFactory
+import org.elder.sourcerer.EventSubscriptionUpdate.UpdateType
 import org.elder.sourcerer.ExpectedVersion
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.notNullValue
@@ -20,7 +21,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
 
     private fun eventstoreInstance() = EventstoreInstance(enableLegacyTcpInterface = enableLegacyTcpInterface)
 
-    // @Test
+    @Test
     fun canReadWriteSingleEvent() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -37,7 +38,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    // @Test
+    @Test
     fun canReadBatched() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -63,7 +64,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    // @Test
+    @Test
     fun canReadBatchedWhenPageSizeMatchesEventsExactly() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -103,8 +104,10 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
             val subscription = Flux.from(consumeRepo.getPublisher(null))
                     .publishOn(Schedulers.parallel())
                     .subscribe {
-                        synchronized(receivedEvents) {
-                            receivedEvents.add(it.event.event)
+                        if (it.updateType == UpdateType.EVENT) {
+                            synchronized(receivedEvents) {
+                                receivedEvents.add(it.event.event)
+                            }
                         }
                     }
 
@@ -128,7 +131,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    // @Test
+    @Test
     fun canConsumeEventsFromCategorySubscriptionCatchUp() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
@@ -151,8 +154,10 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
             val subscription = Flux.from(consumeRepo.getPublisher(null))
                     .publishOn(Schedulers.parallel())
                     .subscribe {
-                        synchronized(receivedEvents) {
-                            receivedEvents.add(it.event.event)
+                        if (it.updateType == UpdateType.EVENT) {
+                            synchronized(receivedEvents) {
+                                receivedEvents.add(it.event.event)
+                            }
                         }
                     }
 
@@ -167,7 +172,7 @@ abstract class EventStoreEventRepositoryIntegrationTestBase(
         }
     }
 
-    // @Test
+    @Test
     fun subscriptionFlagsErrorIfEventstoreDies() {
         eventstoreInstance().use { eventstoreDb ->
             eventstoreDb.ensureStarted()
