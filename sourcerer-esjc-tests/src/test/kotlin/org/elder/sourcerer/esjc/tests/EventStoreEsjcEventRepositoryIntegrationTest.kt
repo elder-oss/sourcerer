@@ -5,11 +5,11 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.msemys.esjc.EventStoreBuilder
 import org.elder.sourcerer.EventRepositoryFactory
 import org.elder.sourcerer.esjc.EventStoreEsjcEventRepositoryFactory
-import org.elder.sourcerer.eventstore.tests.EventStorEventRepositoryIntegrationTestBase
+import org.elder.sourcerer.eventstore.tests.EventStoreEventRepositoryIntegrationTestBase
 import org.elder.sourcerer.eventstore.tests.EventstoreInstance
 
 class EventStoreEsjcEventRepositoryIntegrationTest
-    : EventStorEventRepositoryIntegrationTestBase(enableLegacyTcpInterface = true) {
+    : EventStoreEventRepositoryIntegrationTestBase(enableLegacyTcpInterface = true) {
     override fun createRepositoryFactory(db: EventstoreInstance): EventRepositoryFactory {
         val eventStore = EventStoreBuilder
                 .newBuilder()

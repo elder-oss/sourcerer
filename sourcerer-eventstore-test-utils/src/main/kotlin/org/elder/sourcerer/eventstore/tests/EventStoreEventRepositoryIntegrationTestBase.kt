@@ -13,7 +13,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-abstract class EventStorEventRepositoryIntegrationTestBase(
+abstract class EventStoreEventRepositoryIntegrationTestBase(
         val enableLegacyTcpInterface: Boolean = false
 ) {
     protected abstract fun createRepositoryFactory(db: EventstoreInstance): EventRepositoryFactory
@@ -123,6 +123,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
 
             // We should now have seen all of the events
             val actuallyReceived = synchronized(receivedEvents) { receivedEvents.toList() }
+            Assert.assertThat(actuallyReceived.size, equalTo(sentEvents.size))
             Assert.assertThat(actuallyReceived, equalTo(sentEvents))
         }
     }
@@ -161,6 +162,7 @@ abstract class EventStorEventRepositoryIntegrationTestBase(
 
             // We should now have seen all of the events
             val actuallyReceived = synchronized(receivedEvents) { receivedEvents.toList() }
+            Assert.assertThat(actuallyReceived.size, equalTo(sentEvents.size))
             Assert.assertThat(actuallyReceived, equalTo(sentEvents))
         }
     }

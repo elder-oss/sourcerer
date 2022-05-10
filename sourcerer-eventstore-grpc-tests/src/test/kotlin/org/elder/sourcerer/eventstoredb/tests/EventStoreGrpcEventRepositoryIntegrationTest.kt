@@ -6,11 +6,11 @@ import com.eventstore.dbclient.EventStoreDBClientSettings
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.elder.sourcerer.EventRepositoryFactory
-import org.elder.sourcerer.eventstore.tests.EventStorEventRepositoryIntegrationTestBase
+import org.elder.sourcerer.eventstore.tests.EventStoreEventRepositoryIntegrationTestBase
 import org.elder.sourcerer.eventstore.tests.EventstoreInstance
 import org.elder.sourcerer.eventstoredb.EventStoreGrpcEventRepositoryFactory
 
-class EventStoreGrpcEventRepositoryIntegrationTest : EventStorEventRepositoryIntegrationTestBase() {
+class EventStoreGrpcEventRepositoryIntegrationTest : EventStoreEventRepositoryIntegrationTestBase() {
     override fun createRepositoryFactory(db: EventstoreInstance): EventRepositoryFactory {
         val settings = EventStoreDBClientSettings.builder()
                 .addHost(Endpoint("127.0.0.1", db.httpPort))

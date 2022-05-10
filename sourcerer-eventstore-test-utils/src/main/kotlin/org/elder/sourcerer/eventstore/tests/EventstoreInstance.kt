@@ -10,6 +10,8 @@ import com.github.dockerjava.api.model.Ports
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import org.elder.sourcerer.subscription.SessionSubscriber
+import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.time.Duration
 import java.time.Instant
@@ -64,8 +66,10 @@ class EventstoreInstance(val enableLegacyTcpInterface: Boolean = false) : Closea
                                             ExposedPort.tcp(2113)
                                     )))
                     .exec()
+            logger.info("Starting EventStore in Docker ...")
             dockerClient.startContainerCmd(createResponse.id).exec()
             val containerInfo = dockerClient.inspectContainerCmd(createResponse.id).exec()
+            logger.info("Docker container info: {}", containerInfo)
 
             waitUntilHealth(createResponse.id)
             container = createResponse.id
@@ -86,6 +90,7 @@ class EventstoreInstance(val enableLegacyTcpInterface: Boolean = false) : Closea
         val timeAtStart = Instant.now()
         while (true) {
             val containerInfo = dockerClient.inspectContainerCmd(containerId).exec()
+            logger.info("Status for docker instance is now {}", containerInfo.state.health.status)
             when (containerInfo.state.health.status) {
                 "healthy" -> return
                 "unhealthy" -> throw RuntimeException("Eventstore failed to start")
@@ -109,5 +114,6 @@ class EventstoreInstance(val enableLegacyTcpInterface: Boolean = false) : Closea
     companion object {
         const val EVENTSTORE_IMAGE = "eventstore/eventstore:21.10.2-buster-slim"
         const val STARTUP_TIMEOUT_SECONDS = 60
+        private val logger = LoggerFactory.getLogger(EventstoreInstance::class.java)
     }
 }
