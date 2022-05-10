@@ -1,6 +1,6 @@
-version: 2
+version: 2.1
 jobs:
-  build:
+  build-it-all:
     working_directory: /root/project
     resource_class: medium+
     docker:
@@ -54,8 +54,12 @@ jobs:
               echo "Running Sonar full analysis mode"
               . infra/runsonar-full.sh
             fi
-deployment:
-  fake_deploy_for_circle_ci_2:
-    tag: /.*/
-    commands:
-      - echo "Placeholder NOOP for tags"
+workflows:
+  build-it-all:
+    jobs:
+      - build-it-all:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /.*/
