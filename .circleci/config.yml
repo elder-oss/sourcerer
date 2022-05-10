@@ -53,8 +53,6 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               echo "Running Sonar full analysis mode"
               . infra/runsonar-full.sh
-            else
-              echo "Not relevant, skipping step"
             fi
 deployment:
   fake_deploy_for_circle_ci_2:

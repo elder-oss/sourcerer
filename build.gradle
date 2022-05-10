@@ -42,7 +42,6 @@ sonarqube {
     properties {
         property "sonar.projectVersion", getVersionName()
         property "sonar.jacoco.reportPath", "build/coverage/jacoco.exec"
-        property "sonar.analysis.mode", "preview"
         property "sonar.host.url", sourcerer_sonar_host_url
         property "sonar.login", sourcerer_sonar_login
         property "sonar.github.oauth", sourcerer_sonar_github_oauth
