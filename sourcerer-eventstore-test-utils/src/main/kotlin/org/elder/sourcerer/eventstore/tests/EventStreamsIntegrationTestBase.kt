@@ -1,19 +1,18 @@
-package org.elder.sourcerer.kotlin
+package org.elder.sourcerer.eventstore.tests
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import org.elder.sourcerer.AggregateProjection
-import org.elder.sourcerer.AggregateRepository
-import org.elder.sourcerer.DefaultCommandFactory
-import org.elder.sourcerer.EventType
-import org.elder.sourcerer.ExpectedVersion
+import com.fasterxml.jackson.annotation.JsonTypeName
+import org.elder.sourcerer.*
+import org.elder.sourcerer.eventstore.tests.utils.ConcurrencyProgress
+import org.elder.sourcerer.eventstore.tests.utils.ConcurrencyRule
 import org.elder.sourcerer.exceptions.UnexpectedVersionException
-import org.elder.sourcerer.kotlin.utils.ConcurrencyProgress
-import org.elder.sourcerer.kotlin.utils.ConcurrencyRule
-import org.elder.sourcerer.kotlin.utils.TestEventStore
+import org.elder.sourcerer.kotlin.CreateConflictStrategy
+import org.elder.sourcerer.kotlin.EventStreams
 import org.elder.sourcerer.utils.RetryPolicy
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.instanceOf
+import org.junit.After
 import org.junit.Assert.assertThat
 import org.junit.Assert.fail
 import org.junit.Before
@@ -22,23 +21,39 @@ import org.junit.Test
 import java.util.UUID
 import kotlin.reflect.KClass
 
-class EventStreamsIntegrationTest {
-    private val eventStore = TestEventStore()
+/**
+ * Base class for tests of higher level abstractions such as aggregate repositories, subclassed
+ * by specific implementations.
+ */
+abstract class EventStreamsIntegrationTestBase {
     private val randomId = UUID.randomUUID().toString()
     private val then = this
 
+    private var repositoryFactory: EventRepositoryFactory? = null
     private lateinit var aggregateRepository: AggregateRepository<State, Event>
     private lateinit var streams: EventStreams<State, Event>
+
+    protected abstract fun createRepositoryFactory(sessionId: String): EventRepositoryFactory
 
     @Rule
     @JvmField
     val concurrency = ConcurrencyRule()
 
+
     @Before
     fun setup() {
-        aggregateRepository = eventStore
-                .createAggregateRepository("test_eventstreams", Projection())
+        repositoryFactory = createRepositoryFactory(randomSessionId())
+        val repository = repositoryFactory!!.getEventRepository(Event::class.java)
+        aggregateRepository = DefaultAggregateRepository(repository, Projection())
         setupEventStreams(RetryPolicy.noRetries())
+    }
+
+    @After
+    fun cleanup() {
+        if (repositoryFactory != null) {
+            repositoryFactory!!.close()
+            repositoryFactory = null
+        }
     }
 
     @Test
@@ -260,6 +275,7 @@ class EventStreamsIntegrationTest {
     )
     @JsonSubTypes(JsonSubTypes.Type(Event.ValueSet::class))
     sealed class Event {
+        @JsonTypeName("valueSet")
         data class ValueSet(val value: String) : Event()
     }
 

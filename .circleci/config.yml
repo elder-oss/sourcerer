@@ -12,6 +12,9 @@ jobs:
           name: Building and running unit tests
           command: . infra/run-tests.sh
       - run:
+          name: Running integration tests
+          command: . infra/run-integration-tests.sh
+      - run:
           name: (Maybe) Running Sonar in preview mode
           command: |
             if [ -n "$CI_PULL_REQUEST" ]; then

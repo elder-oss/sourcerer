@@ -61,14 +61,32 @@ allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'signing'
 
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    sourceSets {
+        integrationTest {
+            resources.srcDir "$projectDir/src/integrationTest/resources"
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+        }
+    }
+
+    configurations {
+        integrationTestImplementation.extendsFrom testImplementation
+        integrationTestRuntime.extendsFrom testRuntime
+    }
+
+    task integrationTest(type: Test) {
+        testClassesDirs = sourceSets.integrationTest.output.classesDirs
+        classpath = sourceSets.integrationTest.runtimeClasspath
+    }
+
     checkstyle {
         configFile = new File(rootDir, "infra/codehealth/checkstyle.xml")
         toolVersion = "7.1.1"
         ignoreFailures = false
     }
-
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
 
     jacoco {
         reportsDir = file("build/coverage/jacoco.exec")

@@ -10,6 +10,8 @@ import org.elder.sourcerer.EventTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
 public class EventStoreGrpcEventRepositoryFactory implements EventRepositoryFactory {
@@ -54,6 +56,17 @@ public class EventStoreGrpcEventRepositoryFactory implements EventRepositoryFact
                 eventType.getSimpleName(), eventStreamPrefix);
         return new EventStoreGrpcEventRepository<>(
                 eventStreamPrefix, eventStore, eventType, objectMapper, normalizer);
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            eventStore.shutdown();
+        } catch (ExecutionException ex) {
+            throw new IOException(ex.getCause());
+        } catch (InterruptedException ex) {
+            throw new IOException(ex);
+        }
     }
 
     private static void validateNamespace(final String defaultNamespace) {
