@@ -27,15 +27,6 @@ jobs:
           name: Running integration tests
           command: . infra/run-integration-tests.sh
       - run:
-          name: (Maybe) Running Sonar in preview mode
-          command: |
-            if [ -n "$CI_PULL_REQUEST" ]; then
-              echo "Running Sonar in preview mode for PR $CI_PULL_REQUEST"
-              . infra/runsonar-preview.sh
-            else
-              echo "Not relevant, skipping step"
-            fi
-      - run:
           name: (Maybe) publishing to maven central or internal nexus
           command: |
             if [[ "${CIRCLE_TAG}" =~ v[0-9]+(\.[0-9]+)* ]]; then
@@ -53,6 +44,8 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               echo "Running Sonar full analysis mode"
               . infra/runsonar-full.sh
+            else
+              echo "Not relevant, skipping step"
             fi
 workflows:
   build-it-all:
