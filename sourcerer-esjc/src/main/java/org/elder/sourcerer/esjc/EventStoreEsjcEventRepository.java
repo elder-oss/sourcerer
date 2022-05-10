@@ -64,7 +64,7 @@ import java.util.stream.Collectors;
  * Sourcerer event repository implementation using EventStore (geteventstore.com) as the underlying
  * system. The EventStore implementation uses Jackson to serialize and deserialize events that are
  * subclasses of the given event type base class. To instruct Jackson on how to correctly
- * deserialize events to the correct concrete sub type, please use either the Jaconson annotations,
+ * deserialize events to the correct concrete sub type, please use either the Jackson annotations,
  * or JAXB annotations as per
  * <a href="http://wiki.fasterxml.com/JacksonPolymorphicDeserialization">Jackson Polymorphic
  * Deserialization</a>
