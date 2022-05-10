@@ -1,6 +1,8 @@
 include 'sourcerer-core',
         'sourcerer-crud',
         'sourcerer-esjc',
+        'sourcerer-esjc-tests',
+        'sourcerer-eventstore-test-utils',
         'sourcerer-eventstore-grpc',
         'sourcerer-eventstore-grpc-tests',
         'sourcerer-kotlin'

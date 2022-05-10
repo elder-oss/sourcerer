@@ -1,10 +1,8 @@
-package org.elder.sourcerer.eventstoredb.tests
+package org.elder.sourcerer.eventstore.tests
 
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallback
-import com.github.dockerjava.api.async.ResultCallbackTemplate
 import com.github.dockerjava.api.command.AsyncDockerCmd
-import com.github.dockerjava.api.command.PullImageCmd
 import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 
@@ -13,9 +11,7 @@ import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import java.io.Closeable
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 
 class EventstoreInstance : Closeable {
     private val dockerClient: DockerClient

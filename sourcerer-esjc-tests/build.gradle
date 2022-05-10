@@ -2,9 +2,9 @@ apply plugin: "kotlin"
 
 dependencies {
     testImplementation project(':sourcerer-core')
-    testImplementation project(':sourcerer-eventstore-grpc')
+    testImplementation project(':sourcerer-esjc')
     testImplementation project(':sourcerer-eventstore-test-utils')
-    testImplementation 'com.eventstore:db-client-java:3.0.0'
+    implementation "com.github.msemys:esjc:$escjVersion"
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.13.2.2'
     testImplementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.13.2'
 }

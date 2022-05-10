@@ -1,4 +1,4 @@
-package org.elder.sourcerer.eventstoredb.tests
+package org.elder.sourcerer.eventstore.tests
 
 import org.elder.sourcerer.EventType
 
