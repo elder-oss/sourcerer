@@ -273,11 +273,15 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
                                 .notResolveLinkTos()
                 ),
                 ExpectedVersion.any());
-        return readResult == null || readResult.getEvents() != null
-                || readResult.getEvents().isEmpty()
-                ? -1
-                : fromStreamRevision(
-                readResult.getEvents().get(0).getOriginalEvent().getStreamRevision());
+
+        boolean hasResult = readResult != null
+                && readResult.getEvents() != null
+                && !readResult.getEvents().isEmpty();
+
+        return hasResult
+                ? fromStreamRevision(
+                readResult.getEvents().get(0).getOriginalEvent().getStreamRevision())
+                : -1;
     }
 
     @Override
