@@ -166,12 +166,4 @@ abstract class EventRepositoryIntegrationTestBase {
         }
     }
 
-    private fun <T> eventData(event: T): EventData<T> {
-        return EventData(
-                "eventType",
-                UUID.randomUUID(),
-                mapOf(),
-                event
-        )
-    }
 }
