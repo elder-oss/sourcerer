@@ -127,7 +127,6 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
         return readSingleInternal(toEsStreamId(streamId), -1, false);
     }
 
-    // Not part of public interface, but used for inspection / testing
     private String getCategoryStreamName() {
         return "$ce-" + streamPrefix;
     }
