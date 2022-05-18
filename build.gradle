@@ -31,11 +31,25 @@ nexusStaging {
     password = ossrhPassword
 }
 
-if ("$enable_signing" == 'true') {
+if ("$official_release" == 'true') {
     project.ext.set("use_signing", true)
     project.ext.set("signing.keyId", sourcerer_signing_keyId)
     project.ext.set("signing.password", sourcerer_signing_password)
     project.ext.set("signing.secretKeyRingFile", sourcerer_signing_secretKeyRingFile)
+}
+
+def mavenPublishRepo
+def mavenPublishUsername
+def mavenPublishPassword
+
+if ("$official_release" == 'true') {
+    mavenPublishRepo = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+    mavenPublishUsername = ossrhUsername
+    mavenPublishPassword = ossrhPassword
+} else {
+    mavenPublishRepo = sourcerer_nexus_releaseUrl
+    mavenPublishUsername = sourcerer_nexus_username
+    mavenPublishPassword = sourcerer_nexus_password
 }
 
 sonarqube {
@@ -171,16 +185,16 @@ allprojects {
         repositories {
             maven {
                 credentials {
-                    username property("sourcerer_nexus_username")
-                    password property("sourcerer_nexus_password")
+                    username mavenPublishUsername
+                    password mavenPublishPassword
                 }
-                url property("sourcerer_nexus_releaseUrl")
+                url mavenPublishRepo
             }
         }
     }
 
     signing {
-        required { "$enable_signing" == 'true' }
+        required { "$official_release" == 'true' }
         sign publishing.publications.mavenJava
     }
 }
