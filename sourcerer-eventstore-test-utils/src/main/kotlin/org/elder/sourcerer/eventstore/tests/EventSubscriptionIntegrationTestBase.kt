@@ -13,7 +13,7 @@ abstract class EventSubscriptionIntegrationTestBase {
     @Test
     fun subscriptionRecoversWhenErrorIsThrown() {
         val sessionId = randomSessionId()
-        val sentEvents = (0 until 1000)
+        val sentEvents = (0 until 500)
                 .map { TestEventType(value = UUID.randomUUID().toString()) }
                 .toList()
 
@@ -46,7 +46,7 @@ abstract class EventSubscriptionIntegrationTestBase {
             }
 
             val subscription = DefaultEventSubscription(subscriberRepo, handler,
-                    SubscriptionWorkerConfig(100, 1, 10))
+                    SubscriptionWorkerConfig(100, 10, 10))
             subscription.setPositionSource {
                 val pos = position.get()
                 if (pos < 0) null else pos
