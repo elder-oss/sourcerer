@@ -6,8 +6,8 @@ public class EventSubscriptionUpdate<T> {
         CAUGHT_UP,
     }
 
-    private UpdateType updateType;
-    private EventRecord<T> event;
+    private final UpdateType updateType;
+    private final EventRecord<T> event;
 
     public EventSubscriptionUpdate(final UpdateType updateType, final EventRecord<T> event) {
         this.updateType = updateType;

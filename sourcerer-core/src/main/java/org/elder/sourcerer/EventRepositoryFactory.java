@@ -1,9 +1,11 @@
 package org.elder.sourcerer;
 
+import java.io.Closeable;
+
 /**
  * Factory of event repositories for a given event type.
  */
-public interface EventRepositoryFactory {
+public interface EventRepositoryFactory extends Closeable {
     /**
      * Gets an event repository for the given type of events, and the default namespace.
      *

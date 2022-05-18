@@ -1,0 +1,10 @@
+apply plugin: "kotlin"
+
+dependencies {
+    integrationTestImplementation project(':sourcerer-core')
+    integrationTestImplementation project(':sourcerer-eventstore-grpc')
+    integrationTestImplementation project(':sourcerer-eventstore-test-utils')
+    integrationTestImplementation 'com.eventstore:db-client-java:3.0.0'
+    integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind:2.13.2.2'
+    integrationTestImplementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.13.2'
+}

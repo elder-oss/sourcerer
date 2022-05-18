@@ -14,6 +14,6 @@ public class DefaultEventSubscriptionFactory<T> implements EventSubscriptionFact
     public EventSubscription fromSubscriptionHandler(
             final EventSubscriptionHandler<T> handler,
             final SubscriptionWorkerConfig config) {
-        return new DefaultEventSubscription(repository, handler, config);
+        return new DefaultEventSubscription<T>(repository, handler, config);
     }
 }

@@ -1,11 +1,11 @@
 dependencies {
-    compile 'javax.inject:javax.inject:1'
-    compile 'com.google.guava:guava:19.0'
-    compile 'org.reactivestreams:reactive-streams:1.0.0'
-    compile 'io.projectreactor:reactor-core:2.5.0.M4'
-    compile 'org.jetbrains:annotations:15.0'
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.hamcrest:hamcrest-all:1.3'
-    testCompile 'org.mockito:mockito-core:1.10.19'
-    testCompile 'org.powermock:powermock-mockito-release-full:1.6.4'
+    api 'org.reactivestreams:reactive-streams:1.0.3'
+    api 'org.jetbrains:annotations:23.0.0'
+    implementation 'javax.inject:javax.inject:1'
+    implementation 'com.google.guava:guava:31.1-jre'
+    implementation platform('io.projectreactor:reactor-bom:2020.0.18')
+    implementation 'io.projectreactor:reactor-core'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.hamcrest:hamcrest-all:1.3'
+    testImplementation 'org.mockito:mockito-inline:4.5.1'
 }

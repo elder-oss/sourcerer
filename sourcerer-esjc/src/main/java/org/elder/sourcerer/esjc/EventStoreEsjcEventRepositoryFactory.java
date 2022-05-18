@@ -10,6 +10,7 @@ import org.elder.sourcerer.EventTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.regex.Pattern;
 
 public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFactory {
@@ -54,6 +55,11 @@ public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFact
                 eventType.getSimpleName(), eventStreamPrefix);
         return new EventStoreEsjcEventRepository<>(
                 eventStreamPrefix, eventStore, eventType, objectMapper, normalizer);
+    }
+
+    @Override
+    public void close() {
+        eventStore.shutdown();
     }
 
     private static void validateNamespace(final String defaultNamespace) {

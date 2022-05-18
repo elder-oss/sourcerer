@@ -9,17 +9,18 @@ import org.elder.sourcerer.SubscriptionToken;
 import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.WorkQueueProcessor;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -93,18 +94,19 @@ public class EventSubscriptionManagerTest {
         EventSubscriptionPositionSource positionSource =
                 mock(EventSubscriptionPositionSource.class);
 
-        WorkQueueProcessor<EventSubscriptionUpdate<String>> processor = WorkQueueProcessor.create();
-        Flux<EventSubscriptionUpdate<String>> eventSource = Flux
-                .fromStream(IntStream
-                                    .range(0, 1000000)
-                                    .mapToObj(this::wrapIntAsEvent)
-                                    .map(EventSubscriptionUpdate::ofEvent))
-                .doOnNext(e -> {
-                    lastProducedValue = e.getEvent().getEvent();
-                });
-        eventSource.subscribe(processor);
+        Publisher<EventSubscriptionUpdate<String>> eventSource =
+                Flux
+                        .fromStream(IntStream
+                                .range(0, 1000000)
+                                .mapToObj(this::wrapIntAsEvent)
+                                .map(EventSubscriptionUpdate::ofEvent))
+                        .doOnNext(e -> {
+                            lastProducedValue = e.getEvent().getEvent();
+                        })
+                        .publishOn(Schedulers.parallel())
+                        .subscribeOn(Schedulers.parallel());
 
-        when(repository.getPublisher(any())).thenReturn(processor);
+        when(repository.getPublisher(any())).thenReturn(eventSource);
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
         SlowSubscriptionHandler<String> subscriptionHandler = new SlowSubscriptionHandler<>();
 
@@ -133,18 +135,17 @@ public class EventSubscriptionManagerTest {
                 mock(EventSubscriptionPositionSource.class);
 
         when(repository.getPublisher(any())).then(position -> {
-            WorkQueueProcessor<EventSubscriptionUpdate<String>> processor =
-                    WorkQueueProcessor.create();
             Flux<EventSubscriptionUpdate<String>> eventSource = Flux
                     .fromStream(IntStream
-                                        .range(0, 1000000)
-                                        .mapToObj(this::wrapIntAsEvent)
-                                        .map(EventSubscriptionUpdate::ofEvent))
+                            .range(0, 1000000)
+                            .mapToObj(this::wrapIntAsEvent)
+                            .map(EventSubscriptionUpdate::ofEvent))
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent().getEvent();
                     });
-            eventSource.subscribe(processor);
-            return processor;
+            return eventSource
+                    .publishOn(Schedulers.parallel())
+                    .subscribeOn(Schedulers.parallel());
         });
 
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
@@ -170,21 +171,21 @@ public class EventSubscriptionManagerTest {
                 mock(EventSubscriptionPositionSource.class);
 
         when(repository.getPublisher(any())).then(position -> {
-            WorkQueueProcessor<EventRecord<String>> processor = WorkQueueProcessor.create();
             Flux<EventRecord<String>> eventSource = Flux
                     .fromStream(IntStream.range(0, 1000000).mapToObj(this::wrapIntAsEvent))
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent();
                     });
-            eventSource.subscribe(processor);
-            return processor;
+            return eventSource
+                    .publishOn(Schedulers.parallel())
+                    .subscribeOn(Schedulers.parallel());
         });
 
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
         ErroringSubscriptionHandler<String> subscriptionHandler =
                 new ErroringSubscriptionHandler<>(0);
 
-        EventSubscriptionManager subscriptionManager = new EventSubscriptionManager<>(
+        EventSubscriptionManager<String> subscriptionManager = new EventSubscriptionManager<>(
                 repository,
                 positionSource,
                 subscriptionHandler,
@@ -203,21 +204,23 @@ public class EventSubscriptionManagerTest {
                 mock(EventSubscriptionPositionSource.class);
 
         when(repository.getPublisher(any())).then(position -> {
-            WorkQueueProcessor<EventRecord<String>> processor = WorkQueueProcessor.create();
             Flux<EventRecord<String>> eventSource = Flux
                     .fromStream(IntStream.range(0, 1000000).mapToObj(this::wrapIntAsEvent))
                     .doOnNext(e -> {
                         lastProducedValue = e.getEvent();
                     });
-            eventSource.subscribe(processor);
-            return processor.take(100).thenMany(Flux.error(new RuntimeException("fail!")));
+            return eventSource
+                    .publishOn(Schedulers.parallel())
+                    .subscribeOn(Schedulers.parallel())
+                    .take(100)
+                    .thenMany(Flux.error(new RuntimeException("fail!")));
         });
 
         when(positionSource.getSubscriptionPosition()).thenReturn(null);
         SlowSubscriptionHandler<String> subscriptionHandler =
                 new SlowSubscriptionHandler<>();
 
-        EventSubscriptionManager subscriptionManager = new EventSubscriptionManager<>(
+        EventSubscriptionManager<String> subscriptionManager = new EventSubscriptionManager<>(
                 repository,
                 positionSource,
                 subscriptionHandler,

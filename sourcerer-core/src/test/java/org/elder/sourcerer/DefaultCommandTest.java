@@ -10,21 +10,18 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(ExpectedVersion.class)
 public class DefaultCommandTest {
     private static final String AGGREGATE_ID = "42";
     private final RetryPolicy retryPolicy = RetryPolicy.noRetries();
@@ -33,19 +30,21 @@ public class DefaultCommandTest {
     @Test(expected = InvalidCommandException.class)
     @SuppressWarnings("unchecked")
     public void conflictingVersionsGiveInvalidCommand() {
-        PowerMockito.mockStatic(ExpectedVersion.class);
-        PowerMockito.when(ExpectedVersion.merge(any(), any()))
-                .thenThrow(new ConflictingExpectedVersionsException(
-                        "error", null, null));
 
-        Operation operation = new OperationHandlerOperation(
-                (x, y) -> null,
-                true,
-                false,
-                ExpectedVersion.exactly(42));
-        DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
-        command.setAggregateId(AGGREGATE_ID);
-        command.run();
+        try (MockedStatic<ExpectedVersion> mocked = Mockito.mockStatic(ExpectedVersion.class)) {
+            mocked.when(() -> ExpectedVersion.merge(any(), any()))
+                    .thenThrow(new ConflictingExpectedVersionsException(
+                            "error", null, null));
+
+            Operation operation = new OperationHandlerOperation(
+                    (x, y) -> null,
+                    true,
+                    false,
+                    ExpectedVersion.exactly(42));
+            DefaultCommand command = new DefaultCommand(repository, operation, retryPolicy);
+            command.setAggregateId(AGGREGATE_ID);
+            command.run();
+        }
     }
 
     @Test

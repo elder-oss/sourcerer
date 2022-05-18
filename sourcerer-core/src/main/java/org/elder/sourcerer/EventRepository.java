@@ -152,7 +152,8 @@ public interface EventRepository<T> {
      * @return A Publisher that, when subscribed to, will start producing events for each new event
      * written to the given stream id.
      */
-    Publisher<EventSubscriptionUpdate<T>> getStreamPublisher(String streamId, Integer fromVersion);
+    Publisher<EventSubscriptionUpdate<T>>
+            getStreamPublisher(String streamId, Integer fromVersion);
 
     /**
      * Gets a Publisher that can be used to subscribe to all events related to this repository.

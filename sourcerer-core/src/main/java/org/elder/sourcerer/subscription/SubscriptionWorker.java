@@ -4,13 +4,12 @@ import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionHandler;
 import org.elder.sourcerer.EventSubscriptionPositionSource;
-import org.elder.sourcerer.EventSubscriptionUpdate;
 import org.elder.sourcerer.SubscriptionToken;
 import org.elder.sourcerer.SubscriptionWorkerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.subscriber.LambdaSubscriber;
-import reactor.core.subscriber.Subscribers;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,15 +104,16 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
                 new ArrayBlockingQueue<>(config.getBatchSize());
         SessionSubscriber<T> subscriber =
                 new SessionSubscriber<>(currentUpdates, "" + subscriberCount);
-        LambdaSubscriber<EventSubscriptionUpdate<T>> boundedSubscriber = Subscribers.bounded(
-                config.getBatchSize(),
-                subscriber::onNext,
-                subscriber::onError,
-                subscriber::onComplete);
+        Disposable boundedSubscriber = null;
 
         try {
             logger.info("Subscribing to event store ...");
-            repository.getPublisher(subscriptionPosition).subscribe(boundedSubscriber);
+            boundedSubscriber = Flux.from(repository.getPublisher(subscriptionPosition))
+                    .limitRate(config.getBatchSize())
+                    .subscribe(
+                            subscriber::onNext,
+                            subscriber::onError,
+                            subscriber::onComplete);
             while (processUpdates(currentUpdates)) {
                 logger.debug("Processed updates, will do more");
                 retryCount.set(0);
@@ -124,7 +124,9 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
         } finally {
             logger.info("Subscription worker exiting");
             subscriber.kill();
-            boundedSubscriber.dispose();
+            if (boundedSubscriber != null) {
+                boundedSubscriber.dispose();
+            }
         }
     }
 
