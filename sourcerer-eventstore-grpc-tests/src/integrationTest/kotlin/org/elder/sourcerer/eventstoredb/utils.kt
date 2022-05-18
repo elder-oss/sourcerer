@@ -11,10 +11,8 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 fun createGrpcRepositoryFactory(sessionId: String): EventStoreGrpcEventRepositoryFactory {
     val settings = EventStoreDBClientSettings.builder()
             .addHost(Endpoint("127.0.0.1", 2113))
-            .addHost(Endpoint("127.0.0.1", 2114))
-            // .addHost(Endpoint("127.0.0.1", 2115))
             .defaultCredentials("admin", "changeit")
-            .nodePreference(NodePreference.FOLLOWER)
+            .nodePreference(NodePreference.LEADER)
             .throwOnAppendFailure(true)
             .tls(false)
             .keepAliveInterval(10000)
