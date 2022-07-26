@@ -127,7 +127,7 @@ public class DefaultAggregateRepository<TState, TEvent>
                         currentStreamPosition,
                         maxEventsPerRead);
 
-                if (readResult == null || readResult.getEvents().isEmpty()) {
+                if (readResult == null) {
                     // Not found, return empty wrapper as per contract
                     return DefaultImmutableAggregate.createNew(
                             projection,

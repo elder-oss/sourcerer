@@ -45,14 +45,6 @@ public class DefaultAggregateRepositoryTest {
         returnsAggregateWithEmptyStateOn(null);
     }
 
-    @Test
-    public void readReturnsEmptyOnEmptyStream() throws Exception {
-        returnsAggregateWithEmptyStateOn(
-                new EventReadResult(
-                        ImmutableList.of(),
-                        0, 10, 11, false));
-    }
-
     private void returnsAggregateWithEmptyStateOn(
             final EventReadResult readEventsResult) {
         when(eventRepository.read(any(), anyInt(), anyInt())).thenReturn(readEventsResult);
