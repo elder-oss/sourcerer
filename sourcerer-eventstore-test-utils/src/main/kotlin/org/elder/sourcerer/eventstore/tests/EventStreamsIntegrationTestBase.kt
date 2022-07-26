@@ -19,13 +19,14 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
+import kotlin.random.Random
 import kotlin.reflect.KClass
 
 /**
  * Base class for tests of higher level abstractions such as aggregate repositories, subclassed
  * by specific implementations.
  */
-abstract class EventStreamsIntegrationTestBase {
+abstract class EventStreamsIntegrationTestBase() {
     private val randomId = UUID.randomUUID().toString()
     private val then = this
 
@@ -44,7 +45,7 @@ abstract class EventStreamsIntegrationTestBase {
     fun setup() {
         repositoryFactory = createRepositoryFactory(randomSessionId())
         val repository = repositoryFactory!!.getEventRepository(Event::class.java)
-        aggregateRepository = DefaultAggregateRepository(repository, Projection())
+        aggregateRepository = DefaultAggregateRepository(repository, Projection(), MAX_READ_EVENTS)
         setupEventStreams(RetryPolicy.noRetries())
     }
 
@@ -225,6 +226,40 @@ abstract class EventStreamsIntegrationTestBase {
 
         Thread.sleep(1000)
     }
+    @Test
+    fun `can load all events`() {
+        val expected = mutableListOf<String>()
+
+        fun appendRandomValue() {
+            val value = Random.nextInt().toString()
+            appendWith { Event.ValueSet(value) }
+            expected += value
+        }
+
+        // Load just shy of a page full
+        repeat(MAX_READ_EVENTS - 1) {
+            appendRandomValue()
+        }
+
+        then assertState { allValues equals expected }
+
+        // Load when exactly a page full
+        appendRandomValue()
+
+        then assertState { allValues equals expected }
+
+        // Load when just over a page full
+        appendRandomValue()
+
+        then assertState { allValues equals expected }
+
+        // Load with more than two pages full
+        repeat(MAX_READ_EVENTS) {
+            appendRandomValue()
+        }
+
+        then assertState { allValues equals expected }
+    }
 
     private fun createWith(
             event: () -> Event
@@ -259,14 +294,21 @@ abstract class EventStreamsIntegrationTestBase {
     class Projection : AggregateProjection<State, Event> {
         override fun apply(id: String, state: State, event: Event): State {
             return when (event) {
-                is Event.ValueSet -> state.copy(value = event.value)
+                is Event.ValueSet ->
+                    state.copy(
+                            allValues = state.allValues + event.value,
+                            value = event.value
+                    )
             }
         }
 
         override fun empty() = State()
     }
 
-    data class State(val value: String? = null)
+    data class State(
+            val allValues: List<String> = listOf(),
+            val value: String? = null,
+    )
 
     private infix fun Any?.equals(other: Any?) {
         assertThat(this, equalTo(other))
@@ -289,5 +331,9 @@ abstract class EventStreamsIntegrationTestBase {
         val agg = aggregateRepository.load(randomId)
         val state = agg.state()
         state.checks()
+    }
+
+    companion object {
+        private const val MAX_READ_EVENTS = 5
     }
 }
