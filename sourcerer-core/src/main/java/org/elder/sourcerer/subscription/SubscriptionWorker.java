@@ -1,5 +1,6 @@
 package org.elder.sourcerer.subscription;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.elder.sourcerer.EventRecord;
 import org.elder.sourcerer.EventRepository;
 import org.elder.sourcerer.EventSubscriptionHandler;
@@ -57,11 +58,21 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
                     logger.info("Subscription stop acknowledge, thread terminating");
                     handler.subscriptionStopped();
                     return;
-                } catch (Exception ex) {
+                } catch (final Exception ex) {
+                    if (isCausedBy(ex, ClassNotFoundException.class)) {
+                        logger.error("Encountered class not found exception - " +
+                                "we probably won't be recovering from " +
+                                "this anytime soon, terminate with error.", ex);
+                        handler.subscriptionFailed(ex);
+                        return;
+                    }
                     logger.warn("Exception in subscription, retry logic will apply", ex);
-                    boolean retry = handler.handleError(unwrapException(ex), retryCount.get());
+                    final boolean retry = handler.handleError(
+                            unwrapException(ex),
+                            retryCount.get()
+                    );
                     if (retry) {
-                        boolean keepGoing = sleepForRetry(retryCount.getAndIncrement());
+                        final boolean keepGoing = sleepForRetry(retryCount.getAndIncrement());
                         if (!keepGoing) {
                             logger.debug("Asked to stop by sleeper, terminating thread");
                             return;
@@ -76,7 +87,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
                     }
                 }
             }
-        } catch (InterruptedException ex) {
+        } catch (final InterruptedException ex) {
             logger.warn("Interrupted processing subscription", ex);
             Thread.currentThread().interrupt();
         }
@@ -87,6 +98,20 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
         logger.info("Stopping subscription");
         cancelled.set(true);
         sleeper.release(Integer.MAX_VALUE);
+    }
+
+    @VisibleForTesting
+    protected static boolean isCausedBy(
+            final Throwable exceptionBeingHandled,
+            final Class<? extends Throwable> causedByClass
+    ) {
+        if (exceptionBeingHandled == null) {
+            return false;
+        } else if (causedByClass.isAssignableFrom(exceptionBeingHandled.getClass())) {
+            return true;
+        } else {
+            return isCausedBy(exceptionBeingHandled.getCause(), causedByClass);
+        }
     }
 
     private static Throwable unwrapException(final Exception ex) {
