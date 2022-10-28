@@ -59,6 +59,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
                     handler.subscriptionStopped();
                     return;
                 } catch (final Exception ex) {
+                    logger.warn("Exception in subscription, retry logic will apply", ex);
                     if (isCausedBy(ex, ClassNotFoundException.class)) {
                         logger.error("Encountered class not found exception - " +
                                 "we probably won't be recovering from " +
@@ -146,6 +147,9 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
             // Clean exit, can only mean we're at the end of the subscription, or been explicitly
             // cancelled
             logger.info("Subscription worker finishing cleanly");
+        } catch (final Exception ex) {
+            logger.warn("Exception running one session of subscription", ex);
+            throw ex;
         } finally {
             logger.info("Subscription worker exiting");
             subscriber.kill();
