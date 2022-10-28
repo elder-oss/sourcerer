@@ -147,7 +147,7 @@ class SubscriptionWorker<T> implements Runnable, SubscriptionToken {
             // Clean exit, can only mean we're at the end of the subscription, or been explicitly
             // cancelled
             logger.info("Subscription worker finishing cleanly");
-        } catch (final Exception ex) {
+        } catch (final Throwable ex) {
             logger.warn("Exception running one session of subscription", ex);
             throw ex;
         } finally {
