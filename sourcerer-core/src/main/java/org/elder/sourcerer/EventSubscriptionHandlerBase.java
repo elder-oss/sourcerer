@@ -57,10 +57,12 @@ public abstract class EventSubscriptionHandlerBase<T> implements EventSubscripti
         return true;
     }
 
-    public void closeSubscripton() {
+    public void closeSubscription() {
+        logger.debug("Closing subscription");
         SubscriptionToken token = subscriptionToken.get();
         if (token != null) {
             token.stop();
+            logger.debug("Subscription closed");
         } else {
             throw new IllegalStateException("Unable to stop subscription that has not yet started");
         }

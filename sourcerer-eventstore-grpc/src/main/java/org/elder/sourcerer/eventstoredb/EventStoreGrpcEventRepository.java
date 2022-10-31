@@ -539,7 +539,20 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         @Override
         public void onEvent(final Subscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
-            emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            try {
+                emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            } catch (final Exception ex) {
+                final String msgBase = "Subscription " + name + " failed onEvent, emitting error.";
+                final String eventDetails = event != null && event.getEvent() != null
+                        ? String.format(
+                        msgBase + " EventType: %s, StreamId: %s, Position: %s",
+                        event.getEvent().getEventType(),
+                        event.getEvent().getStreamId(),
+                        event.getEvent().getPosition().toString()
+                ) : null;
+                logger.error(eventDetails, ex);
+                emitter.error(ex);
+            }
             // TODO: Support "caught up" tracking once new Java client is live
         }
 
