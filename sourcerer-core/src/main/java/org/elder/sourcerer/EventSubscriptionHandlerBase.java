@@ -3,7 +3,6 @@ package org.elder.sourcerer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -57,10 +56,13 @@ public abstract class EventSubscriptionHandlerBase<T> implements EventSubscripti
         return true;
     }
 
-    public void closeSubscripton() {
+    // TODO this function is not used, either use it or remove it.
+    public void closeSubscription() {
+        logger.info("Closing subscription");
         SubscriptionToken token = subscriptionToken.get();
         if (token != null) {
             token.stop();
+            logger.info("Subscription closed");
         } else {
             throw new IllegalStateException("Unable to stop subscription that has not yet started");
         }

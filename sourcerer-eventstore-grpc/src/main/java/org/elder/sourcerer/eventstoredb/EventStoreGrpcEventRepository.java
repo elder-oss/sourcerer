@@ -562,7 +562,17 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
 
         @Override
         public void onCancelled(final Subscription subscription) {
-            logger.info("Subscription " + name + " was cancelled");
+            logger.info("Cancelling subscription " + name);
+            try {
+                if (subscription != null) {
+                    subscription.stop();
+                    logger.info("Subscription " + name + " was cancelled");
+                } else {
+                    logger.info("Subscription " + name + " was not cancelled because it is null");
+                }
+            } catch (final Exception ex) {
+                logger.error("Exception cancelling subscription " + name, ex);
+            }
         }
     }
 }
