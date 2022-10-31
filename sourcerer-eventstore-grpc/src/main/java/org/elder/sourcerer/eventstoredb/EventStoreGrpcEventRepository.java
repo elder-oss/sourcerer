@@ -539,7 +539,13 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         @Override
         public void onEvent(final Subscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
-            emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            try {
+                emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            } catch (final Exception ex) {
+                final String eventStr = event != null ? event.toString() : null;
+                logger.error("Subscription " + name + " failed onEvent " + eventStr, ex);
+                emitter.error(ex);
+            }
             // TODO: Support "caught up" tracking once new Java client is live
         }
 
@@ -563,16 +569,6 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         @Override
         public void onCancelled(final Subscription subscription) {
             logger.info("Cancelling subscription " + name);
-            try {
-                if (subscription != null) {
-                    subscription.stop();
-                    logger.info("Subscription " + name + " was cancelled");
-                } else {
-                    logger.info("Subscription " + name + " was not cancelled because it is null");
-                }
-            } catch (final Exception ex) {
-                logger.error("Exception cancelling subscription " + name, ex);
-            }
         }
     }
 }
