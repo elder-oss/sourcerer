@@ -57,7 +57,7 @@ public abstract class EventSubscriptionHandlerBase<T> implements EventSubscripti
         return true;
     }
 
-    public void closeSubscription() {
+    public void closeSubscripton() {
         logger.debug("Closing subscription");
         SubscriptionToken token = subscriptionToken.get();
         if (token != null) {
