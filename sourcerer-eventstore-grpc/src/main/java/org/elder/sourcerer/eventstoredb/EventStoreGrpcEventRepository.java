@@ -8,6 +8,7 @@ import com.eventstore.dbclient.ExpectedRevision;
 import com.eventstore.dbclient.NotLeaderException;
 import com.eventstore.dbclient.ReadResult;
 import com.eventstore.dbclient.ReadStreamOptions;
+import com.eventstore.dbclient.RecordedEvent;
 import com.eventstore.dbclient.ResolvedEvent;
 import com.eventstore.dbclient.ResourceNotFoundException;
 import com.eventstore.dbclient.StreamNotFoundException;
@@ -539,7 +540,27 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
         @Override
         public void onEvent(final Subscription subscription, final ResolvedEvent event) {
             logger.debug("Incoming message in {}: {}", name, event);
-            emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            try {
+                emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
+            } catch (final Exception ex) {
+                final RecordedEvent recordedEvent = event.getEvent();
+                final String eventType = recordedEvent == null ? null
+                        : recordedEvent.getEventType();
+                final String streamId = recordedEvent == null ? null
+                        : recordedEvent.getStreamId();
+                final String position = recordedEvent == null ? null
+                        : recordedEvent.getPosition().toString();
+                final String msg = String.format(
+                        "Subscription %s failed onEvent, emitting error. " +
+                                "EventType: %s, StreamId: %s, Position: %s",
+                        name,
+                        eventType,
+                        streamId,
+                        position
+                );
+                logger.error(msg, ex);
+                emitter.error(ex);
+            }
             // TODO: Support "caught up" tracking once new Java client is live
         }
 
@@ -562,7 +583,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
 
         @Override
         public void onCancelled(final Subscription subscription) {
-            logger.info("Subscription " + name + " was cancelled");
+            logger.error("Subscription " + name + " was cancelled");
         }
     }
 }
