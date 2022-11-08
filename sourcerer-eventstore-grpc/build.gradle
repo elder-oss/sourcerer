@@ -1,6 +1,6 @@
 dependencies {
     api project(':sourcerer-core')
-    implementation 'com.eventstore:db-client-java:3.0.1'
+    implementation 'com.eventstore:db-client-java:3.0.2'
     implementation platform('io.projectreactor:reactor-bom:2020.0.18')
     implementation 'io.projectreactor:reactor-core'
     implementation 'com.google.guava:guava:31.1-jre'
