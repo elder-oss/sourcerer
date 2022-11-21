@@ -43,8 +43,12 @@ jobs:
             else
               echo "Not relevant, skipping step"
             fi
-deployment:
-  fake_deploy_for_circle_ci_2:
-    tag: /.*/
-    commands:
-      - echo "Placeholder NOOP for tags"
+workflows:
+  build:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only: /.*/
