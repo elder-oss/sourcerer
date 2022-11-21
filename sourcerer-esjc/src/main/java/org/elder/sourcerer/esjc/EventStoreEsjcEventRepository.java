@@ -89,17 +89,33 @@ public class EventStoreEsjcEventRepository<T> implements EventRepository<T> {
             final EventStore eventStore,
             final Class<T> eventClass,
             final ObjectMapper objectMapper,
-            final EventNormalizer<T> normalizer) {
+            final EventNormalizer<T> normalizer,
+            final Integer readBatchSizeIn,
+            final Integer maxLiveQueueSizeIn
+    ) {
         this.streamPrefix = streamPrefix;
         this.eventClass = eventClass;
         this.eventStore = eventStore;
         this.objectMapper = objectMapper;
         this.normalizer = normalizer;
         this.timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-        // TODO: Customize these settings
+        final int readBatchSize = readBatchSizeIn == null ? 500 : readBatchSizeIn;
+        final int maxLiveQueueSize = maxLiveQueueSizeIn == null ? 10000 : maxLiveQueueSizeIn;
         defaultSubscriptionSettings = CatchUpSubscriptionSettings.newBuilder()
                 .resolveLinkTos(true)
+                .readBatchSize(readBatchSize)
+                .maxLiveQueueSize(maxLiveQueueSize)
                 .build();
+    }
+
+    public EventStoreEsjcEventRepository(
+            final String streamPrefix,
+            final EventStore eventStore,
+            final Class<T> eventClass,
+            final ObjectMapper objectMapper,
+            final EventNormalizer<T> normalizer
+    ) {
+        this(streamPrefix, eventStore, eventClass, objectMapper, normalizer, null, null);
     }
 
     @Override
