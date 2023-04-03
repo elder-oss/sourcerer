@@ -34,6 +34,12 @@ public interface Command<TState, TParams, TEvent> {
     Command<TState, TParams, TEvent> setAggregateId(String aggregateId);
 
     /**
+     * Specifies the snapshot.
+     * @return The command instance that the method was invoked on, for method chaining.
+     */
+    Command<TState, TParams, TEvent> setSnapshot(Snapshot<TState> snapshot);
+
+    /**
      * Sets the arguments passed to the operation behind this command as the command is executed.
      *
      * @param arguments The arguments to pass to the underlying operation as the command is

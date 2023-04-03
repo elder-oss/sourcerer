@@ -9,6 +9,7 @@ import org.elder.sourcerer.ImmutableAggregate
 import org.elder.sourcerer.OperationHandler
 import org.elder.sourcerer.OperationHandlerOperation
 import org.elder.sourcerer.Operations
+import org.elder.sourcerer.Snapshot
 import org.elder.sourcerer.functions.UpdateHandlerAggregate
 
 /**
@@ -57,11 +58,13 @@ class EventStreams<STATE, EVENT>(
      * @param id the aggregate id
      * @param expectedVersion expected aggregate version. By default will fail if stream does not
      * exist
+     * @param snapshot optional snapshot.
      * @param update operations to perform on the aggregate
      */
     fun update(
             id: String,
             expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
+            snapshot: Snapshot<STATE> ?= null,
             update: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
         return CommandResponse.of(
@@ -70,6 +73,7 @@ class EventStreams<STATE, EVENT>(
                         .setAggregateId(id)
                         .setAtomic(true)
                         .setExpectedVersion(expectedVersion)
+                        .setSnapshot(snapshot)
                         .run())
     }
 

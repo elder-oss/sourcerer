@@ -13,6 +13,7 @@ import org.elder.sourcerer.utils.RetryPolicy
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.instanceOf
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
 import org.junit.Assert.fail
 import org.junit.Before
@@ -226,6 +227,7 @@ abstract class EventStreamsIntegrationTestBase() {
 
         Thread.sleep(1000)
     }
+
     @Test
     fun `can load all events`() {
         val expected = mutableListOf<String>()
@@ -259,6 +261,22 @@ abstract class EventStreamsIntegrationTestBase() {
         }
 
         then assertState { allValues equals expected }
+    }
+
+    @Test
+    fun `can load from specific state`() {
+        for (i in 0..10) {
+            appendWith { Event.ValueSet("$i") }
+        }
+        val initialRandomList = listOf("different","random")
+        val snapshot = Snapshot(State(initialRandomList), 6)
+
+        val expected = initialRandomList + listOf("6","7","8","9","10")
+
+        val aggregate = aggregateRepository.loadFromSnapshot(randomId, snapshot)
+        val actualState = aggregate.state()
+
+        assertEquals(expected, actualState.allValues)
     }
 
     private fun createWith(
@@ -329,6 +347,15 @@ abstract class EventStreamsIntegrationTestBase() {
 
     private infix fun assertState(checks: State.() -> Unit) {
         val agg = aggregateRepository.load(randomId)
+        val state = agg.state()
+        state.checks()
+    }
+
+    private fun assertStateFromSnapshot(
+        snapshot: Snapshot<State>,
+        checks: State.() -> Unit
+    ) {
+        val agg = aggregateRepository.loadFromSnapshot(randomId, snapshot)
         val state = agg.state()
         state.checks()
     }

@@ -117,8 +117,18 @@ public class DefaultAggregateRepository<TState, TEvent>
 
     @Override
     public ImmutableAggregate<TState, TEvent> load(final String aggregateId) {
-        TState state = projection.empty();
-        int currentStreamPosition = 0;
+        Snapshot<TState> snapshot = new Snapshot(projection.empty(), 0);
+        return loadFromSnapshot(aggregateId, snapshot);
+    }
+
+    @Override
+    public ImmutableAggregate<TState, TEvent> loadFromSnapshot(
+            final String aggregateId,
+            final Snapshot<TState> snapshot
+    ) {
+        TState state = snapshot.getState();
+        int initialStreamPosition = snapshot.getStreamVersion();
+        int currentStreamPosition = initialStreamPosition;
         try {
             while (true) { // Exit through return
                 logger.debug("Reading events for {} from {}", aggregateId, currentStreamPosition);
@@ -152,13 +162,15 @@ public class DefaultAggregateRepository<TState, TEvent>
                 currentStreamPosition = readResult.getNextVersion();
             }
         } finally {
-            if (currentStreamPosition > LARGE_EVENT_STREAM_WARNING_CUTOFF) {
+            int numberOfProcessedEvents = currentStreamPosition - initialStreamPosition;
+            if (numberOfProcessedEvents > LARGE_EVENT_STREAM_WARNING_CUTOFF) {
                 logger.warn(
                         "Read large stream {} consisting of {} events - consider snapshotting?",
                         aggregateId,
                         currentStreamPosition);
             }
         }
+
     }
 
     @Override
