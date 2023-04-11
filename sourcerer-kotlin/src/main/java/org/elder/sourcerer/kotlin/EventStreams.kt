@@ -78,25 +78,6 @@ class EventStreams<STATE, EVENT>(
     }
 
     /**
-     * Load the current state of an existing stream.
-     *
-     * @param id the aggregate id
-     * @param snapshot optional snapshot.
-     */
-    fun loadState(
-        id: String,
-        snapshot: Snapshot<STATE>? = null
-    ): CommandResponse {
-        return CommandResponse.of(
-            commandFactory
-                .fromOperation(updateOf(update, expectedVersion))
-                .setAggregateId(id)
-                .setAtomic(true)
-                .setSnapshot(snapshot)
-                .run())
-    }
-
-    /**
      * Append events to stream.
      *
      * Stream may be new or existing. No validation is performed, and nothing is read.
