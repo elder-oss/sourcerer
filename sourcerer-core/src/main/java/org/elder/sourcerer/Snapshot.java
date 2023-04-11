@@ -1,9 +1,7 @@
 package org.elder.sourcerer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * The current state of an aggregate at some point in time.
@@ -12,9 +10,10 @@ public class Snapshot<TState> {
     private final TState state;
     private final Integer streamVersion;
 
+    @JsonCreator
     public Snapshot(
-            final TState state,
-            final Integer streamVersion) {
+            @JsonProperty("state") final TState state,
+            @JsonProperty("streamVersion") final Integer streamVersion) {
         this.state = state;
         this.streamVersion = streamVersion;
     }
@@ -26,4 +25,6 @@ public class Snapshot<TState> {
     public Integer getStreamVersion() {
         return streamVersion;
     }
+
+
 }

@@ -64,7 +64,7 @@ class EventStreams<STATE, EVENT>(
     fun update(
             id: String,
             expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
-            snapshot: Snapshot<STATE> ?= null,
+            snapshot: Snapshot<STATE>? = null,
             update: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
         return CommandResponse.of(
@@ -75,6 +75,25 @@ class EventStreams<STATE, EVENT>(
                         .setExpectedVersion(expectedVersion)
                         .setSnapshot(snapshot)
                         .run())
+    }
+
+    /**
+     * Load the current state of an existing stream.
+     *
+     * @param id the aggregate id
+     * @param snapshot optional snapshot.
+     */
+    fun loadState(
+        id: String,
+        snapshot: Snapshot<STATE>? = null
+    ): CommandResponse {
+        return CommandResponse.of(
+            commandFactory
+                .fromOperation(updateOf(update, expectedVersion))
+                .setAggregateId(id)
+                .setAtomic(true)
+                .setSnapshot(snapshot)
+                .run())
     }
 
     /**
