@@ -127,7 +127,7 @@ public class DefaultAggregateRepository<TState, TEvent>
             final Snapshot<TState> snapshot
     ) {
         TState state = snapshot.getState();
-        int initialStreamPosition = snapshot.getStreamVersion();
+        int initialStreamPosition = snapshot.getStreamVersion() + 1;
         int currentStreamPosition = initialStreamPosition;
         try {
             while (true) { // Exit through return
