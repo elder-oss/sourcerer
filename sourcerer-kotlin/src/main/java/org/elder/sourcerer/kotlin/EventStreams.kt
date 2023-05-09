@@ -38,26 +38,12 @@ class EventStreams<STATE, EVENT>(
     ) : this(DefaultCommandFactory(aggregateRepository))
 
     /**
-     * Create EventStreams that uses a DefaultCommandFactory and snapshot.
+     * For backwards compatibility. Create a EventStreams with no snapshotting.
      */
     constructor(
-        aggregateRepository: AggregateRepository<STATE, EVENT>,
-        snapshotRepository: EventRepository<SnapshotEvent>,
-        snapshotAggregateRepository: AggregateRepository<STATE, SnapshotEvent>,
-        clazz: Class<STATE>,
-        mapper: ObjectMapper,
-        snapshottingVersion: String,
-        minVersionsBetweenSnapshots: Int = 1000
-    ) : this(
-        commandFactory= DefaultCommandFactory(aggregateRepository),
-        snapshottingEnabled = true,
-        snapshotRepository = snapshotRepository,
-        snapshotCommandFactory= DefaultCommandFactory(snapshotAggregateRepository),
-        clazz = clazz,
-        mapper = mapper,
-        snapshottingVersion = snapshottingVersion,
-        minVersionsBetweenSnapshots = minVersionsBetweenSnapshots
-    )
+        commandFactory: CommandFactory<STATE, EVENT>
+    ) : this(commandFactory, false)
+
 
     /**
      * Create a new stream.
