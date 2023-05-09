@@ -271,7 +271,7 @@ abstract class EventStreamsIntegrationTestBase() {
         val initialRandomList = listOf("different","random")
         val snapshot = Snapshot(State(initialRandomList), 6)
 
-        val expected = initialRandomList + listOf("6","7","8","9","10")
+        val expected = initialRandomList + listOf("7","8","9","10")
 
         val aggregate = aggregateRepository.loadFromSnapshot(randomId, snapshot)
         val actualState = aggregate.state()
@@ -347,15 +347,6 @@ abstract class EventStreamsIntegrationTestBase() {
 
     private infix fun assertState(checks: State.() -> Unit) {
         val agg = aggregateRepository.load(randomId)
-        val state = agg.state()
-        state.checks()
-    }
-
-    private fun assertStateFromSnapshot(
-        snapshot: Snapshot<State>,
-        checks: State.() -> Unit
-    ) {
-        val agg = aggregateRepository.loadFromSnapshot(randomId, snapshot)
         val state = agg.state()
         state.checks()
     }

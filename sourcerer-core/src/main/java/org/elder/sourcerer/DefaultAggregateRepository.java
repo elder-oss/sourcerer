@@ -117,7 +117,7 @@ public class DefaultAggregateRepository<TState, TEvent>
 
     @Override
     public ImmutableAggregate<TState, TEvent> load(final String aggregateId) {
-        Snapshot<TState> snapshot = new Snapshot(projection.empty(), 0);
+        Snapshot<TState> snapshot = new Snapshot(projection.empty(), -1);
         return loadFromSnapshot(aggregateId, snapshot);
     }
 

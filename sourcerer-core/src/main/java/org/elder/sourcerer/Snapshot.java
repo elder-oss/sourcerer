@@ -26,5 +26,4 @@ public class Snapshot<TState> {
         return streamVersion;
     }
 
-
 }
