@@ -75,7 +75,6 @@ class EventStreams<STATE, EVENT>(
      * @param id the aggregate id
      * @param expectedVersion expected aggregate version. By default will fail if stream does not
      * exist
-     * @param snapshot optional snapshot.
      * @param update operations to perform on the aggregate
      */
     fun update(
@@ -100,7 +99,7 @@ class EventStreams<STATE, EVENT>(
         }
     }
 
-    fun doUpdate(
+    private fun doUpdate(
         id: String,
         expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
         snapshot: Snapshot<STATE>? = null,
@@ -168,7 +167,7 @@ class EventStreams<STATE, EVENT>(
                         .run())
     }
 
-    fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>): CommandResponse {
+    private fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>): CommandResponse {
         return CommandResponse.of(
             snapshotCommandFactory!!
                 .fromOperation(Operations.appendOf(operation))

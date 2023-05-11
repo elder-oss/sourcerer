@@ -47,9 +47,9 @@ if ("$official_release" == 'true') {
     mavenPublishUsername = ossrhUsername
     mavenPublishPassword = ossrhPassword
 } else {
-    mavenPublishRepo = "https://nexus.elder.org/content/repositories/releases"
-    mavenPublishUsername = elderNexusUsername
-    mavenPublishPassword = elderNexusPassword
+    mavenPublishRepo = sourcerer_nexus_releaseUrl
+    mavenPublishUsername = sourcerer_nexus_username
+    mavenPublishPassword = sourcerer_nexus_password
 }
 
 sonarqube {
