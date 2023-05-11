@@ -1,11 +1,9 @@
 package org.elder.sourcerer.kotlin
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import org.elder.sourcerer.AggregateRepository
 import org.elder.sourcerer.CommandFactory
 import org.elder.sourcerer.CommandResponse
 import org.elder.sourcerer.DefaultCommandFactory
-import org.elder.sourcerer.EventRepository
 import org.elder.sourcerer.ExpectedVersion
 import org.elder.sourcerer.ImmutableAggregate
 import org.elder.sourcerer.OperationHandler
@@ -21,13 +19,7 @@ import org.elder.sourcerer.functions.UpdateHandlerAggregate
  */
 class EventStreams<STATE, EVENT>(
         private val commandFactory: CommandFactory<STATE, EVENT>,
-        private val snapshottingEnabled: Boolean = false,
-        private val snapshotRepository: EventRepository<SnapshotEvent>? = null,
-        private val snapshotCommandFactory: CommandFactory<STATE, SnapshotEvent>? = null,
-        private val clazz: Class<STATE>? = null,
-        private val mapper: ObjectMapper? = null,
-        private val snapshottingVersion: String? = null,
-        private val minVersionsBetweenSnapshots: Int? = null
+        private val snapshottingSupport: SnapshottingSupport<STATE>? = null
 ) {
 
     /**
@@ -42,7 +34,7 @@ class EventStreams<STATE, EVENT>(
      */
     constructor(
         commandFactory: CommandFactory<STATE, EVENT>
-    ) : this(commandFactory, false)
+    ) : this(commandFactory, null)
 
 
     /**
@@ -82,12 +74,12 @@ class EventStreams<STATE, EVENT>(
             expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
             update: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
-        return when (snapshottingEnabled) {
+        return when (snapshottingSupport?.snapshottingEnabled) {
             true -> {
-                val snapshot = findSnapshot<STATE>(id)
+                val snapshot = snapshottingSupport.findSnapshot<STATE>(id)
                 return doUpdate(id, expectedVersion, snapshot) { agg ->
                     val updatedAggregate = update(agg)
-                    createNewSnapshotIfNecessary(
+                    snapshottingSupport.createNewSnapshotIfNecessary(
                         id = id,
                         snapshot = snapshot,
                         newVersion = updatedAggregate.sourceVersion(),
@@ -115,42 +107,6 @@ class EventStreams<STATE, EVENT>(
                 .run())
     }
 
-    private fun <STATE> findSnapshot(
-        entityId: String
-    ) : Snapshot<STATE>? {
-        val snapshotEntityId = snapshotEntityId(entityId)
-        return snapshotRepository!!.readLast(snapshotEntityId)
-            ?.event
-            ?.let { it as SnapshotEvent.Added<STATE> }
-            ?.takeIf { it.monitorVersion == snapshottingVersion }
-            ?.snapshot
-            ?.parse()
-    }
-
-    private fun <STATE> createNewSnapshotIfNecessary(
-        id: String,
-        snapshot: Snapshot<STATE>?,
-        newVersion: Int,
-        newState: STATE
-    ) {
-        val snapshotIsWellBehind = snapshot == null
-                || (newVersion - snapshot.streamVersion) > minVersionsBetweenSnapshots!!
-        if (snapshotIsWellBehind) {
-            val snapshotEntityId = snapshotEntityId(id)
-            val snapshot = Snapshot(newState, newVersion)
-            snapshotAppend(snapshotEntityId) {
-                listOf(SnapshotEvent.Added(snapshot, snapshottingVersion!!))
-            }
-        }
-    }
-
-    private fun <STATE> Snapshot<STATE>.parse() : Snapshot<STATE> {
-        val state = mapper!!.convertValue(state, clazz) as STATE
-        return Snapshot<STATE>(state, streamVersion)
-    }
-
-    private fun snapshotEntityId(entityId: String) = "$entityId-$snapshottingVersion"
-
     /**
      * Append events to stream.
      *
@@ -165,14 +121,6 @@ class EventStreams<STATE, EVENT>(
                         .fromOperation(Operations.appendOf(operation))
                         .setAggregateId(id)
                         .run())
-    }
-
-    private fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>): CommandResponse {
-        return CommandResponse.of(
-            snapshotCommandFactory!!
-                .fromOperation(Operations.appendOf(operation))
-                .setAggregateId(id)
-                .run())
     }
 
     private fun updateOf(
