@@ -9,6 +9,7 @@ import org.elder.sourcerer.ImmutableAggregate
 import org.elder.sourcerer.OperationHandler
 import org.elder.sourcerer.OperationHandlerOperation
 import org.elder.sourcerer.Operations
+import org.elder.sourcerer.Snapshot
 import org.elder.sourcerer.functions.UpdateHandlerAggregate
 
 /**
@@ -17,7 +18,8 @@ import org.elder.sourcerer.functions.UpdateHandlerAggregate
  * Kotlin wrapper for CommandFactory that simplifies its usage.
  */
 class EventStreams<STATE, EVENT>(
-        private val commandFactory: CommandFactory<STATE, EVENT>
+        private val commandFactory: CommandFactory<STATE, EVENT>,
+        private val snapshottingSupport: SnapshottingSupport<STATE>? = null
 ) {
 
     /**
@@ -26,6 +28,14 @@ class EventStreams<STATE, EVENT>(
     constructor(
             aggregateRepository: AggregateRepository<STATE, EVENT>
     ) : this(DefaultCommandFactory(aggregateRepository))
+
+    /**
+     * For backwards compatibility. Create a EventStreams with no snapshotting.
+     */
+    constructor(
+        commandFactory: CommandFactory<STATE, EVENT>
+    ) : this(commandFactory, null)
+
 
     /**
      * Create a new stream.
@@ -64,13 +74,37 @@ class EventStreams<STATE, EVENT>(
             expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
             update: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
     ): CommandResponse {
+        return when (snapshottingSupport?.snapshottingEnabled) {
+            true -> {
+                val snapshot = snapshottingSupport.findSnapshot(id)
+                return doUpdate(id, expectedVersion, snapshot) { agg ->
+                    val updatedAggregate = update(agg)
+                    snapshottingSupport.createNewSnapshotIfNecessary(
+                        id = id,
+                        snapshot = snapshot,
+                        newVersion = updatedAggregate.sourceVersion(),
+                        newState = updatedAggregate.state())
+                    updatedAggregate
+                }
+            }
+            else -> doUpdate(id, expectedVersion) { agg -> update(agg) }
+        }
+    }
+
+    private fun doUpdate(
+        id: String,
+        expectedVersion: ExpectedVersion = ExpectedVersion.anyExisting(),
+        snapshot: Snapshot<STATE>? = null,
+        update: (ImmutableAggregate<STATE, EVENT>) -> ImmutableAggregate<STATE, EVENT>
+    ): CommandResponse {
         return CommandResponse.of(
-                commandFactory
-                        .fromOperation(updateOf(update, expectedVersion))
-                        .setAggregateId(id)
-                        .setAtomic(true)
-                        .setExpectedVersion(expectedVersion)
-                        .run())
+            commandFactory
+                .fromOperation(updateOf(update, expectedVersion))
+                .setAggregateId(id)
+                .setAtomic(true)
+                .setExpectedVersion(expectedVersion)
+                .setSnapshot(snapshot)
+                .run())
     }
 
     /**

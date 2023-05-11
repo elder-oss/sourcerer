@@ -30,6 +30,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     private boolean atomic;
     private boolean idempotentCreate = false;
     private String aggregateId = null;
+    private Snapshot<TState> snapshot = null;
     private TParams arguments = null;
     private ExpectedVersion expectedVersion = null;
     private List<MetadataDecorator> metadataDecorators = new ArrayList<>();
@@ -50,6 +51,12 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     @Override
     public Command<TState, TParams, TEvent> setAggregateId(final String aggregateId) {
         this.aggregateId = aggregateId;
+        return this;
+    }
+
+    @Override
+    public Command<TState, TParams, TEvent> setSnapshot(final Snapshot<TState> snapshot) {
+        this.snapshot = snapshot;
         return this;
     }
 
@@ -282,7 +289,7 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
     @NotNull
     private ImmutableAggregate<TState, TEvent> readAndValidateAggregate(
             final ExpectedVersion effectiveExpectedVersion) {
-        ImmutableAggregate<TState, TEvent> aggregate = repository.load(aggregateId);
+        ImmutableAggregate<TState, TEvent> aggregate = loadAggregate();
 
         // Validate expected version early if we have state
         switch (effectiveExpectedVersion.getType()) {
@@ -315,5 +322,13 @@ public class DefaultCommand<TState, TParams, TEvent> implements Command<TState, 
                         "Unrecognized expected version type " + effectiveExpectedVersion.getType());
         }
         return aggregate;
+    }
+
+    private ImmutableAggregate loadAggregate() {
+        if (snapshot != null) {
+            return repository.loadFromSnapshot(aggregateId, snapshot);
+        } else {
+            return repository.load(aggregateId);
+        }
     }
 }

@@ -25,6 +25,24 @@ public interface AggregateRepository<TState, TEvent> {
     ImmutableAggregate<TState, TEvent> load(String aggregateId);
 
     /**
+     * Loads an aggregate given an aggregate id and the initial snapshot.
+     * The construction of an aggregate is implementation specific, but would be semantically
+     * equivalent to applying a projection to each recorded event for the aggregate from
+     * the initial position and state.
+     *
+     * @param aggregateId The id of the aggregate to load.
+     * @param snapshot The snapshot to start from.
+     *
+     * @return A snapshot in time of the aggregate along with information such as its current
+     * version. This method should never return null, but rather an ImmutableAggregate with a
+     * version of Aggregate.VERSION_NOT_CREATED (-1) if the aggregate is nonexistent or deleted.
+     */
+    ImmutableAggregate<TState, TEvent> loadFromSnapshot(
+            String aggregateId,
+            Snapshot<TState> snapshot
+    );
+
+    /**
      * Persists a given existing or new aggregate with a list of events taken from an aggregate
      * state. The id of the aggregate and expected version (if used) will be taken from the details
      * of the aggregate state, and all pending events on the state will be persisted.

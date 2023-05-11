@@ -5,6 +5,7 @@ dependencies {
     implementation 'com.google.guava:guava:31.1-jre'
     implementation platform('io.projectreactor:reactor-bom:2020.0.18')
     implementation 'io.projectreactor:reactor-core'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.13.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.hamcrest:hamcrest-all:1.3'
     testImplementation 'org.mockito:mockito-inline:4.5.1'
