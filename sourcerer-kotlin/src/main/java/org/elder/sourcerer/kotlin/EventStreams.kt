@@ -76,7 +76,7 @@ class EventStreams<STATE, EVENT>(
     ): CommandResponse {
         return when (snapshottingSupport?.snapshottingEnabled) {
             true -> {
-                val snapshot = snapshottingSupport.findSnapshot<STATE>(id)
+                val snapshot = snapshottingSupport.findSnapshot(id)
                 return doUpdate(id, expectedVersion, snapshot) { agg ->
                     val updatedAggregate = update(agg)
                     snapshottingSupport.createNewSnapshotIfNecessary(

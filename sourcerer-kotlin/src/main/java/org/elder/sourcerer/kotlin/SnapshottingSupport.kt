@@ -17,16 +17,14 @@ class SnapshottingSupport<STATE>(
     private val minVersionsBetweenSnapshots: Int
 ) {
 
-    fun <STATE> createNewSnapshotIfNecessary(
+    fun createNewSnapshotIfNecessary(
         id: String,
         snapshot: Snapshot<STATE>?,
         newVersion: Int,
         newState: STATE
     ) {
-        val minVersionsBetweenSnapshots = minVersionsBetweenSnapshots
-        val snapshottingVersion = snapshottingVersion
-        val snapshotIsWellBehind = snapshot == null
-                || (newVersion - snapshot.streamVersion) > minVersionsBetweenSnapshots
+        val snapshotVersion = snapshot?.streamVersion ?: -1
+        val snapshotIsWellBehind = newVersion - snapshotVersion > minVersionsBetweenSnapshots
         if (snapshotIsWellBehind) {
             val snapshotEntityId = snapshotEntityId(id)
             val snapshot = Snapshot(newState, newVersion)
@@ -36,7 +34,7 @@ class SnapshottingSupport<STATE>(
         }
     }
 
-    fun <STATE> findSnapshot(
+    fun findSnapshot(
         entityId: String
     ) : Snapshot<STATE>? {
         val snapshotEntityId = snapshotEntityId(entityId)
@@ -48,7 +46,7 @@ class SnapshottingSupport<STATE>(
             ?.parse()
     }
 
-    private fun <STATE> Snapshot<STATE>.parse() : Snapshot<STATE> {
+    private fun Snapshot<STATE>.parse() : Snapshot<STATE> {
         val state = mapper.convertValue(state, clazz) as STATE
         return Snapshot<STATE>(state, streamVersion)
     }
