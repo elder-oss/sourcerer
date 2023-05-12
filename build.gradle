@@ -8,7 +8,6 @@ buildscript {
 }
 
 plugins {
-    id "org.sonarqube" version "3.3"
     id 'org.jetbrains.kotlin.jvm' version '1.6.21'
     id 'maven-publish'
     id 'signing'
@@ -50,17 +49,6 @@ if ("$official_release" == 'true') {
     mavenPublishRepo = sourcerer_nexus_releaseUrl
     mavenPublishUsername = sourcerer_nexus_username
     mavenPublishPassword = sourcerer_nexus_password
-}
-
-sonarqube {
-    properties {
-        property "sonar.projectVersion", getVersionName()
-        property "sonar.jacoco.reportPath", "build/coverage/jacoco.exec"
-        property "sonar.host.url", sourcerer_sonar_host_url
-        property "sonar.login", sourcerer_sonar_login
-        property "sonar.github.oauth", sourcerer_sonar_github_oauth
-        property "sonar.github.repository", "elder-oss/sourcerer"
-    }
 }
 
 allprojects {
