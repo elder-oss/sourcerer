@@ -10,7 +10,6 @@ import org.elder.sourcerer.EventTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.regex.Pattern;
 
 public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFactory {
@@ -56,7 +55,6 @@ public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFact
             final String namespace,
             final String repositoryName) {
         validateNamespace(namespace);
-        validateRepositoryName(repositoryName);
         String actualRepositoryName = repositoryName(eventType, repositoryName);
         EventNormalizer<T> normalizer = EventTypeUtils.getNormalizer(eventType);
         String eventStreamPrefix = String.format("%s:%s", namespace, actualRepositoryName);
@@ -72,6 +70,7 @@ public class EventStoreEsjcEventRepositoryFactory implements EventRepositoryFact
             final String repositoryName
     ) {
         if (repositoryName != null) {
+            validateRepositoryName(repositoryName);
             return repositoryName;
         } else {
             return EventTypeUtils.getRepositoryName(eventType);

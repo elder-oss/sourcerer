@@ -57,7 +57,6 @@ public class EventStoreGrpcEventRepositoryFactory implements EventRepositoryFact
             final String namespace,
             final String repositoryName) {
         validateNamespace(namespace);
-        validateRepositoryName(repositoryName);
         String actualRepositoryName = repositoryName(eventType, repositoryName);
         EventNormalizer<T> normalizer = EventTypeUtils.getNormalizer(eventType);
         String eventStreamPrefix = String.format("%s:%s", namespace, actualRepositoryName);
@@ -73,6 +72,7 @@ public class EventStoreGrpcEventRepositoryFactory implements EventRepositoryFact
             final String repositoryName
     ) {
         if (repositoryName != null) {
+            validateRepositoryName(repositoryName);
             return repositoryName;
         } else {
             return EventTypeUtils.getRepositoryName(eventType);
