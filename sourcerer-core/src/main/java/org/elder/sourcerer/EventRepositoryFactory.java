@@ -41,5 +41,8 @@ public interface EventRepositoryFactory extends Closeable {
      * @param <T>       The base type for events in the event repository.
      * @return An event repository instance used to access events of the given type.
      */
-    <T> EventRepository<T> getEventRepository(Class<T> eventType, String namespace, String repositoryName);
+    <T> EventRepository<T> getEventRepository(
+            Class<T> eventType,
+            String namespace,
+            String repositoryName);
 }
