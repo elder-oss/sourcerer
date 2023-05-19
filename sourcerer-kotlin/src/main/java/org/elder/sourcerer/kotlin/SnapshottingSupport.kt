@@ -5,6 +5,8 @@ import org.elder.sourcerer.EventData
 import org.elder.sourcerer.EventRepository
 import org.elder.sourcerer.ExpectedVersion
 import org.elder.sourcerer.Snapshot
+import org.elder.sourcerer.kotlin.SnapshotEvent.Companion.SNAPSHOT_ADDED_EVENT_NAME
+import org.slf4j.LoggerFactory
 import java.util.UUID
 
 class SnapshottingSupport<STATE>(
@@ -22,27 +24,36 @@ class SnapshottingSupport<STATE>(
         newVersion: Int,
         newState: STATE
     ) {
-        val snapshotVersion = snapshot?.streamVersion ?: -1
-        val snapshotIsWellBehind = newVersion - snapshotVersion > minVersionsBetweenSnapshots
-        if (snapshotIsWellBehind) {
-            val snapshotEntityId = snapshotEntityId(id)
-            val snapshot = Snapshot(newState, newVersion)
-            snapshotAppend(snapshotEntityId) {
-                listOf(SnapshotEvent.Added(snapshot, snapshottingVersion))
+        try {
+            val snapshotVersion = snapshot?.streamVersion ?: -1
+            val snapshotIsWellBehind = newVersion - snapshotVersion >= minVersionsBetweenSnapshots
+            if (snapshotIsWellBehind) {
+                val snapshotEntityId = snapshotEntityId(id)
+                val snapshot = Snapshot(newState, newVersion)
+                snapshotAppend(snapshotEntityId) {
+                    listOf(SnapshotEvent.Added(snapshot, snapshottingVersion))
+                }
             }
+        } catch (ex: Exception) {
+            logger.warn("Error attempting to create new snapshot", ex)
         }
     }
 
     fun findSnapshot(
         entityId: String
     ) : Snapshot<STATE>? {
-        val snapshotEntityId = snapshotEntityId(entityId)
-        return snapshotRepository.readLast(snapshotEntityId)
-            ?.event
-            ?.let { it as SnapshotEvent.Added<STATE> }
-            ?.takeIf { it.monitorVersion == snapshottingVersion }
-            ?.snapshot
-            ?.parse()
+        return try {
+            val snapshotEntityId = snapshotEntityId(entityId)
+            snapshotRepository.readLast(snapshotEntityId)
+                ?.event
+                ?.let { it as SnapshotEvent.Added<STATE> }
+                ?.takeIf { it.monitorVersion == snapshottingVersion }
+                ?.snapshot
+                ?.parse()
+        } catch (ex: Exception) {
+            logger.warn("Error trying to find snapshot", ex)
+            null
+        }
     }
 
     private fun Snapshot<STATE>.parse() : Snapshot<STATE> {
@@ -52,7 +63,8 @@ class SnapshottingSupport<STATE>(
 
     private fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>) {
         val events = operation().map { event ->
-            EventData("snapshotEvent",
+            EventData(
+                SNAPSHOT_ADDED_EVENT_NAME,
                 UUID.randomUUID(),
                 mapOf(),
                 event)
@@ -61,4 +73,8 @@ class SnapshottingSupport<STATE>(
     }
 
     private fun snapshotEntityId(entityId: String) = "$entityId-$snapshottingVersion"
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(SnapshottingSupport::class.java)
+    }
 }
