@@ -1,16 +1,15 @@
 package org.elder.sourcerer.kotlin
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.elder.sourcerer.CommandFactory
-import org.elder.sourcerer.CommandResponse
+import org.elder.sourcerer.EventData
 import org.elder.sourcerer.EventRepository
-import org.elder.sourcerer.Operations
+import org.elder.sourcerer.ExpectedVersion
 import org.elder.sourcerer.Snapshot
+import java.util.UUID
 
 class SnapshottingSupport<STATE>(
     val snapshottingEnabled: Boolean = false,
     private val snapshotRepository: EventRepository<SnapshotEvent>,
-    private val snapshotCommandFactory: CommandFactory<STATE, SnapshotEvent>,
     private val clazz: Class<STATE>,
     private val mapper: ObjectMapper,
     private val snapshottingVersion: String,
@@ -51,12 +50,14 @@ class SnapshottingSupport<STATE>(
         return Snapshot<STATE>(state, streamVersion)
     }
 
-    private fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>): CommandResponse {
-        return CommandResponse.of(
-            snapshotCommandFactory!!
-                .fromOperation(Operations.appendOf(operation))
-                .setAggregateId(id)
-                .run())
+    private fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>) {
+        val events = operation().map { event ->
+            EventData("snapshotEvent",
+                UUID.randomUUID(),
+                mapOf(),
+                event)
+        }
+        snapshotRepository.append(id, events, ExpectedVersion.any())
     }
 
     private fun snapshotEntityId(entityId: String) = "$entityId-$snapshottingVersion"
