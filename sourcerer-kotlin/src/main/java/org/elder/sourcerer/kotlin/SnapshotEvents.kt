@@ -18,10 +18,14 @@ import org.elder.sourcerer.Snapshot
 )
 sealed class SnapshotEvent {
 
-    @JsonTypeName("snapshotAdded")
+    @JsonTypeName(SNAPSHOT_ADDED_EVENT_NAME)
     data class Added<State>(
         val snapshot: Snapshot<State>,
         val monitorVersion: String
     ) : SnapshotEvent()
+
+    companion object {
+        const val SNAPSHOT_ADDED_EVENT_NAME = "snapshotAdded"
+    }
 }
 
