@@ -7,10 +7,15 @@ import org.elder.sourcerer.ExpectedVersion
 import org.elder.sourcerer.Snapshot
 import org.elder.sourcerer.kotlin.SnapshotEvent.Companion.SNAPSHOT_ADDED_EVENT_NAME
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayOutputStream
+import java.util.Base64
 import java.util.UUID
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 
 class SnapshottingSupport<STATE>(
     val snapshottingEnabled: Boolean = false,
+    val compressingEnabled: Boolean = false,
     private val snapshotRepository: EventRepository<SnapshotEvent>,
     private val clazz: Class<STATE>,
     private val mapper: ObjectMapper,
@@ -31,7 +36,11 @@ class SnapshottingSupport<STATE>(
                 val snapshotEntityId = snapshotEntityId(id)
                 val snapshot = Snapshot(newState, newVersion)
                 snapshotAppend(snapshotEntityId) {
-                    listOf(SnapshotEvent.Added(snapshot, snapshottingVersion))
+                    listOf(
+                        when (compressingEnabled) {
+                            true -> SnapshotEvent.CompressedAdded(snapshot.compress(), snapshottingVersion)
+                            false -> SnapshotEvent.Added(snapshot, snapshottingVersion)
+                        })
                 }
             }
         } catch (ex: Exception) {
@@ -44,19 +53,38 @@ class SnapshottingSupport<STATE>(
     ) : Snapshot<STATE>? {
         return try {
             val snapshotEntityId = snapshotEntityId(entityId)
-            snapshotRepository.readLast(snapshotEntityId)
+            val event = snapshotRepository.readLast(snapshotEntityId)
                 ?.event
-                ?.let { it as SnapshotEvent.Added<STATE> }
                 ?.takeIf { it.monitorVersion == snapshottingVersion }
-                ?.snapshot
-                ?.parse()
+            when (event) {
+                is SnapshotEvent.Added<*>-> event.snapshot.parse()
+                is SnapshotEvent.CompressedAdded -> event.compressedSnapshot.uncompress()
+                else -> null
+            }
         } catch (ex: Exception) {
             logger.warn("Error trying to find snapshot", ex)
             null
         }
     }
 
-    private fun Snapshot<STATE>.parse() : Snapshot<STATE> {
+    private fun Snapshot<STATE>.compress() : Snapshot<String> {
+        val data = mapper.writeValueAsBytes(state)
+        val compressed = ByteArrayOutputStream().use {
+            GZIPOutputStream(it).use { it.write(data) }
+            it
+        }.toByteArray()
+        val stringState = Base64.getEncoder().encodeToString(compressed)
+        return Snapshot<String>(stringState, streamVersion)
+    }
+
+    private fun Snapshot<String>.uncompress() : Snapshot<STATE> {
+        val data = Base64.getDecoder().decode(state)
+        val uncompressed = GZIPInputStream(data.inputStream()).use { it.readBytes() }
+        val state = mapper.convertValue(uncompressed, clazz) as STATE
+        return Snapshot<STATE>(state, streamVersion)
+    }
+
+    private fun Snapshot<*>.parse() : Snapshot<STATE> {
         val state = mapper.convertValue(state, clazz) as STATE
         return Snapshot<STATE>(state, streamVersion)
     }
