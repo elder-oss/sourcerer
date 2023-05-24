@@ -1,5 +1,6 @@
 package org.elder.sourcerer.kotlin
 
+import com.fasterxml.jackson.annotation.JsonTypeName
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.elder.sourcerer.EventData
 import org.elder.sourcerer.EventRepository
@@ -91,8 +92,12 @@ class SnapshottingSupport<STATE>(
 
     private fun snapshotAppend(id: String, operation: () -> List<SnapshotEvent>) {
         val events = operation().map { event ->
+            val eventTypeName = event::class.java.annotations
+                .first { it.annotationClass == JsonTypeName::class }
+                .let { it as JsonTypeName }
+                .value
             EventData(
-                SNAPSHOT_ADDED_EVENT_NAME,
+                eventTypeName,
                 UUID.randomUUID(),
                 mapOf(),
                 event)
