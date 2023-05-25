@@ -81,7 +81,7 @@ class SnapshottingSupport<STATE>(
     private fun Snapshot<String>.uncompress() : Snapshot<STATE> {
         val data = Base64.getDecoder().decode(state)
         val uncompressed = GZIPInputStream(data.inputStream()).use { it.readBytes() }
-        val state = mapper.convertValue(uncompressed, clazz) as STATE
+        val state = mapper.readValue(uncompressed, clazz) as STATE
         return Snapshot<STATE>(state, streamVersion)
     }
 
