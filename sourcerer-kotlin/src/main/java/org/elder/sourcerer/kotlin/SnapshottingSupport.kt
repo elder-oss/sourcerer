@@ -70,11 +70,14 @@ class SnapshottingSupport<STATE>(
 
     private fun Snapshot<STATE>.compress() : Snapshot<String> {
         val data = mapper.writeValueAsBytes(state)
+        logger.info("REMOVEME: Size before compressing: ${data.size}")
         val compressed = ByteArrayOutputStream().use {
             GZIPOutputStream(it).use { it.write(data) }
             it
         }.toByteArray()
+        logger.info("REMOVEME: Size after compressing: ${compressed.size}")
         val stringState = Base64.getEncoder().encodeToString(compressed)
+        logger.info("REMOVEME: Array length: ${stringState.length}")
         return Snapshot<String>(stringState, streamVersion)
     }
 
