@@ -6,7 +6,6 @@ import org.elder.sourcerer.EventData
 import org.elder.sourcerer.EventRepository
 import org.elder.sourcerer.ExpectedVersion
 import org.elder.sourcerer.Snapshot
-import org.elder.sourcerer.kotlin.SnapshotEvent.Companion.SNAPSHOT_ADDED_EVENT_NAME
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.util.Base64
@@ -80,7 +79,8 @@ class SnapshottingSupport<STATE>(
 
     private fun Snapshot<String>.uncompress() : Snapshot<STATE> {
         val data = Base64.getDecoder().decode(state)
-        val state = mapper.readValue(data, clazz) as STATE
+        val uncompressed = GZIPInputStream(data.inputStream()).use { it.readBytes() }
+        val state = mapper.readValue(uncompressed, clazz) as STATE
         return Snapshot<STATE>(state, streamVersion)
     }
 
