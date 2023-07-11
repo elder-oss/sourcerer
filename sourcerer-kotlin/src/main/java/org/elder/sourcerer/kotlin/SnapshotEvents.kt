@@ -14,18 +14,28 @@ import org.elder.sourcerer.Snapshot
     visible = true
 )
 @JsonSubTypes(
-    JsonSubTypes.Type(SnapshotEvent.Added::class)
+    JsonSubTypes.Type(SnapshotEvent.Added::class),
+    JsonSubTypes.Type(SnapshotEvent.CompressedAdded::class)
 )
 sealed class SnapshotEvent {
+
+    abstract val monitorVersion: String
 
     @JsonTypeName(SNAPSHOT_ADDED_EVENT_NAME)
     data class Added<State>(
         val snapshot: Snapshot<State>,
-        val monitorVersion: String
+        override val monitorVersion: String
+    ) : SnapshotEvent()
+
+    @JsonTypeName(COMPRESSED_SNAPSHOT_ADDED_EVENT_NAME)
+    data class CompressedAdded(
+        val compressedSnapshot: Snapshot<String>,
+        override val monitorVersion: String
     ) : SnapshotEvent()
 
     companion object {
         const val SNAPSHOT_ADDED_EVENT_NAME = "snapshotAdded"
+        const val COMPRESSED_SNAPSHOT_ADDED_EVENT_NAME = "compressedSnapshotAdded"
     }
 }
 
