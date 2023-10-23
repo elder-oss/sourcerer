@@ -542,7 +542,7 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
             logger.debug("Incoming message in {}: {}", name, event);
             try {
                 emitter.next(EventSubscriptionUpdate.ofEvent(fromEsEvent(event)));
-            } catch (final Exception ex) {
+            } catch (final Exception | LinkageError ex) {
                 final RecordedEvent recordedEvent = event.getEvent();
                 final String eventType = recordedEvent == null ? null
                         : recordedEvent.getEventType();
