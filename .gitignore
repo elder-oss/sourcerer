@@ -5,4 +5,6 @@ target
 tmp
 .idea
 *.iml
+.claude/
+docs/ai/
 
