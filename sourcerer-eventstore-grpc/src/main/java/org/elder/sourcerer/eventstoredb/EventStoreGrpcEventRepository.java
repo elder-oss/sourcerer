@@ -457,10 +457,11 @@ public class EventStoreGrpcEventRepository<T> implements EventRepository<T> {
             } else if (ex.getCause() instanceof ResourceNotFoundException
             ) {
                 throw new PermanentEventReadException(ex.getCause());
-            } else if (ex.getCause() instanceof ConnectionShutdownException
-                    || ex.getCause() instanceof NotLeaderException
-            ) {
+            } else if (ex.getCause() instanceof ConnectionShutdownException) {
                 throw new RetriableEventReadException(ex.getCause());
+            } else if (ex.getCause() instanceof NotLeaderException) {
+                logger.warn("Not leader exception reading events", ex.getCause());
+                throw new PermanentEventReadException(ex.getCause());
             } else if (ex.getCause() instanceof RuntimeException) {
                 logger.warn("Unrecognized runtime exception reading events", ex.getCause());
                 throw new RetriableEventReadException(ex.getCause());
